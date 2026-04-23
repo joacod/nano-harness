@@ -4,4 +4,4 @@ dist/
 out/
 *.log
 coverage/
-pnpm-lock.yaml
+*.tsbuildinfo
