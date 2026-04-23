@@ -1,0 +1,27 @@
+{
+  "name": "@nano-harness/desktop",
+  "private": true,
+  "version": "0.0.1",
+  "type": "module",
+  "main": "out/main/index.js",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "typecheck": "tsc -p tsconfig.node.json --noEmit && tsc -p tsconfig.web.json --noEmit",
+    "lint": "eslint ."
+  },
+  "dependencies": {
+    "react": "19.2.5",
+    "react-dom": "19.2.5"
+  },
+  "devDependencies": {
+    "@types/node": "25.6.0",
+    "@types/react": "19.2.14",
+    "@types/react-dom": "19.2.3",
+    "@vitejs/plugin-react": "5.2.0",
+    "electron": "41.3.0",
+    "electron-vite": "5.0.0",
+    "eslint": "10.2.1",
+    "vite": "7.3.2"
+  }
+}
