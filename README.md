@@ -1,4 +1,4 @@
-# nano-harness
+# Nano Harness
 
 `nano-harness` is a local-first desktop app for experimenting with agent runs, provider streaming, events, and tool execution in a small inspectable workspace.
 
