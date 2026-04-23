@@ -8,6 +8,7 @@
   },
   "include": [
     "src/renderer/**/*.ts",
-    "src/renderer/**/*.tsx"
+    "src/renderer/**/*.tsx",
+    "../../packages/shared/src/**/*.ts"
   ]
 }

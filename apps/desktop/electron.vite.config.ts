@@ -1,10 +1,19 @@
-import { defineConfig, externalizeDepsPlugin } from 'electron-vite'
+import { defineConfig } from 'electron-vite'
 import react from '@vitejs/plugin-react'
 import { resolve } from 'node:path'
 
+const bundledWorkspacePackages = ['@nano-harness/core', '@nano-harness/infra', '@nano-harness/shared']
+
 export default defineConfig({
   main: {
-    plugins: [externalizeDepsPlugin()],
+    build: {
+      externalizeDeps: {
+        exclude: bundledWorkspacePackages
+      },
+      rollupOptions: {
+        external: ['@libsql/client', '@libsql/client/node', 'drizzle-orm', 'drizzle-orm/libsql']
+      }
+    },
     resolve: {
       alias: {
         '@shared': resolve(__dirname, '../../packages/shared/src'),
@@ -14,7 +23,11 @@ export default defineConfig({
     }
   },
   preload: {
-    plugins: [externalizeDepsPlugin()],
+    build: {
+      externalizeDeps: {
+        exclude: bundledWorkspacePackages
+      }
+    },
     resolve: {
       alias: {
         '@shared': resolve(__dirname, '../../packages/shared/src')

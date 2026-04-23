@@ -20,6 +20,21 @@ importers:
 
   apps/desktop:
     dependencies:
+      '@libsql/client':
+        specifier: 0.17.3
+        version: 0.17.3
+      '@nano-harness/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@nano-harness/infra':
+        specifier: workspace:*
+        version: link:../../packages/infra
+      '@nano-harness/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
+      drizzle-orm:
+        specifier: 0.45.2
+        version: 0.45.2(@libsql/client@0.17.3)
       react:
         specifier: 19.2.5
         version: 19.2.5
