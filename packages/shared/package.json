@@ -9,6 +9,6 @@
     "lint": "eslint src --ext .ts"
   },
   "devDependencies": {
-    "eslint": "9.39.4"
+    "eslint": "10.2.1"
   }
 }

@@ -2,7 +2,7 @@
   "name": "nano-harness",
   "private": true,
   "version": "0.0.1",
-  "packageManager": "pnpm@10.18.0",
+  "packageManager": "pnpm@10.33.2",
   "scripts": {
     "dev": "pnpm --filter @nano-harness/desktop dev",
     "build": "pnpm -r run build",
@@ -10,8 +10,8 @@
     "lint": "pnpm -r run lint"
   },
   "devDependencies": {
-    "@eslint/js": "9.39.4",
-    "typescript": "5.9.3",
+    "@eslint/js": "10.0.1",
+    "typescript": "6.0.3",
     "typescript-eslint": "8.59.0"
   }
 }
