@@ -2,6 +2,7 @@ import { contextBridge, ipcRenderer } from 'electron'
 
 import {
   appSettingsSchema,
+  conversationListSchema,
   conversationSnapshotSchema,
   desktopBridgeChannels,
   desktopContextSchema,
@@ -16,6 +17,9 @@ import {
 const desktopApi: DesktopApi = {
   async getContext() {
     return desktopContextSchema.parse(await ipcRenderer.invoke(desktopBridgeChannels.getContext))
+  },
+  async listConversations() {
+    return conversationListSchema.parse(await ipcRenderer.invoke(desktopBridgeChannels.listConversations))
   },
   async getSettings() {
     return appSettingsSchema.nullable().parse(await ipcRenderer.invoke(desktopBridgeChannels.getSettings))

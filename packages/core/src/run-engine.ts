@@ -234,6 +234,11 @@ export class CoreRunEngine implements RunEngine {
         createdAt: now,
         updatedAt: now,
       })
+    } else {
+      await this.store.saveConversation({
+        ...snapshot.conversation,
+        updatedAt: now,
+      })
     }
 
     const run: Run = {

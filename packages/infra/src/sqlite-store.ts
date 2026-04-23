@@ -234,6 +234,11 @@ export class SqliteStore implements Store {
       })
   }
 
+  async listConversations() {
+    const conversationRows = await this.db.select().from(conversationsTable).orderBy(asc(conversationsTable.updatedAt))
+    return conversationRows.reverse().map((conversation) => conversationSchema.parse(conversation))
+  }
+
   async getConversation(conversationId: string): Promise<ConversationSnapshot> {
     const [conversationRow] = await this.db
       .select()
