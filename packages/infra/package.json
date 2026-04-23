@@ -3,12 +3,22 @@
   "private": true,
   "version": "0.0.1",
   "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
   "scripts": {
     "build": "tsc -p tsconfig.json --emitDeclarationOnly",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint src --ext .ts"
   },
+  "dependencies": {
+    "@libsql/client": "0.17.3",
+    "@nano-harness/core": "workspace:*",
+    "@nano-harness/shared": "workspace:*",
+    "drizzle-orm": "0.45.2"
+  },
   "devDependencies": {
+    "@types/node": "25.6.0",
     "eslint": "10.2.1"
   }
 }
