@@ -3,10 +3,16 @@
   "private": true,
   "version": "0.0.1",
   "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
   "scripts": {
     "build": "tsc -p tsconfig.json --emitDeclarationOnly",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint src --ext .ts"
+  },
+  "dependencies": {
+    "@nano-harness/shared": "workspace:*"
   },
   "devDependencies": {
     "eslint": "10.2.1"
