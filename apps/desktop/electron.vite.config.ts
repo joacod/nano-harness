@@ -4,7 +4,16 @@ import { resolve } from 'node:path'
 
 export default defineConfig({
   main: {
-    plugins: [externalizeDepsPlugin()],
+    plugins: [
+      externalizeDepsPlugin({
+        exclude: ['@nano-harness/core', '@nano-harness/infra', '@nano-harness/shared']
+      })
+    ],
+    build: {
+      rollupOptions: {
+        external: ['@libsql/client', '@libsql/client/node', 'drizzle-orm', 'drizzle-orm/libsql']
+      }
+    },
     resolve: {
       alias: {
         '@shared': resolve(__dirname, '../../packages/shared/src'),
@@ -14,7 +23,11 @@ export default defineConfig({
     }
   },
   preload: {
-    plugins: [externalizeDepsPlugin()],
+    plugins: [
+      externalizeDepsPlugin({
+        exclude: ['@nano-harness/core', '@nano-harness/infra', '@nano-harness/shared']
+      })
+    ],
     resolve: {
       alias: {
         '@shared': resolve(__dirname, '../../packages/shared/src')
