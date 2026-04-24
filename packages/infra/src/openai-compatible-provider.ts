@@ -1,4 +1,4 @@
-import type { ActionDefinition, Message } from '@nano-harness/shared'
+import type { ActionDefinition, AssistantToolCall, Message } from '@nano-harness/shared'
 import type { Provider, ProviderActionRequest, ProviderGenerateInput, ProviderGenerateResult } from '@nano-harness/core'
 
 type FetchLike = typeof fetch
@@ -9,10 +9,28 @@ type OpenAICompatibleProviderOptions = {
   resolveApiKey?: (envVar: string) => string | undefined
 }
 
-type OpenAICompatibleMessage = {
-  role: 'system' | 'user' | 'assistant'
-  content: string
-}
+type OpenAICompatibleMessage =
+  | {
+      role: 'system' | 'user'
+      content: string
+    }
+  | {
+      role: 'assistant'
+      content: string | null
+      tool_calls?: Array<{
+        id: string
+        type: 'function'
+        function: {
+          name: string
+          arguments: string
+        }
+      }>
+    }
+  | {
+      role: 'tool'
+      content: string
+      tool_call_id: string
+    }
 
 type OpenAICompatibleTool = {
   type: 'function'
@@ -57,12 +75,32 @@ function normalizeBaseUrl(baseUrl: string): string {
   return baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl
 }
 
+function toOpenAICompatibleAssistantToolCalls(toolCalls: AssistantToolCall[]) {
+  return toolCalls.map((toolCall) => ({
+    id: toolCall.id,
+    type: 'function' as const,
+    function: {
+      name: toolCall.actionId,
+      arguments: JSON.stringify(toolCall.input),
+    },
+  }))
+}
+
 function toOpenAICompatibleMessages(messages: Message[]): OpenAICompatibleMessage[] {
   return messages.map((message) => {
     if (message.role === 'tool') {
       return {
-        role: 'user',
-        content: `Tool result:\n${message.content}`,
+        role: 'tool',
+        content: message.content,
+        tool_call_id: message.toolCallId,
+      }
+    }
+
+    if (message.role === 'assistant') {
+      return {
+        role: 'assistant',
+        content: message.content || null,
+        tool_calls: message.toolCalls?.length ? toOpenAICompatibleAssistantToolCalls(message.toolCalls) : undefined,
       }
     }
 
@@ -138,6 +176,10 @@ function toProviderActionRequests(pendingToolCalls: Map<number, PendingToolCall>
   return [...pendingToolCalls.entries()]
     .sort(([leftIndex], [rightIndex]) => leftIndex - rightIndex)
     .map(([, toolCall]) => {
+      if (!toolCall.id) {
+        throw new Error('Received tool call without an id')
+      }
+
       if (!toolCall.name) {
         throw new Error('Received tool call without a function name')
       }
@@ -151,6 +193,7 @@ function toProviderActionRequests(pendingToolCalls: Map<number, PendingToolCall>
       }
 
       return {
+        toolCallId: toolCall.id,
         actionId: toolCall.name,
         input: parsedArguments,
       }
@@ -203,6 +246,7 @@ export class OpenAICompatibleProvider implements Provider {
           stream: true,
           messages: toOpenAICompatibleMessages(input.messages),
           tools: toOpenAICompatibleTools(input.actions),
+          parallel_tool_calls: false,
         }),
         signal: input.signal,
       },
@@ -239,7 +283,7 @@ export class OpenAICompatibleProvider implements Provider {
 
         if (data === '[DONE]') {
           return {
-            message,
+            content: message,
             actionCalls: pendingToolCalls.size > 0 ? toProviderActionRequests(pendingToolCalls) : undefined,
           }
         }
@@ -295,7 +339,7 @@ export class OpenAICompatibleProvider implements Provider {
     }
 
     return {
-      message,
+      content: message,
       actionCalls: pendingToolCalls.size > 0 ? toProviderActionRequests(pendingToolCalls) : undefined,
     }
   }

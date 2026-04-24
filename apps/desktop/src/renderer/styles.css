@@ -276,6 +276,28 @@ a {
   color: #8fb7d9;
 }
 
+.message-tool-calls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.message-tool-call-chip {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  border: 1px solid rgba(125, 211, 252, 0.22);
+  border-radius: 14px;
+  background: rgba(11, 23, 40, 0.7);
+}
+
+.message-tool-call-chip span {
+  font-size: 0.76rem;
+  color: var(--muted-foreground);
+}
+
 .message-pre {
   margin: 0;
   white-space: pre-wrap;

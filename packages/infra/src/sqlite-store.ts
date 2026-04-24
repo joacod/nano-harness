@@ -6,11 +6,13 @@ import { createClient } from '@libsql/client/node'
 import type { Client } from '@libsql/client'
 import type { ConversationSnapshot, Store, UpdateRunStatusInput } from '@nano-harness/core'
 import {
+  assistantToolCallSchema,
   appSettingsSchema,
   approvalRequestSchema,
   approvalResolutionSchema,
   conversationSchema,
   messageSchema,
+  type Message,
   runEventSchema,
   runSchema,
 } from '@nano-harness/shared'
@@ -55,6 +57,7 @@ const initializationStatements = [
     run_id TEXT,
     role TEXT NOT NULL,
     content TEXT NOT NULL,
+    metadata TEXT,
     created_at TEXT NOT NULL
   )`,
   `CREATE INDEX IF NOT EXISTS messages_conversation_id_idx ON messages (conversation_id, created_at)`,
@@ -178,6 +181,7 @@ function normalizeNullableMessageRow(row: {
   runId: string | null
   role: string
   content: string
+  metadata: string | null
   createdAt: string
 }) {
   return {
@@ -186,8 +190,74 @@ function normalizeNullableMessageRow(row: {
     runId: row.runId ?? undefined,
     role: row.role,
     content: row.content,
+    metadata: row.metadata ?? undefined,
     createdAt: row.createdAt,
   }
+}
+
+function serializeMessageMetadata(message: Message): string | null {
+  if (message.role === 'assistant' && message.toolCalls && message.toolCalls.length > 0) {
+    return serializeJson({
+      toolCalls: message.toolCalls,
+    })
+  }
+
+    if (message.role === 'tool') {
+      return serializeJson({
+        toolCallId: message.toolCallId,
+        toolName: message.toolName,
+    })
+  }
+
+  return null
+}
+
+function deserializeMessage(row: {
+  id: string
+  conversationId: string
+  runId?: string
+  role: string
+  content: string
+  metadata?: string
+  createdAt: string
+}) {
+  const metadata = row.metadata ? parseJson<Record<string, unknown>>(row.metadata) : undefined
+
+  if (row.role === 'assistant') {
+    return messageSchema.parse({
+      id: row.id,
+      conversationId: row.conversationId,
+      runId: row.runId,
+      role: 'assistant',
+      content: row.content,
+      toolCalls: Array.isArray(metadata?.['toolCalls'])
+        ? metadata?.['toolCalls'].map((toolCall) => assistantToolCallSchema.parse(toolCall))
+        : undefined,
+      createdAt: row.createdAt,
+    })
+  }
+
+  if (row.role === 'tool') {
+    return messageSchema.parse({
+      id: row.id,
+      conversationId: row.conversationId,
+      runId: row.runId,
+      role: 'tool',
+      content: row.content,
+      toolCallId: typeof metadata?.['toolCallId'] === 'string' ? metadata['toolCallId'] : '',
+      toolName: typeof metadata?.['toolName'] === 'string' ? metadata['toolName'] : undefined,
+      createdAt: row.createdAt,
+    })
+  }
+
+  return messageSchema.parse({
+    id: row.id,
+    conversationId: row.conversationId,
+    runId: row.runId,
+    role: row.role,
+    content: row.content,
+    createdAt: row.createdAt,
+  })
 }
 
 export class SqliteStore implements Store {
@@ -216,6 +286,7 @@ export class SqliteStore implements Store {
     for (const statement of initializationStatements) {
       await this.client.execute(statement)
     }
+
   }
 
   async saveConversation(conversation: Parameters<typeof conversationSchema.parse>[0]): Promise<void> {
@@ -286,7 +357,7 @@ export class SqliteStore implements Store {
     return {
       conversation: conversationRow ? conversationSchema.parse(conversationRow) : null,
       runs: runRows.map((run) => runSchema.parse(normalizeNullableRunRow(run))),
-      messages: messageRows.map((message) => messageSchema.parse(normalizeNullableMessageRow(message))),
+      messages: messageRows.map((message) => deserializeMessage(normalizeNullableMessageRow(message))),
       events: eventRows.map(deserializeRunEvent),
       approvalRequests: approvalRequests.map((request) => approvalRequestSchema.parse(request)),
       approvalResolutions: approvalResolutions.map((resolution) => approvalResolutionSchema.parse(resolution)),
@@ -332,7 +403,15 @@ export class SqliteStore implements Store {
   async saveMessage(message: Parameters<typeof messageSchema.parse>[0]): Promise<void> {
     const parsedMessage = messageSchema.parse(message)
 
-    await this.db.insert(messagesTable).values(parsedMessage)
+    await this.db.insert(messagesTable).values({
+      id: parsedMessage.id,
+      conversationId: parsedMessage.conversationId,
+      runId: parsedMessage.runId,
+      role: parsedMessage.role,
+      content: parsedMessage.content,
+      metadata: serializeMessageMetadata(parsedMessage),
+      createdAt: parsedMessage.createdAt,
+    })
   }
 
   async appendEvent(event: Parameters<typeof runEventSchema.parse>[0]): Promise<void> {

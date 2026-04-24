@@ -769,7 +769,20 @@ function ChatTranscript({
 
       {snapshot.messages.map((message) => (
         <article key={message.id} className={`message-bubble message-${message.role}`}>
-          <header className="message-meta">{message.role}</header>
+          <header className="message-meta">
+            {message.role}
+            {message.role === 'tool' && message.toolName ? ` · ${message.toolName}` : ''}
+          </header>
+          {message.role === 'assistant' && message.toolCalls?.length ? (
+            <div className="message-tool-calls">
+              {message.toolCalls.map((toolCall) => (
+                <div key={toolCall.id} className="message-tool-call-chip">
+                  <strong>{toolCall.actionId}</strong>
+                  <span>{toolCall.id}</span>
+                </div>
+              ))}
+            </div>
+          ) : null}
           {message.role === 'assistant' ? (
             <Streamdown>{message.content}</Streamdown>
           ) : (

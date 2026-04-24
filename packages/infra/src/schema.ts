@@ -29,6 +29,7 @@ export const messagesTable = sqliteTable(
     runId: text('run_id'),
     role: text('role').notNull(),
     content: text('content').notNull(),
+    metadata: text('metadata'),
     createdAt: text('created_at').notNull(),
   },
   (table) => [

@@ -20,6 +20,7 @@ export interface EventBus {
 }
 
 export interface ProviderActionRequest {
+  toolCallId: string
   actionId: string
   input: Record<string, JsonValue>
 }
@@ -34,7 +35,7 @@ export interface ProviderGenerateInput {
 }
 
 export interface ProviderGenerateResult {
-  message?: string
+  content?: string
   actionCalls?: ProviderActionRequest[]
 }
 
@@ -461,16 +462,22 @@ export class CoreRunEngine implements RunEngine {
           },
         })
 
-        const assistantContent = providerResult.message ?? streamedMessage
+        const assistantContent = providerResult.content ?? streamedMessage
         let providerMessageId = messages.at(-1)?.id
+        const assistantToolCalls = providerResult.actionCalls?.map((actionCall) => ({
+          id: actionCall.toolCallId,
+          actionId: actionCall.actionId,
+          input: actionCall.input,
+        }))
 
-        if (assistantContent) {
+        if (assistantContent || (assistantToolCalls && assistantToolCalls.length > 0)) {
           const assistantMessage: Message = {
             id: this.createId(),
             conversationId: run.conversationId,
             runId: run.id,
             role: 'assistant',
             content: assistantContent,
+            toolCalls: assistantToolCalls,
             createdAt: this.now(),
           }
 
@@ -641,6 +648,8 @@ export class CoreRunEngine implements RunEngine {
       runId: run.id,
       role: 'tool',
       content: stringifyToolOutput(result.output),
+      toolCallId: actionRequest.toolCallId,
+      toolName: actionRequest.actionId,
       createdAt: this.now(),
     }
 
