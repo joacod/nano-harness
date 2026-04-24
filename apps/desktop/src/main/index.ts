@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain } from 'electron'
+import { app, BrowserWindow, ipcMain, Menu, nativeImage } from 'electron'
 import { mkdir } from 'node:fs/promises'
 import { join } from 'node:path'
 
@@ -19,6 +19,37 @@ import {
   startRunResultSchema,
   type AppSettings,
 } from '../../../../packages/shared/src'
+
+app.setName('Nano Harness')
+
+function getAppIconPath(): string {
+  return join(app.getAppPath(), 'resources', 'icon.png')
+}
+
+function buildApplicationMenu() {
+  return Menu.buildFromTemplate([
+    {
+      label: 'Nano Harness',
+      submenu: [{ role: 'about' }, { type: 'separator' }, { role: 'services' }, { type: 'separator' }, { role: 'hide' }, { role: 'hideOthers' }, { role: 'unhide' }, { type: 'separator' }, { role: 'quit' }],
+    },
+    {
+      label: 'File',
+      submenu: [{ role: 'close' }],
+    },
+    {
+      label: 'Edit',
+      submenu: [{ role: 'undo' }, { role: 'redo' }, { type: 'separator' }, { role: 'cut' }, { role: 'copy' }, { role: 'paste' }, { role: 'selectAll' }],
+    },
+    {
+      label: 'View',
+      submenu: [{ role: 'reload' }, { role: 'forceReload' }, { role: 'toggleDevTools' }, { type: 'separator' }, { role: 'resetZoom' }, { role: 'zoomIn' }, { role: 'zoomOut' }, { type: 'separator' }, { role: 'togglefullscreen' }],
+    },
+    {
+      label: 'Window',
+      submenu: [{ role: 'minimize' }, { role: 'zoom' }, { type: 'separator' }, { role: 'front' }],
+    },
+  ])
+}
 
 type DesktopRuntime = {
   store: Awaited<ReturnType<typeof createSqliteStore>>
@@ -102,7 +133,8 @@ function createWindow(): void {
     height: 800,
     minWidth: 900,
     minHeight: 640,
-    title: 'nano-harness',
+    title: 'Nano Harness',
+    icon: getAppIconPath(),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       contextIsolation: true,
@@ -259,6 +291,12 @@ function setupIpcHandlers(runtime: DesktopRuntime): void {
 }
 
 void app.whenReady().then(async () => {
+  Menu.setApplicationMenu(buildApplicationMenu())
+
+  if (process.platform === 'darwin' && app.dock) {
+    app.dock.setIcon(nativeImage.createFromPath(getAppIconPath()))
+  }
+
   const runtime = await createRuntime()
   setupIpcHandlers(runtime)
   setupEventForwarding(runtime)
