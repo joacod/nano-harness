@@ -442,6 +442,12 @@ a {
   background: rgba(16, 30, 52, 0.92);
 }
 
+.run-provider-label {
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: #c8def7;
+}
+
 .run-card-header,
 .status-row,
 .timeline-header {

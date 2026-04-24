@@ -56,6 +56,7 @@ export const runCancelledEventSchema = eventBaseSchema.extend({
 export const providerRequestedEventSchema = eventBaseSchema.extend({
   type: z.literal('provider.requested'),
   payload: z.object({
+    provider: z.string().min(1),
     model: z.string().min(1),
   }),
 })

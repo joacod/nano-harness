@@ -275,7 +275,7 @@ function describeRunEvent(event: RunEvent) {
     case 'provider.requested':
       return {
         title: 'Provider request sent',
-        detail: `Model: ${event.payload.model}`,
+        detail: `${event.payload.provider} · ${event.payload.model}`,
       }
     case 'provider.delta':
       return {
@@ -363,6 +363,12 @@ function getPendingApproval(snapshot: ConversationSnapshot | undefined, runId: s
       .reverse()
       .find((request) => request.runId === runId && !resolvedRequestIds.has(request.id)) ?? null
   )
+}
+
+function getProviderRequestForRun(events: RunEvent[], runId: string) {
+  const providerRequestedEvent = events.find((event) => event.runId === runId && event.type === 'provider.requested')
+
+  return providerRequestedEvent?.type === 'provider.requested' ? providerRequestedEvent : null
 }
 
 function applyProviderDefaults(settings: AppSettings, providerKey: AppSettings['provider']['provider']): AppSettings {
@@ -685,6 +691,7 @@ function ConversationRoute() {
         <div className="panel-stack">
           <RunListCard
             runs={snapshotQuery.data?.runs ?? []}
+            events={snapshotQuery.data?.events ?? []}
             selectedRunId={selectedRunId}
             onSelectRun={(runId) => setSelectedRunId(runId)}
           />
@@ -702,10 +709,12 @@ function ConversationRoute() {
 
 function RunListCard({
   runs,
+  events,
   selectedRunId,
   onSelectRun,
 }: {
   runs: ConversationSnapshot['runs']
+  events: RunEvent[]
   selectedRunId: string | null
   onSelectRun: (runId: string) => void
 }) {
@@ -724,21 +733,27 @@ function RunListCard({
       {sortedRuns.length === 0 ? <p className="muted-copy">No runs yet for this conversation.</p> : null}
 
       <div className="run-list">
-        {sortedRuns.map((run) => (
-          <button
-            key={run.id}
-            type="button"
-            className={`run-card ${selectedRunId === run.id ? 'run-card-active' : ''}`}
-            onClick={() => onSelectRun(run.id)}
-          >
-            <div className="run-card-header">
-              <strong>{run.status}</strong>
-              <span className={`status-badge status-${run.status}`}>{run.status}</span>
-            </div>
-            <small>{formatTimestamp(run.createdAt)}</small>
-            {run.failureMessage ? <span className="error-copy">{run.failureMessage}</span> : null}
-          </button>
-        ))}
+        {sortedRuns.map((run) => {
+          const providerRequest = getProviderRequestForRun(events, run.id)
+
+          return (
+            <button
+              key={run.id}
+              type="button"
+              className={`run-card ${selectedRunId === run.id ? 'run-card-active' : ''}`}
+              onClick={() => onSelectRun(run.id)}
+            >
+              <div className="run-card-header">
+                <strong>{run.status}</strong>
+                <span className={`status-badge status-${run.status}`}>{run.status}</span>
+              </div>
+              <small>{formatTimestamp(run.createdAt)}</small>
+              {providerRequest ? <span className="run-provider-label">{providerRequest.payload.provider}</span> : null}
+              {providerRequest ? <span className="muted-copy">{providerRequest.payload.model}</span> : null}
+              {run.failureMessage ? <span className="error-copy">{run.failureMessage}</span> : null}
+            </button>
+          )
+        })}
       </div>
     </section>
   )
