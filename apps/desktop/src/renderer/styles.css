@@ -57,6 +57,12 @@ a {
   min-height: 100vh;
 }
 
+.workspace-shell-single {
+  grid-template-columns: minmax(0, 1fr);
+  place-items: center;
+  padding: 28px;
+}
+
 .sidebar {
   display: flex;
   flex-direction: column;
@@ -193,6 +199,10 @@ a {
 
 .panel-card {
   padding: 24px;
+}
+
+.diagnostic-card {
+  width: min(720px, 100%);
 }
 
 .panel-card-hero {

@@ -26,6 +26,12 @@ export default defineConfig({
     build: {
       externalizeDeps: {
         exclude: bundledWorkspacePackages
+      },
+      rollupOptions: {
+        output: {
+          entryFileNames: '[name].js',
+          format: 'cjs'
+        }
       }
     },
     resolve: {
