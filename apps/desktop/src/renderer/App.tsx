@@ -60,6 +60,7 @@ type StreamingRunState = {
 type RuntimeUiState = {
   context: DesktopContext | null
   recentEvents: RunEvent[]
+  liveRunEvents: Record<string, RunEvent[]>
   streamingRuns: Record<string, StreamingRunState>
 }
 
@@ -156,16 +157,154 @@ function updateStreamingState(current: Record<string, StreamingRunState>, event:
   return current
 }
 
+function updateLiveRunEvents(current: Record<string, RunEvent[]>, event: RunEvent) {
+  const nextEvents = [...(current[event.runId] ?? []), event].slice(-200)
+
+  return {
+    ...current,
+    [event.runId]: nextEvents,
+  }
+}
+
+function mergeRunEvents(persistedEvents: RunEvent[], liveEvents: RunEvent[]) {
+  const mergedEvents = new Map<string, RunEvent>()
+
+  for (const event of persistedEvents) {
+    mergedEvents.set(event.id, event)
+  }
+
+  for (const event of liveEvents) {
+    mergedEvents.set(event.id, event)
+  }
+
+  return [...mergedEvents.values()].sort((left, right) => left.timestamp.localeCompare(right.timestamp))
+}
+
+function formatTimestamp(value: string) {
+  return new Date(value).toLocaleString()
+}
+
+function previewText(value: string, maxLength = 120) {
+  const normalized = value.trim().replace(/\s+/g, ' ')
+
+  if (!normalized) {
+    return 'No additional detail.'
+  }
+
+  return normalized.length > maxLength ? `${normalized.slice(0, maxLength - 3)}...` : normalized
+}
+
+function describeRunEvent(event: RunEvent) {
+  switch (event.type) {
+    case 'run.created':
+      return {
+        title: 'Run created',
+        detail: `Conversation ${event.payload.run.conversationId}`,
+      }
+    case 'run.started':
+      return {
+        title: 'Run started',
+        detail: `Execution began at ${formatTimestamp(event.payload.startedAt)}`,
+      }
+    case 'run.waiting_approval':
+      return {
+        title: 'Waiting for approval',
+        detail: `Approval request ${event.payload.approvalRequestId}`,
+      }
+    case 'run.completed':
+      return {
+        title: 'Run completed',
+        detail: `Finished at ${formatTimestamp(event.payload.finishedAt)}`,
+      }
+    case 'run.failed':
+      return {
+        title: 'Run failed',
+        detail: event.payload.message,
+      }
+    case 'run.cancelled':
+      return {
+        title: 'Run cancelled',
+        detail: event.payload.reason ?? 'Cancelled without a recorded reason.',
+      }
+    case 'provider.requested':
+      return {
+        title: 'Provider request sent',
+        detail: `Model: ${event.payload.model}`,
+      }
+    case 'provider.delta':
+      return {
+        title: 'Provider streamed delta',
+        detail: previewText(event.payload.delta, 160),
+      }
+    case 'provider.completed':
+      return {
+        title: 'Provider stream completed',
+        detail: `Assistant message ${event.payload.messageId}`,
+      }
+    case 'provider.error':
+      return {
+        title: 'Provider error surfaced',
+        detail: event.payload.message,
+      }
+    case 'action.requested':
+      return {
+        title: `Action requested: ${event.payload.actionCall.actionId}`,
+        detail: previewText(JSON.stringify(event.payload.actionCall.input)),
+      }
+    case 'action.started':
+      return {
+        title: 'Action started',
+        detail: `Call ${event.payload.actionCallId}`,
+      }
+    case 'action.completed':
+      return {
+        title: 'Action completed',
+        detail: previewText(JSON.stringify(event.payload.result.output)),
+      }
+    case 'action.failed':
+      return {
+        title: 'Action failed',
+        detail: event.payload.result.errorMessage ?? 'Action returned a failed result.',
+      }
+    case 'approval.required':
+      return {
+        title: 'Approval required',
+        detail: event.payload.approvalRequest.reason,
+      }
+    case 'approval.granted':
+      return {
+        title: 'Approval granted',
+        detail: `Resolved at ${formatTimestamp(event.payload.resolution.decidedAt)}`,
+      }
+    case 'approval.rejected':
+      return {
+        title: 'Approval rejected',
+        detail: `Resolved at ${formatTimestamp(event.payload.resolution.decidedAt)}`,
+      }
+    case 'message.created':
+      return {
+        title: `${event.payload.message.role} message persisted`,
+        detail: previewText(event.payload.message.content, 160),
+      }
+  }
+}
+
+function getEventFamily(eventType: RunEvent['type']) {
+  return eventType.split('.')[0]
+}
+
 function RuntimeUiProvider() {
   const queryClient = useQueryClient()
   const { data: context } = useQuery(contextQueryOptions)
   const [recentEvents, setRecentEvents] = useState<RunEvent[]>([])
+  const [liveRunEvents, setLiveRunEvents] = useState<Record<string, RunEvent[]>>({})
   const [streamingRuns, setStreamingRuns] = useState<Record<string, StreamingRunState>>({})
 
   useEffect(() => {
     const unsubscribe = window.desktop.onRunEvent((event) => {
       startTransition(() => {
         setRecentEvents((currentEvents) => [event, ...currentEvents].slice(0, 20))
+        setLiveRunEvents((currentEvents) => updateLiveRunEvents(currentEvents, event))
         setStreamingRuns((currentRuns) => updateStreamingState(currentRuns, event))
       })
 
@@ -187,6 +326,7 @@ function RuntimeUiProvider() {
       value={{
         context: context ?? null,
         recentEvents,
+        liveRunEvents,
         streamingRuns,
       }}
     >
@@ -197,7 +337,8 @@ function RuntimeUiProvider() {
 
 function RootLayout() {
   const { context, recentEvents } = useRuntimeUi()
-  const { data: conversations = [] } = useQuery(conversationsQueryOptions)
+  const conversationsQuery = useQuery(conversationsQueryOptions)
+  const conversations = conversationsQuery.data ?? []
 
   return (
     <main className="workspace-shell">
@@ -218,7 +359,9 @@ function RootLayout() {
             </Link>
           </div>
           <nav className="conversation-nav">
-            {conversations.length > 0 ? (
+            {conversationsQuery.isLoading ? <p className="muted-copy">Loading conversations...</p> : null}
+            {conversationsQuery.isError ? <p className="error-copy">Failed to load conversations.</p> : null}
+            {!conversationsQuery.isLoading && !conversationsQuery.isError && conversations.length > 0 ? (
               conversations.map((conversation) => (
                 <Link
                   key={conversation.id}
@@ -232,7 +375,9 @@ function RootLayout() {
                 </Link>
               ))
             ) : (
-              <p className="muted-copy">No conversations yet. Start with a prompt.</p>
+              !conversationsQuery.isLoading && !conversationsQuery.isError ? (
+                <p className="muted-copy">No conversations yet. Start with a prompt.</p>
+              ) : null
             )}
           </nav>
         </div>
@@ -248,7 +393,12 @@ function RootLayout() {
           <h2>Recent Events</h2>
           <ul className="event-list">
             {recentEvents.length > 0 ? (
-              recentEvents.map((event) => <li key={event.id}>{event.type}</li>)
+              recentEvents.map((event) => (
+                <li key={event.id} className="event-list-item">
+                  <span>{event.type}</span>
+                  <small>{new Date(event.timestamp).toLocaleTimeString()}</small>
+                </li>
+              ))
             ) : (
               <li>No events yet.</li>
             )}
@@ -281,31 +431,212 @@ function HomeRoute() {
 function ConversationRoute() {
   const { conversationId } = useParams({ from: '/conversations/$conversationId' })
   const snapshotQuery = useQuery(conversationQueryOptions(conversationId))
-  const { streamingRuns } = useRuntimeUi()
+  const { liveRunEvents, streamingRuns } = useRuntimeUi()
+  const [selectedRunId, setSelectedRunId] = useState<string | null>(null)
+
+  useEffect(() => {
+    const runs = snapshotQuery.data?.runs ?? []
+
+    if (runs.length === 0) {
+      setSelectedRunId(null)
+      return
+    }
+
+    if (!selectedRunId || !runs.some((run) => run.id === selectedRunId)) {
+      setSelectedRunId(runs.at(-1)?.id ?? null)
+    }
+  }, [selectedRunId, snapshotQuery.data?.runs])
 
   const streamingEntry = useMemo(() => {
     return Object.entries(streamingRuns).find(([, run]) => run.conversationId === conversationId)
   }, [conversationId, streamingRuns])
 
-  return (
-    <div className="panel-stack">
+  const selectedRun = useMemo(() => {
+    return snapshotQuery.data?.runs.find((run) => run.id === selectedRunId) ?? null
+  }, [selectedRunId, snapshotQuery.data?.runs])
+
+  const selectedRunEvents = useMemo(() => {
+    if (!selectedRunId) {
+      return []
+    }
+
+    return mergeRunEvents(
+      snapshotQuery.data?.events.filter((event) => event.runId === selectedRunId) ?? [],
+      liveRunEvents[selectedRunId] ?? [],
+    )
+  }, [liveRunEvents, selectedRunId, snapshotQuery.data?.events])
+
+  if (snapshotQuery.isError) {
+    return (
       <section className="panel-card panel-card-hero">
         <p className="eyebrow">Conversation</p>
-        <h2>{snapshotQuery.data?.conversation?.title ?? 'Loading conversation...'}</h2>
-        <p className="muted-copy">
-          Messages are persisted in SQLite and assistant deltas stream through the event bridge before the final message is committed.
+        <h2>Failed to load conversation</h2>
+        <p className="error-copy">
+          {snapshotQuery.error instanceof Error ? snapshotQuery.error.message : 'The conversation snapshot could not be loaded.'}
         </p>
       </section>
+    )
+  }
 
-      <section className="panel-card transcript-panel">
-        {snapshotQuery.isLoading ? <p className="muted-copy">Loading messages...</p> : null}
-        {!snapshotQuery.isLoading && snapshotQuery.data ? (
-          <ChatTranscript snapshot={snapshotQuery.data} streamingEntry={streamingEntry ?? null} />
-        ) : null}
+  if (!snapshotQuery.isLoading && !snapshotQuery.data?.conversation) {
+    return (
+      <section className="panel-card panel-card-hero">
+        <p className="eyebrow">Conversation</p>
+        <h2>Conversation not found</h2>
+        <p className="muted-copy">This conversation may have been removed or has not been created yet.</p>
       </section>
+    )
+  }
 
-      <ComposerCard conversationId={conversationId} />
+  return (
+    <div className="conversation-grid">
+      <div className="panel-stack">
+        <section className="panel-card panel-card-hero">
+          <p className="eyebrow">Conversation</p>
+          <h2>{snapshotQuery.data?.conversation?.title ?? 'Loading conversation...'}</h2>
+          <p className="muted-copy">
+            Messages are persisted in SQLite and the run inspector shows the same event model both live and after relaunch.
+          </p>
+        </section>
+
+        <section className="panel-card transcript-panel">
+          {snapshotQuery.isLoading ? <p className="muted-copy">Loading messages...</p> : null}
+          {!snapshotQuery.isLoading && snapshotQuery.data ? (
+            <ChatTranscript snapshot={snapshotQuery.data} streamingEntry={streamingEntry ?? null} />
+          ) : null}
+        </section>
+
+        <ComposerCard conversationId={conversationId} />
+      </div>
+
+      <div className="panel-stack">
+        <RunListCard
+          runs={snapshotQuery.data?.runs ?? []}
+          selectedRunId={selectedRunId}
+          onSelectRun={(runId) => setSelectedRunId(runId)}
+        />
+        <RunInspectorCard
+          run={selectedRun}
+          events={selectedRunEvents}
+          streamingState={selectedRun ? streamingRuns[selectedRun.id] ?? null : null}
+        />
+      </div>
     </div>
+  )
+}
+
+function RunListCard({
+  runs,
+  selectedRunId,
+  onSelectRun,
+}: {
+  runs: ConversationSnapshot['runs']
+  selectedRunId: string | null
+  onSelectRun: (runId: string) => void
+}) {
+  const sortedRuns = [...runs].reverse()
+
+  return (
+    <section className="panel-card inspector-card">
+      <div className="sidebar-header-row">
+        <div>
+          <p className="eyebrow">Runs</p>
+          <h2>Conversation history</h2>
+        </div>
+        <span className="runtime-pill">{runs.length} total</span>
+      </div>
+
+      {sortedRuns.length === 0 ? <p className="muted-copy">No runs yet for this conversation.</p> : null}
+
+      <div className="run-list">
+        {sortedRuns.map((run) => (
+          <button
+            key={run.id}
+            type="button"
+            className={`run-card ${selectedRunId === run.id ? 'run-card-active' : ''}`}
+            onClick={() => onSelectRun(run.id)}
+          >
+            <div className="run-card-header">
+              <strong>{run.status}</strong>
+              <span className={`status-badge status-${run.status}`}>{run.status}</span>
+            </div>
+            <small>{formatTimestamp(run.createdAt)}</small>
+            {run.failureMessage ? <span className="error-copy">{run.failureMessage}</span> : null}
+          </button>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+function RunInspectorCard({
+  run,
+  events,
+  streamingState,
+}: {
+  run: ConversationSnapshot['runs'][number] | null
+  events: RunEvent[]
+  streamingState: StreamingRunState | null
+}) {
+  return (
+    <section className="panel-card inspector-card">
+      <p className="eyebrow">Inspector</p>
+      <div className="sidebar-header-row">
+        <h2>{run ? 'Run timeline' : 'Select a run'}</h2>
+        {run ? (
+          <div className="status-row">
+            <span className={`status-badge status-${run.status}`}>{run.status}</span>
+            {streamingState?.isStreaming ? <span className="status-badge status-streaming">streaming</span> : null}
+          </div>
+        ) : null}
+      </div>
+
+      {!run ? <p className="muted-copy">Choose a run to inspect its persisted and live event sequence.</p> : null}
+
+      {run ? (
+        <>
+          <div className="inspector-summary">
+            <div>
+              <span className="field-label">Created</span>
+              <p>{formatTimestamp(run.createdAt)}</p>
+            </div>
+            <div>
+              <span className="field-label">Started</span>
+              <p>{run.startedAt ? formatTimestamp(run.startedAt) : 'Not started yet'}</p>
+            </div>
+            <div>
+              <span className="field-label">Finished</span>
+              <p>{run.finishedAt ? formatTimestamp(run.finishedAt) : 'Still active'}</p>
+            </div>
+          </div>
+
+          {run.failureMessage ? <p className="error-copy">{run.failureMessage}</p> : null}
+          {!run.failureMessage && streamingState?.errorMessage ? <p className="error-copy">{streamingState.errorMessage}</p> : null}
+
+          {events.length === 0 ? <p className="muted-copy">No events captured for this run yet.</p> : null}
+
+          <ol className="timeline-list">
+            {events.map((event) => {
+              const description = describeRunEvent(event)
+
+              return (
+                <li key={event.id} className="timeline-item">
+                  <div className={`timeline-dot timeline-${getEventFamily(event.type)}`} />
+                  <div className="timeline-card">
+                    <div className="timeline-header">
+                      <strong>{description.title}</strong>
+                      <small>{formatTimestamp(event.timestamp)}</small>
+                    </div>
+                    <p className="timeline-type">{event.type}</p>
+                    <p className="muted-copy">{description.detail}</p>
+                  </div>
+                </li>
+              )
+            })}
+          </ol>
+        </>
+      ) : null}
+    </section>
   )
 }
 
