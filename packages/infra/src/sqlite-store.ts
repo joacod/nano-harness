@@ -12,6 +12,7 @@ import {
   approvalResolutionSchema,
   conversationSchema,
   messageSchema,
+  runStatusSchema,
   type Message,
   runEventSchema,
   runSchema,
@@ -308,6 +309,14 @@ export class SqliteStore implements Store {
   async listConversations() {
     const conversationRows = await this.db.select().from(conversationsTable).orderBy(asc(conversationsTable.updatedAt))
     return conversationRows.reverse().map((conversation) => conversationSchema.parse(conversation))
+  }
+
+  async listRuns(statuses?: Array<ReturnType<typeof runStatusSchema.parse>>) {
+    const runRows = statuses && statuses.length > 0
+      ? await this.db.select().from(runsTable).where(inArray(runsTable.status, statuses)).orderBy(asc(runsTable.createdAt))
+      : await this.db.select().from(runsTable).orderBy(asc(runsTable.createdAt))
+
+    return runRows.map((run) => runSchema.parse(normalizeNullableRunRow(run)))
   }
 
   async getConversation(conversationId: string): Promise<ConversationSnapshot> {

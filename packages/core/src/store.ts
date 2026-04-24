@@ -30,6 +30,7 @@ export interface Store {
   initialize(): Promise<void>
   saveConversation(conversation: Conversation): Promise<void>
   listConversations(): Promise<Conversation[]>
+  listRuns(statuses?: RunStatus[]): Promise<Run[]>
   getConversation(conversationId: string): Promise<ConversationSnapshot>
   createRun(run: Run): Promise<void>
   getRun(runId: string): Promise<Run | null>
