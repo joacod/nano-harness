@@ -110,6 +110,7 @@ function createWindow(): void {
     },
   })
 
+  window.maximize()
   void window.loadURL(process.env['ELECTRON_RENDERER_URL'] ?? `file://${join(__dirname, '../renderer/index.html')}`)
 }
 

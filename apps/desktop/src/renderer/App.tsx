@@ -73,12 +73,23 @@ type RuntimeUiState = {
 }
 
 const RuntimeUiContext = createContext<RuntimeUiState | null>(null)
+const TechnicalUiContext = createContext<{ showTechnicalInfo: boolean; toggleTechnicalInfo: () => void } | null>(null)
 
 function useRuntimeUi(): RuntimeUiState {
   const value = useContext(RuntimeUiContext)
 
   if (!value) {
     throw new Error('Runtime UI context is unavailable')
+  }
+
+  return value
+}
+
+function useTechnicalUi() {
+  const value = useContext(TechnicalUiContext)
+
+  if (!value) {
+    throw new Error('Technical UI context is unavailable')
   }
 
   return value
@@ -373,6 +384,7 @@ function RuntimeUiProvider() {
   const [recentEvents, setRecentEvents] = useState<RunEvent[]>([])
   const [liveRunEvents, setLiveRunEvents] = useState<Record<string, RunEvent[]>>({})
   const [streamingRuns, setStreamingRuns] = useState<Record<string, StreamingRunState>>({})
+  const [showTechnicalInfo, setShowTechnicalInfo] = useState(false)
 
   useEffect(() => {
     const unsubscribe = window.desktop.onRunEvent((event) => {
@@ -401,21 +413,29 @@ function RuntimeUiProvider() {
   }, [queryClient])
 
   return (
-    <RuntimeUiContext.Provider
+    <TechnicalUiContext.Provider
       value={{
-        context: context ?? null,
-        recentEvents,
-        liveRunEvents,
-        streamingRuns,
+        showTechnicalInfo,
+        toggleTechnicalInfo: () => setShowTechnicalInfo((current) => !current),
       }}
     >
-      <RouterProvider router={router} />
-    </RuntimeUiContext.Provider>
+      <RuntimeUiContext.Provider
+        value={{
+          context: context ?? null,
+          recentEvents,
+          liveRunEvents,
+          streamingRuns,
+        }}
+      >
+        <RouterProvider router={router} />
+      </RuntimeUiContext.Provider>
+    </TechnicalUiContext.Provider>
   )
 }
 
 function RootLayout() {
   const { context, recentEvents } = useRuntimeUi()
+  const { showTechnicalInfo, toggleTechnicalInfo } = useTechnicalUi()
   const conversationsQuery = useQuery(conversationsQueryOptions)
   const settingsQuery = useQuery(settingsQueryOptions)
   const providerStatusQuery = useQuery(providerStatusQueryOptions)
@@ -466,76 +486,89 @@ function RootLayout() {
         </div>
 
         <div className="sidebar-section sidebar-footer">
-          <Link to="/settings" className="ghost-link" activeProps={{ className: 'ghost-link ghost-link-active' }}>
-            Provider Settings
-          </Link>
-          <p className="runtime-pill">{context ? `${context.platform} / v${context.version}` : 'Loading runtime...'}</p>
-        </div>
-
-        <div className="sidebar-section">
-          <div className="sidebar-header-row">
-            <h2>Configuration</h2>
-            {providerStatus ? (
-              <span className={`runtime-pill ${providerStatus.isReady ? 'runtime-pill-ready' : 'runtime-pill-warning'}`}>
-                {providerStatus.isReady ? 'ready' : 'action needed'}
-              </span>
-            ) : null}
+          <div className="sidebar-footer-actions">
+            <Link to="/settings" className="ghost-link" activeProps={{ className: 'ghost-link ghost-link-active' }}>
+              Settings
+            </Link>
+            <button type="button" className="ghost-button" onClick={toggleTechnicalInfo}>
+              {showTechnicalInfo ? 'Hide technical info' : 'Show technical info'}
+            </button>
           </div>
-          {settingsQuery.isLoading ? <p className="muted-copy">Loading configuration...</p> : null}
-          {settingsQuery.isError ? <p className="error-copy">Failed to load provider settings.</p> : null}
-          {settings ? (
-            <dl className="summary-list">
-              <div>
-                <dt>Provider</dt>
-                <dd>{providerStatus?.providerLabel ?? getProviderDefinition(settings.provider.provider).label}</dd>
-              </div>
-              <div>
-                <dt>Model</dt>
-                <dd>{settings.provider.model}</dd>
-              </div>
-              <div>
-                <dt>API key</dt>
-                <dd>{providerStatus?.apiKeyPresent ? 'Configured' : 'Missing'}</dd>
-              </div>
-              <div>
-                <dt>Workspace</dt>
-                <dd>{settings.workspace.rootPath}</dd>
-              </div>
-            </dl>
-          ) : null}
-          {providerStatus && providerStatus.issues.length > 0 ? (
-            <div className="status-note-block">
-              {providerStatus.issues.map((issue) => (
-                <p key={issue} className="error-copy">
-                  {issue}
-                </p>
-              ))}
-            </div>
-          ) : null}
+          <p className="runtime-pill">{providerStatus?.isReady ? 'Provider ready' : 'Provider needs setup'}</p>
         </div>
 
-        <div className="sidebar-section">
-          <h2>Recent Events</h2>
-          <ul className="event-list">
-            {recentEvents.length > 0 ? (
-              recentEvents.map((event) => {
-                const description = describeRunEvent(event)
-
-                return (
-                <li key={event.id} className="event-list-item">
+        {showTechnicalInfo ? (
+          <>
+            <div className="sidebar-section">
+              <div className="sidebar-header-row">
+                <h2>Configuration</h2>
+                {providerStatus ? (
+                  <span className={`runtime-pill ${providerStatus.isReady ? 'runtime-pill-ready' : 'runtime-pill-warning'}`}>
+                    {providerStatus.isReady ? 'ready' : 'action needed'}
+                  </span>
+                ) : null}
+              </div>
+              {settingsQuery.isLoading ? <p className="muted-copy">Loading configuration...</p> : null}
+              {settingsQuery.isError ? <p className="error-copy">Failed to load provider settings.</p> : null}
+              {settings ? (
+                <dl className="summary-list">
                   <div>
-                    <strong>{description.title}</strong>
-                    <small>{event.runId.slice(0, 8)}</small>
+                    <dt>Provider</dt>
+                    <dd>{providerStatus?.providerLabel ?? getProviderDefinition(settings.provider.provider).label}</dd>
                   </div>
-                  <small>{formatRelativeTimestamp(event.timestamp)}</small>
-                </li>
-                )
-              })
-            ) : (
-              <li>No events yet.</li>
-            )}
-          </ul>
-        </div>
+                  <div>
+                    <dt>Model</dt>
+                    <dd>{settings.provider.model}</dd>
+                  </div>
+                  <div>
+                    <dt>API key</dt>
+                    <dd>{providerStatus?.apiKeyPresent ? 'Configured' : 'Missing'}</dd>
+                  </div>
+                  <div>
+                    <dt>Workspace</dt>
+                    <dd>{settings.workspace.rootPath}</dd>
+                  </div>
+                  <div>
+                    <dt>Runtime</dt>
+                    <dd>{context ? `${context.platform} / v${context.version}` : 'Loading runtime...'}</dd>
+                  </div>
+                </dl>
+              ) : null}
+              {providerStatus && providerStatus.issues.length > 0 ? (
+                <div className="status-note-block">
+                  {providerStatus.issues.map((issue) => (
+                    <p key={issue} className="error-copy">
+                      {issue}
+                    </p>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+
+            <div className="sidebar-section">
+              <h2>Recent Events</h2>
+              <ul className="event-list">
+                {recentEvents.length > 0 ? (
+                  recentEvents.map((event) => {
+                    const description = describeRunEvent(event)
+
+                    return (
+                      <li key={event.id} className="event-list-item">
+                        <div>
+                          <strong>{description.title}</strong>
+                          <small>{event.runId.slice(0, 8)}</small>
+                        </div>
+                        <small>{formatRelativeTimestamp(event.timestamp)}</small>
+                      </li>
+                    )
+                  })
+                ) : (
+                  <li>No events yet.</li>
+                )}
+              </ul>
+            </div>
+          </>
+        ) : null}
       </aside>
 
       <section className="content-panel">
@@ -562,6 +595,7 @@ function HomeRoute() {
 
 function ConversationRoute() {
   const { conversationId } = useParams({ from: '/conversations/$conversationId' })
+  const { showTechnicalInfo } = useTechnicalUi()
   const snapshotQuery = useQuery(conversationQueryOptions(conversationId))
   const { liveRunEvents, streamingRuns } = useRuntimeUi()
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null)
@@ -625,14 +659,16 @@ function ConversationRoute() {
   }
 
   return (
-    <div className="conversation-grid">
+    <div className={`conversation-grid ${showTechnicalInfo ? 'conversation-grid-technical' : 'conversation-grid-simple'}`}>
       <div className="panel-stack">
         <section className="panel-card panel-card-hero">
           <p className="eyebrow">Conversation</p>
           <h2>{snapshotQuery.data?.conversation?.title ?? 'Loading conversation...'}</h2>
-          <p className="muted-copy">
-            Messages are persisted in SQLite and the run inspector shows the same event model both live and after relaunch.
-          </p>
+          {showTechnicalInfo ? (
+            <p className="muted-copy">
+              Messages are persisted in SQLite and the run inspector shows the same event model both live and after relaunch.
+            </p>
+          ) : null}
         </section>
 
         <section className="panel-card transcript-panel">
@@ -645,19 +681,21 @@ function ConversationRoute() {
         <ComposerCard conversationId={conversationId} />
       </div>
 
-      <div className="panel-stack">
-        <RunListCard
-          runs={snapshotQuery.data?.runs ?? []}
-          selectedRunId={selectedRunId}
-          onSelectRun={(runId) => setSelectedRunId(runId)}
-        />
-        <RunInspectorCard
-          run={selectedRun}
-          events={selectedRunEvents}
-          pendingApproval={pendingApproval}
-          streamingState={selectedRun ? streamingRuns[selectedRun.id] ?? null : null}
-        />
-      </div>
+      {showTechnicalInfo ? (
+        <div className="panel-stack">
+          <RunListCard
+            runs={snapshotQuery.data?.runs ?? []}
+            selectedRunId={selectedRunId}
+            onSelectRun={(runId) => setSelectedRunId(runId)}
+          />
+          <RunInspectorCard
+            run={selectedRun}
+            events={selectedRunEvents}
+            pendingApproval={pendingApproval}
+            streamingState={selectedRun ? streamingRuns[selectedRun.id] ?? null : null}
+          />
+        </div>
+      ) : null}
     </div>
   )
 }
@@ -1183,8 +1221,7 @@ function SettingsFormCard({
 
         <LabeledField label="Model">
           <FieldHint>
-            Default for {getProviderDefinition(form.state.values.provider.provider).label}:{' '}
-            <code>{getProviderDefinition(form.state.values.provider.provider).defaultModel}</code>
+            Choose a model available for your selected provider.
           </FieldHint>
           <form.Field
             name="provider.model"
