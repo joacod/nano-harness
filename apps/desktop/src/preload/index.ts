@@ -7,6 +7,7 @@ import {
   desktopBridgeChannels,
   desktopContextSchema,
   getConversationInputSchema,
+  providerStatusSchema,
   resolveApprovalInputSchema,
   runCreateInputSchema,
   runEventSchema,
@@ -21,6 +22,9 @@ const desktopApi: DesktopApi = {
   },
   async listConversations() {
     return conversationListSchema.parse(await ipcRenderer.invoke(desktopBridgeChannels.listConversations))
+  },
+  async getProviderStatus() {
+    return providerStatusSchema.nullable().parse(await ipcRenderer.invoke(desktopBridgeChannels.getProviderStatus))
   },
   async getSettings() {
     return appSettingsSchema.nullable().parse(await ipcRenderer.invoke(desktopBridgeChannels.getSettings))

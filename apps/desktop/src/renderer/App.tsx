@@ -19,6 +19,7 @@ import type {
   ApprovalRequest,
   ConversationSnapshot,
   DesktopContext,
+  ProviderStatus,
   RunEvent,
 } from '../../../../packages/shared/src'
 
@@ -90,6 +91,11 @@ const contextQueryOptions = queryOptions({
 const settingsQueryOptions = queryOptions({
   queryKey: ['settings'],
   queryFn: () => window.desktop.getSettings(),
+})
+
+const providerStatusQueryOptions = queryOptions({
+  queryKey: ['provider-status'],
+  queryFn: () => window.desktop.getProviderStatus(),
 })
 
 const conversationsQueryOptions = queryOptions({
@@ -398,8 +404,10 @@ function RootLayout() {
   const { context, recentEvents } = useRuntimeUi()
   const conversationsQuery = useQuery(conversationsQueryOptions)
   const settingsQuery = useQuery(settingsQueryOptions)
+  const providerStatusQuery = useQuery(providerStatusQueryOptions)
   const conversations = conversationsQuery.data ?? []
   const settings = settingsQuery.data
+  const providerStatus = providerStatusQuery.data
 
   return (
     <main className="workspace-shell">
@@ -453,12 +461,20 @@ function RootLayout() {
         <div className="sidebar-section">
           <div className="sidebar-header-row">
             <h2>Configuration</h2>
-            {settings ? <span className="runtime-pill">ready</span> : null}
+            {providerStatus ? (
+              <span className={`runtime-pill ${providerStatus.isReady ? 'runtime-pill-ready' : 'runtime-pill-warning'}`}>
+                {providerStatus.isReady ? 'ready' : 'action needed'}
+              </span>
+            ) : null}
           </div>
           {settingsQuery.isLoading ? <p className="muted-copy">Loading configuration...</p> : null}
           {settingsQuery.isError ? <p className="error-copy">Failed to load provider settings.</p> : null}
           {settings ? (
             <dl className="summary-list">
+              <div>
+                <dt>Provider</dt>
+                <dd>{providerStatus?.providerLabel ?? settings.provider.providerId}</dd>
+              </div>
               <div>
                 <dt>Model</dt>
                 <dd>{settings.provider.model}</dd>
@@ -469,13 +485,22 @@ function RootLayout() {
               </div>
               <div>
                 <dt>Base URL</dt>
-                <dd>{settings.provider.baseUrl ?? 'Default OpenAI-compatible endpoint'}</dd>
+                <dd>{providerStatus?.baseUrl ?? settings.provider.baseUrl ?? 'Default OpenAI-compatible endpoint'}</dd>
               </div>
               <div>
                 <dt>Workspace</dt>
                 <dd>{settings.workspace.rootPath}</dd>
               </div>
             </dl>
+          ) : null}
+          {providerStatus && providerStatus.issues.length > 0 ? (
+            <div className="status-note-block">
+              {providerStatus.issues.map((issue) => (
+                <p key={issue} className="error-copy">
+                  {issue}
+                </p>
+              ))}
+            </div>
           ) : null}
         </div>
 
@@ -844,10 +869,12 @@ function RunInspectorCard({
 function SettingsRoute() {
   const queryClient = useQueryClient()
   const settingsQuery = useQuery(settingsQueryOptions)
+  const providerStatusQuery = useQuery(providerStatusQueryOptions)
   const mutation = useMutation({
     mutationFn: async (settings: AppSettings) => window.desktop.saveSettings(settings),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['settings'] })
+      await queryClient.invalidateQueries({ queryKey: ['provider-status'] })
     },
   })
 
@@ -864,6 +891,7 @@ function SettingsRoute() {
     <SettingsFormCard
       key={JSON.stringify(settingsQuery.data)}
       initialSettings={settingsQuery.data}
+      providerStatus={providerStatusQuery.data ?? null}
       isSaving={mutation.isPending}
       saveError={mutation.error instanceof Error ? mutation.error.message : null}
       onSubmit={async (settings) => {
@@ -925,6 +953,7 @@ function ChatTranscript({
 function ComposerCard({ conversationId }: { conversationId: string | null }) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const providerStatusQuery = useQuery(providerStatusQueryOptions)
   const [submitError, setSubmitError] = useState<string | null>(null)
   const startRunMutation = useMutation({
     mutationFn: async (prompt: string) => {
@@ -1005,6 +1034,11 @@ function ComposerCard({ conversationId }: { conversationId: string | null }) {
         </div>
       </form>
 
+      {providerStatusQuery.data && !providerStatusQuery.data.isReady ? (
+        <p className="warning-copy">
+          Provider setup is incomplete. Update settings before expecting a successful hosted-provider response.
+        </p>
+      ) : null}
       {submitError ? <p className="error-copy">{submitError}</p> : null}
       {startRunMutation.error instanceof Error ? <p className="error-copy">{startRunMutation.error.message}</p> : null}
     </section>
@@ -1013,11 +1047,13 @@ function ComposerCard({ conversationId }: { conversationId: string | null }) {
 
 function SettingsFormCard({
   initialSettings,
+  providerStatus,
   isSaving,
   saveError,
   onSubmit,
 }: {
   initialSettings: AppSettings
+  providerStatus: ProviderStatus | null
   isSaving: boolean
   saveError: string | null
   onSubmit: (settings: AppSettings) => Promise<void>
@@ -1054,6 +1090,77 @@ function SettingsFormCard({
         These values are stored locally and used by the OpenAI-compatible provider adapter in Electron main.
       </p>
 
+      <div className="preset-row">
+        <button
+          type="button"
+          className="ghost-button"
+          onClick={() => {
+            form.setFieldValue('provider.providerId', 'openai-compatible')
+            form.setFieldValue('provider.baseUrl', 'https://openrouter.ai/api/v1')
+            form.setFieldValue('provider.apiKeyEnvVar', 'OPENROUTER_API_KEY')
+            if (!form.getFieldValue('provider.model')?.trim()) {
+              form.setFieldValue('provider.model', 'openai/gpt-4.1-mini')
+            }
+          }}
+        >
+          Use OpenRouter defaults
+        </button>
+        <button
+          type="button"
+          className="ghost-button"
+          onClick={() => {
+            form.setFieldValue('provider.providerId', 'openai-compatible')
+            form.setFieldValue('provider.baseUrl', 'https://api.openai.com/v1')
+            form.setFieldValue('provider.apiKeyEnvVar', 'OPENAI_API_KEY')
+            if (!form.getFieldValue('provider.model')?.trim()) {
+              form.setFieldValue('provider.model', 'gpt-4.1-mini')
+            }
+          }}
+        >
+          Use OpenAI defaults
+        </button>
+      </div>
+
+      {providerStatus ? (
+        <section className="provider-status-card">
+          <div className="sidebar-header-row">
+            <div>
+              <p className="eyebrow">Provider status</p>
+              <h3>{providerStatus.providerLabel}</h3>
+            </div>
+            <span className={`status-badge ${providerStatus.isReady ? 'status-completed' : 'status-waiting_approval'}`}>
+              {providerStatus.isReady ? 'ready' : 'check setup'}
+            </span>
+          </div>
+          <dl className="summary-list">
+            <div>
+              <dt>Model</dt>
+              <dd>{providerStatus.model}</dd>
+            </div>
+            <div>
+              <dt>Base URL</dt>
+              <dd>{providerStatus.baseUrl}</dd>
+            </div>
+            <div>
+              <dt>API key env</dt>
+              <dd>
+                {providerStatus.apiKeyEnvVar} {providerStatus.apiKeyPresent ? '(found)' : '(missing)'}
+              </dd>
+            </div>
+          </dl>
+          {providerStatus.issues.map((issue) => (
+            <p key={issue} className="error-copy">
+              {issue}
+            </p>
+          ))}
+          {providerStatus.hints.map((hint) => (
+            <p key={hint} className="muted-copy">
+              {hint}
+            </p>
+          ))}
+        </section>
+      ) : null}
+
       <form
         className="settings-form"
         onSubmit={(event) => {
@@ -1075,6 +1182,7 @@ function SettingsFormCard({
         </LabeledField>
 
         <LabeledField label="Model">
+          <FieldHint>For OpenRouter, enter the routed model id like `openai/gpt-4.1-mini`.</FieldHint>
           <form.Field
             name="provider.model"
             validators={{
@@ -1096,7 +1204,7 @@ function SettingsFormCard({
         </LabeledField>
 
         <LabeledField label="Base URL">
-          <FieldHint>Leave blank for the default endpoint, or set a custom OpenAI-compatible base URL.</FieldHint>
+          <FieldHint>For OpenRouter, use `https://openrouter.ai/api/v1`.</FieldHint>
           <form.Field
             name="provider.baseUrl"
             validators={{

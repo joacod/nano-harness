@@ -178,6 +178,16 @@ a {
   font-size: 0.85rem;
 }
 
+.runtime-pill-ready {
+  background: rgba(34, 197, 94, 0.14);
+  color: #86efac;
+}
+
+.runtime-pill-warning {
+  background: rgba(250, 204, 21, 0.14);
+  color: #fde68a;
+}
+
 .event-list {
   margin: 12px 0 0;
   padding-left: 18px;
@@ -229,6 +239,13 @@ a {
   margin: 0;
   color: var(--foreground);
   overflow-wrap: anywhere;
+}
+
+.status-note-block {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
 }
 
 .event-list li + li {
@@ -349,6 +366,26 @@ a {
   display: flex;
   flex-direction: column;
   gap: 16px;
+}
+
+.preset-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.provider-status-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: rgba(10, 20, 35, 0.72);
+}
+
+.provider-status-card h3 {
+  margin: 0;
 }
 
 .run-list,
@@ -607,6 +644,10 @@ a {
   color: #fda4af;
 }
 
+.warning-copy {
+  color: #fde68a;
+}
+
 .success-copy {
   color: #86efac;
 }
@@ -644,6 +685,10 @@ a {
 
   .inspector-summary {
     grid-template-columns: 1fr;
+  }
+
+  .preset-row {
+    flex-direction: column;
   }
 
   .approval-actions,

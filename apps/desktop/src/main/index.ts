@@ -10,6 +10,7 @@ import {
   desktopBridgeChannels,
   desktopContextSchema,
   getConversationInputSchema,
+  providerStatusSchema,
   resolveApprovalInputSchema,
   runCreateInputSchema,
   runEventSchema,
@@ -110,6 +111,46 @@ function createWindow(): void {
   void window.loadURL(process.env['ELECTRON_RENDERER_URL'] ?? `file://${join(__dirname, '../renderer/index.html')}`)
 }
 
+function buildProviderStatus(settings: AppSettings | null) {
+  if (!settings) {
+    return null
+  }
+
+  const isOpenRouter = (settings.provider.baseUrl ?? '').includes('openrouter.ai')
+  const apiKeyPresent = Boolean(process.env[settings.provider.apiKeyEnvVar]?.trim())
+  const baseUrl = settings.provider.baseUrl ?? 'https://api.openai.com/v1'
+  const issues: string[] = []
+  const hints: string[] = []
+
+  if (!apiKeyPresent) {
+    issues.push(`Environment variable ${settings.provider.apiKeyEnvVar} is not set for the desktop process.`)
+  }
+
+  if (isOpenRouter && settings.provider.apiKeyEnvVar !== 'OPENROUTER_API_KEY') {
+    hints.push('OpenRouter commonly uses OPENROUTER_API_KEY as the API key environment variable.')
+  }
+
+  if (isOpenRouter && settings.provider.model.startsWith('gpt-')) {
+    hints.push('For OpenRouter, use the provider-prefixed model id you want to route to, for example openai/gpt-4.1-mini.')
+  }
+
+  if (!isOpenRouter && !settings.provider.baseUrl) {
+    hints.push('The default base URL is the OpenAI-compatible endpoint from the provider adapter.')
+  }
+
+  return providerStatusSchema.parse({
+    providerId: settings.provider.providerId,
+    providerLabel: isOpenRouter ? 'OpenRouter' : 'OpenAI-compatible provider',
+    model: settings.provider.model,
+    baseUrl,
+    apiKeyEnvVar: settings.provider.apiKeyEnvVar,
+    apiKeyPresent,
+    isReady: issues.length === 0,
+    issues,
+    hints,
+  })
+}
+
 async function ensureSettings(runtime: DesktopRuntime): Promise<void> {
   const existingSettings = await runtime.store.getSettings()
 
@@ -178,6 +219,10 @@ function setupIpcHandlers(runtime: DesktopRuntime): void {
 
   ipcMain.handle(desktopBridgeChannels.listConversations, async () => {
     return await runtime.store.listConversations()
+  })
+
+  ipcMain.handle(desktopBridgeChannels.getProviderStatus, async () => {
+    return buildProviderStatus(await runtime.store.getSettings())
   })
 
   ipcMain.handle(desktopBridgeChannels.getSettings, async () => {
