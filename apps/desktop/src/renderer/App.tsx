@@ -14,7 +14,13 @@ import {
 } from '@tanstack/react-router'
 import { Streamdown } from 'streamdown'
 
-import type { AppSettings, ConversationSnapshot, DesktopContext, RunEvent } from '../../../../packages/shared/src'
+import type {
+  AppSettings,
+  ApprovalRequest,
+  ConversationSnapshot,
+  DesktopContext,
+  RunEvent,
+} from '../../../../packages/shared/src'
 
 const rootRoute = createRootRoute({
   component: RootLayout,
@@ -293,6 +299,20 @@ function getEventFamily(eventType: RunEvent['type']) {
   return eventType.split('.')[0]
 }
 
+function getPendingApproval(snapshot: ConversationSnapshot | undefined, runId: string | null): ApprovalRequest | null {
+  if (!snapshot || !runId) {
+    return null
+  }
+
+  const resolvedRequestIds = new Set(snapshot.approvalResolutions.map((resolution) => resolution.approvalRequestId))
+
+  return (
+    [...snapshot.approvalRequests]
+      .reverse()
+      .find((request) => request.runId === runId && !resolvedRequestIds.has(request.id)) ?? null
+  )
+}
+
 function RuntimeUiProvider() {
   const queryClient = useQueryClient()
   const { data: context } = useQuery(contextQueryOptions)
@@ -308,7 +328,12 @@ function RuntimeUiProvider() {
         setStreamingRuns((currentRuns) => updateStreamingState(currentRuns, event))
       })
 
-      if (event.type === 'run.created' || event.type === 'message.created') {
+      if (
+        event.type === 'run.created' ||
+        event.type === 'message.created' ||
+        event.type.startsWith('approval.') ||
+        event.type.startsWith('action.')
+      ) {
         void queryClient.invalidateQueries({ queryKey: ['conversations'] })
         void queryClient.invalidateQueries({ queryKey: ['conversation'] })
       }
@@ -466,6 +491,10 @@ function ConversationRoute() {
     )
   }, [liveRunEvents, selectedRunId, snapshotQuery.data?.events])
 
+  const pendingApproval = useMemo(() => {
+    return getPendingApproval(snapshotQuery.data, selectedRunId)
+  }, [selectedRunId, snapshotQuery.data])
+
   if (snapshotQuery.isError) {
     return (
       <section className="panel-card panel-card-hero">
@@ -518,6 +547,7 @@ function ConversationRoute() {
         <RunInspectorCard
           run={selectedRun}
           events={selectedRunEvents}
+          pendingApproval={pendingApproval}
           streamingState={selectedRun ? streamingRuns[selectedRun.id] ?? null : null}
         />
       </div>
@@ -572,12 +602,33 @@ function RunListCard({
 function RunInspectorCard({
   run,
   events,
+  pendingApproval,
   streamingState,
 }: {
   run: ConversationSnapshot['runs'][number] | null
   events: RunEvent[]
+  pendingApproval: ApprovalRequest | null
   streamingState: StreamingRunState | null
 }) {
+  const queryClient = useQueryClient()
+  const approvalMutation = useMutation({
+    mutationFn: async (decision: 'granted' | 'rejected') => {
+      if (!run || !pendingApproval) {
+        throw new Error('No pending approval is available')
+      }
+
+      await window.desktop.resolveApproval({
+        runId: run.id,
+        approvalRequestId: pendingApproval.id,
+        decision,
+      })
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['conversation'] })
+      await queryClient.invalidateQueries({ queryKey: ['conversations'] })
+    },
+  })
+
   return (
     <section className="panel-card inspector-card">
       <p className="eyebrow">Inspector</p>
@@ -612,6 +663,39 @@ function RunInspectorCard({
 
           {run.failureMessage ? <p className="error-copy">{run.failureMessage}</p> : null}
           {!run.failureMessage && streamingState?.errorMessage ? <p className="error-copy">{streamingState.errorMessage}</p> : null}
+
+          {pendingApproval ? (
+            <section className="approval-card">
+              <div className="sidebar-header-row">
+                <div>
+                  <p className="eyebrow">Approval</p>
+                  <h3>Action requires confirmation</h3>
+                </div>
+                <span className="status-badge status-waiting_approval">pending</span>
+              </div>
+              <p className="muted-copy">{pendingApproval.reason}</p>
+              <small className="muted-copy">Requested at {formatTimestamp(pendingApproval.requestedAt)}</small>
+              <div className="approval-actions">
+                <button
+                  type="button"
+                  className="ghost-button"
+                  disabled={approvalMutation.isPending}
+                  onClick={() => approvalMutation.mutate('rejected')}
+                >
+                  Reject
+                </button>
+                <button
+                  type="button"
+                  className="primary-button"
+                  disabled={approvalMutation.isPending}
+                  onClick={() => approvalMutation.mutate('granted')}
+                >
+                  {approvalMutation.isPending ? 'Submitting...' : 'Grant approval'}
+                </button>
+              </div>
+              {approvalMutation.error instanceof Error ? <p className="error-copy">{approvalMutation.error.message}</p> : null}
+            </section>
+          ) : null}
 
           {events.length === 0 ? <p className="muted-copy">No events captured for this run yet.</p> : null}
 
@@ -685,7 +769,20 @@ function ChatTranscript({
 
       {snapshot.messages.map((message) => (
         <article key={message.id} className={`message-bubble message-${message.role}`}>
-          <header className="message-meta">{message.role}</header>
+          <header className="message-meta">
+            {message.role}
+            {message.role === 'tool' && message.toolName ? ` · ${message.toolName}` : ''}
+          </header>
+          {message.role === 'assistant' && message.toolCalls?.length ? (
+            <div className="message-tool-calls">
+              {message.toolCalls.map((toolCall) => (
+                <div key={toolCall.id} className="message-tool-call-chip">
+                  <strong>{toolCall.actionId}</strong>
+                  <span>{toolCall.id}</span>
+                </div>
+              ))}
+            </div>
+          ) : null}
           {message.role === 'assistant' ? (
             <Streamdown>{message.content}</Streamdown>
           ) : (

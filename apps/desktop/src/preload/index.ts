@@ -7,6 +7,7 @@ import {
   desktopBridgeChannels,
   desktopContextSchema,
   getConversationInputSchema,
+  resolveApprovalInputSchema,
   runCreateInputSchema,
   runEventSchema,
   runIdInputSchema,
@@ -41,6 +42,9 @@ const desktopApi: DesktopApi = {
   },
   async cancelRun(input) {
     await ipcRenderer.invoke(desktopBridgeChannels.cancelRun, runIdInputSchema.parse(input))
+  },
+  async resolveApproval(input) {
+    await ipcRenderer.invoke(desktopBridgeChannels.resolveApproval, resolveApprovalInputSchema.parse(input))
   },
   onRunEvent(listener) {
     const wrappedListener = (_event: Electron.IpcRendererEvent, payload: unknown) => {

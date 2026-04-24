@@ -19,6 +19,7 @@ export const actionDefinitionSchema = z.object({
   title: z.string().min(1),
   description: z.string().min(1).optional(),
   requiresApproval: z.boolean(),
+  inputSchema: z.record(z.string(), jsonValueSchema),
 })
 
 export type ActionDefinition = z.infer<typeof actionDefinitionSchema>

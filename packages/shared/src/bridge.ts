@@ -32,6 +32,14 @@ export const conversationListSchema = z.array(conversationSchema)
 
 export type ConversationList = z.infer<typeof conversationListSchema>
 
+export const resolveApprovalInputSchema = z.object({
+  runId: z.string().min(1),
+  approvalRequestId: z.string().min(1),
+  decision: approvalResolutionSchema.shape.decision,
+})
+
+export type ResolveApprovalInput = z.infer<typeof resolveApprovalInputSchema>
+
 export const runIdInputSchema = z.object({
   runId: z.string().min(1),
 })
@@ -59,6 +67,7 @@ export const desktopBridgeChannels = {
   startRun: 'desktop:start-run',
   resumeRun: 'desktop:resume-run',
   cancelRun: 'desktop:cancel-run',
+  resolveApproval: 'desktop:resolve-approval',
   runEvent: 'desktop:run-event',
 } as const
 
@@ -71,6 +80,7 @@ export type DesktopApi = {
   startRun(input: z.infer<typeof runCreateInputSchema>): Promise<StartRunResult>
   resumeRun(input: RunIdInput): Promise<void>
   cancelRun(input: RunIdInput): Promise<void>
+  resolveApproval(input: ResolveApprovalInput): Promise<void>
   onRunEvent(listener: (event: z.infer<typeof runEventSchema>) => void): () => void
 }
 
