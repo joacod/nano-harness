@@ -1,4 +1,5 @@
 import { app, BrowserWindow, ipcMain } from 'electron'
+import { mkdir } from 'node:fs/promises'
 import { join } from 'node:path'
 
 import type { ApprovalCoordinator } from '../../../../packages/core/src'
@@ -86,7 +87,7 @@ function buildDefaultSettings(): AppSettings {
       baseUrl: process.env['OPENAI_BASE_URL'] || undefined,
     },
     workspace: {
-      rootPath: app.getPath('home'),
+      rootPath: join(app.getPath('home'), 'nano-harness'),
       approvalPolicy: 'on-request',
     },
   }
@@ -113,7 +114,9 @@ async function ensureSettings(runtime: DesktopRuntime): Promise<void> {
   const existingSettings = await runtime.store.getSettings()
 
   if (!existingSettings) {
-    await runtime.store.saveSettings(buildDefaultSettings())
+    const defaultSettings = buildDefaultSettings()
+    await mkdir(defaultSettings.workspace.rootPath, { recursive: true })
+    await runtime.store.saveSettings(defaultSettings)
   }
 }
 
