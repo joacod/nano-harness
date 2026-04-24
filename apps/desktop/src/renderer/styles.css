@@ -115,6 +115,7 @@ a {
 
 .ghost-link,
 .conversation-link,
+.ghost-button,
 .primary-button {
   transition: 140ms ease;
 }
@@ -431,7 +432,27 @@ a {
 .timeline-type {
   font-size: 0.82rem;
   color: #8fb7d9;
- }
+}
+
+.approval-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid rgba(250, 204, 21, 0.22);
+  border-radius: 18px;
+  background: rgba(56, 44, 10, 0.28);
+}
+
+.approval-card h3 {
+  margin: 0;
+}
+
+.approval-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
 
 .composer-form,
 .settings-form {
@@ -473,6 +494,24 @@ a {
 }
 
 .primary-button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.ghost-button {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 12px 18px;
+  background: rgba(20, 33, 56, 0.5);
+  color: #c4d7ef;
+}
+
+.ghost-button:hover {
+  border-color: rgba(125, 211, 252, 0.4);
+  color: #f4fbff;
+}
+
+.ghost-button:disabled {
   opacity: 0.6;
   cursor: default;
 }

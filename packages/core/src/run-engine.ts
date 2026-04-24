@@ -27,6 +27,7 @@ export interface ProviderActionRequest {
 export interface ProviderGenerateInput {
   run: Run
   messages: Message[]
+  actions: ActionDefinition[]
   settings: AppSettings
   signal: AbortSignal
   onDelta?: (delta: string) => Promise<void> | void
@@ -50,6 +51,7 @@ export interface ActionExecutionInput {
 }
 
 export interface ActionExecutor {
+  listDefinitions(): Promise<ActionDefinition[]>
   getDefinition(actionId: string): Promise<ActionDefinition | null>
   execute(input: ActionExecutionInput): Promise<ActionResult>
 }
@@ -62,7 +64,7 @@ export interface PolicyInput {
 }
 
 export interface PolicyDecision {
-  requiresApproval: boolean
+  effect: 'allow' | 'deny' | 'require_approval'
   reason?: string
 }
 
@@ -77,6 +79,7 @@ export interface ApprovalCoordinator {
     settings: AppSettings
     signal: AbortSignal
   }): Promise<ApprovalResolution>
+  resolveDecision?(input: { approvalRequestId: string; decision: ApprovalResolution['decision'] }): Promise<boolean> | boolean
 }
 
 export interface RunEngineDependencies {
@@ -100,6 +103,7 @@ export interface RunEngine {
   startRun(input: RunCreateInput): Promise<RunHandle>
   resumeRun(runId: string): Promise<void>
   cancelRun(runId: string): Promise<void>
+  resolveApproval(input: { runId: string; approvalRequestId: string; decision: ApprovalResolution['decision'] }): Promise<void>
 }
 
 type PendingApprovalContext = {
@@ -358,6 +362,59 @@ export class CoreRunEngine implements RunEngine {
     })
   }
 
+  async resolveApproval(input: {
+    runId: string
+    approvalRequestId: string
+    decision: ApprovalResolution['decision']
+  }): Promise<void> {
+    const run = await this.store.getRun(input.runId)
+
+    if (!run) {
+      throw new Error(`Run ${input.runId} not found`)
+    }
+
+    const snapshot = await this.store.getConversation(run.conversationId)
+    const request = snapshot.approvalRequests.find((approvalRequest) => approvalRequest.id === input.approvalRequestId)
+
+    if (!request || request.runId !== run.id) {
+      throw new Error(`Approval request ${input.approvalRequestId} not found for run ${run.id}`)
+    }
+
+    const alreadyResolved = snapshot.approvalResolutions.some(
+      (resolution) => resolution.approvalRequestId === input.approvalRequestId,
+    )
+
+    if (alreadyResolved) {
+      return
+    }
+
+    const resolvedByCoordinator = await this.approvalCoordinator?.resolveDecision?.({
+      approvalRequestId: input.approvalRequestId,
+      decision: input.decision,
+    })
+
+    if (resolvedByCoordinator) {
+      return
+    }
+
+    if (run.status !== 'waiting_approval') {
+      throw new Error(`Run ${run.id} is not waiting for approval`)
+    }
+
+    await this.persistApprovalResolution(run, {
+      approvalRequestId: input.approvalRequestId,
+      decision: input.decision,
+      decidedAt: this.now(),
+    })
+
+    if (input.decision === 'granted') {
+      await this.resumeRun(run.id)
+      return
+    }
+
+    await this.cancelRun(run.id)
+  }
+
   private async executeRun(context: ContinueRunContext): Promise<void> {
     let run = context.run
     const snapshot = context.snapshot
@@ -385,9 +442,11 @@ export class CoreRunEngine implements RunEngine {
         })
 
         let streamedMessage = ''
+        const actions = await this.actionExecutor.listDefinitions()
         const providerResult = await this.provider.generate({
           run,
           messages,
+          actions,
           settings: context.settings,
           signal: context.signal,
           onDelta: async (delta) => {
@@ -529,7 +588,11 @@ export class CoreRunEngine implements RunEngine {
       settings,
     })
 
-    if (policyDecision.requiresApproval) {
+    if (policyDecision.effect === 'deny') {
+      throw new Error(policyDecision.reason ?? `Action ${actionDefinition.id} is denied by policy`)
+    }
+
+    if (policyDecision.effect === 'require_approval') {
       const resolution = await this.requireApproval({
         run,
         actionCall,
@@ -759,12 +822,29 @@ export class CoreRunEngine implements RunEngine {
 
 export class StaticPolicy implements Policy {
   async evaluateAction(input: PolicyInput): Promise<PolicyDecision> {
-    const requiresApproval =
-      input.action.requiresApproval || input.settings.workspace.approvalPolicy === 'always'
+    if (input.settings.workspace.approvalPolicy === 'always') {
+      return {
+        effect: 'require_approval',
+        reason: `Approval required for ${input.action.title}`,
+      }
+    }
+
+    if (input.action.requiresApproval && input.settings.workspace.approvalPolicy === 'never') {
+      return {
+        effect: 'deny',
+        reason: `${input.action.title} requires approval, but approvals are disabled in settings`,
+      }
+    }
+
+    if (input.action.requiresApproval) {
+      return {
+        effect: 'require_approval',
+        reason: `Approval required for ${input.action.title}`,
+      }
+    }
 
     return {
-      requiresApproval,
-      reason: requiresApproval ? `Approval required for ${input.action.title}` : undefined,
+      effect: 'allow',
     }
   }
 }

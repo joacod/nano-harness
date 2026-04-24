@@ -1,4 +1,4 @@
-import type { Message } from '@nano-harness/shared'
+import type { ActionDefinition, Message } from '@nano-harness/shared'
 import type { Provider, ProviderActionRequest, ProviderGenerateInput, ProviderGenerateResult } from '@nano-harness/core'
 
 type FetchLike = typeof fetch
@@ -12,6 +12,15 @@ type OpenAICompatibleProviderOptions = {
 type OpenAICompatibleMessage = {
   role: 'system' | 'user' | 'assistant'
   content: string
+}
+
+type OpenAICompatibleTool = {
+  type: 'function'
+  function: {
+    name: string
+    description?: string
+    parameters: Record<string, unknown>
+  }
 }
 
 type OpenAICompatibleStreamChunk = {
@@ -51,7 +60,10 @@ function normalizeBaseUrl(baseUrl: string): string {
 function toOpenAICompatibleMessages(messages: Message[]): OpenAICompatibleMessage[] {
   return messages.map((message) => {
     if (message.role === 'tool') {
-      throw new Error('OpenAI-compatible provider does not support tool messages yet')
+      return {
+        role: 'user',
+        content: `Tool result:\n${message.content}`,
+      }
     }
 
     return {
@@ -59,6 +71,17 @@ function toOpenAICompatibleMessages(messages: Message[]): OpenAICompatibleMessag
       content: message.content,
     }
   })
+}
+
+function toOpenAICompatibleTools(actions: ActionDefinition[]): OpenAICompatibleTool[] {
+  return actions.map((action) => ({
+    type: 'function',
+    function: {
+      name: action.id,
+      description: action.description,
+      parameters: action.inputSchema,
+    },
+  }))
 }
 
 function splitSseEvents(buffer: string): { events: string[]; remainder: string } {
@@ -179,6 +202,7 @@ export class OpenAICompatibleProvider implements Provider {
           model: input.settings.provider.model,
           stream: true,
           messages: toOpenAICompatibleMessages(input.messages),
+          tools: toOpenAICompatibleTools(input.actions),
         }),
         signal: input.signal,
       },
