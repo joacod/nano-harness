@@ -112,6 +112,10 @@ function setupIpcHandlers(runtime: DesktopRuntime): void {
     })
   })
 
+  ipcMain.handle(desktopBridgeChannels.listConversations, async () => {
+    return await runtime.store.listConversations()
+  })
+
   ipcMain.handle(desktopBridgeChannels.getSettings, async () => {
     return await runtime.store.getSettings()
   })

@@ -28,6 +28,10 @@ export const conversationSnapshotSchema = z.object({
 
 export type ConversationSnapshot = z.infer<typeof conversationSnapshotSchema>
 
+export const conversationListSchema = z.array(conversationSchema)
+
+export type ConversationList = z.infer<typeof conversationListSchema>
+
 export const runIdInputSchema = z.object({
   runId: z.string().min(1),
 })
@@ -48,6 +52,7 @@ export type StartRunResult = z.infer<typeof startRunResultSchema>
 
 export const desktopBridgeChannels = {
   getContext: 'desktop:get-context',
+  listConversations: 'desktop:list-conversations',
   getSettings: 'desktop:get-settings',
   saveSettings: 'desktop:save-settings',
   getConversation: 'desktop:get-conversation',
@@ -59,6 +64,7 @@ export const desktopBridgeChannels = {
 
 export type DesktopApi = {
   getContext(): Promise<DesktopContext>
+  listConversations(): Promise<ConversationList>
   getSettings(): Promise<z.infer<typeof appSettingsSchema> | null>
   saveSettings(settings: z.infer<typeof appSettingsSchema>): Promise<z.infer<typeof appSettingsSchema>>
   getConversation(input: GetConversationInput): Promise<ConversationSnapshot>
