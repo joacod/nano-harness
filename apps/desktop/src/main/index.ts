@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain } from 'electron'
+import { app, BrowserWindow, ipcMain, Menu, nativeImage } from 'electron'
 import { mkdir } from 'node:fs/promises'
 import { join } from 'node:path'
 
@@ -10,6 +10,8 @@ import {
   desktopBridgeChannels,
   desktopContextSchema,
   getConversationInputSchema,
+  getProviderDefinition,
+  providerStatusSchema,
   resolveApprovalInputSchema,
   runCreateInputSchema,
   runEventSchema,
@@ -17,6 +19,37 @@ import {
   startRunResultSchema,
   type AppSettings,
 } from '../../../../packages/shared/src'
+
+app.setName('Nano Harness')
+
+function getAppIconPath(): string {
+  return join(app.getAppPath(), 'resources', 'icon.png')
+}
+
+function buildApplicationMenu() {
+  return Menu.buildFromTemplate([
+    {
+      label: 'Nano Harness',
+      submenu: [{ role: 'about' }, { type: 'separator' }, { role: 'services' }, { type: 'separator' }, { role: 'hide' }, { role: 'hideOthers' }, { role: 'unhide' }, { type: 'separator' }, { role: 'quit' }],
+    },
+    {
+      label: 'File',
+      submenu: [{ role: 'close' }],
+    },
+    {
+      label: 'Edit',
+      submenu: [{ role: 'undo' }, { role: 'redo' }, { type: 'separator' }, { role: 'cut' }, { role: 'copy' }, { role: 'paste' }, { role: 'selectAll' }],
+    },
+    {
+      label: 'View',
+      submenu: [{ role: 'reload' }, { role: 'forceReload' }, { role: 'toggleDevTools' }, { type: 'separator' }, { role: 'resetZoom' }, { role: 'zoomIn' }, { role: 'zoomOut' }, { type: 'separator' }, { role: 'togglefullscreen' }],
+    },
+    {
+      label: 'Window',
+      submenu: [{ role: 'minimize' }, { role: 'zoom' }, { type: 'separator' }, { role: 'front' }],
+    },
+  ])
+}
 
 type DesktopRuntime = {
   store: Awaited<ReturnType<typeof createSqliteStore>>
@@ -79,12 +112,13 @@ class DesktopApprovalCoordinator implements ApprovalCoordinator {
 }
 
 function buildDefaultSettings(): AppSettings {
+  const provider = getProviderDefinition('openrouter')
+
   return {
     provider: {
-      providerId: 'openai-compatible',
-      model: process.env['OPENAI_MODEL'] ?? 'gpt-4.1-mini',
-      apiKeyEnvVar: process.env['OPENAI_API_KEY_ENV_VAR'] ?? 'OPENAI_API_KEY',
-      baseUrl: process.env['OPENAI_BASE_URL'] || undefined,
+      provider: provider.key,
+      model: provider.defaultModel,
+      apiKey: '',
     },
     workspace: {
       rootPath: join(app.getPath('home'), 'nano-harness'),
@@ -99,7 +133,8 @@ function createWindow(): void {
     height: 800,
     minWidth: 900,
     minHeight: 640,
-    title: 'nano-harness',
+    title: 'Nano Harness',
+    icon: getAppIconPath(),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       contextIsolation: true,
@@ -107,7 +142,39 @@ function createWindow(): void {
     },
   })
 
+  window.maximize()
   void window.loadURL(process.env['ELECTRON_RENDERER_URL'] ?? `file://${join(__dirname, '../renderer/index.html')}`)
+}
+
+function buildProviderStatus(settings: AppSettings | null) {
+  if (!settings) {
+    return null
+  }
+
+  const provider = getProviderDefinition(settings.provider.provider)
+  const apiKeyPresent = Boolean(settings.provider.apiKey.trim())
+  const issues: string[] = []
+  const hints: string[] = []
+
+  if (!apiKeyPresent) {
+    issues.push(`Add your ${provider.label} API key before starting a hosted-provider run.`)
+  }
+
+  if (settings.provider.provider === 'openrouter' && !settings.provider.model.includes('/')) {
+    hints.push('OpenRouter models usually include the provider prefix, for example x-ai/grok-4.1-fast.')
+  }
+
+  return providerStatusSchema.parse({
+    providerId: provider.adapterId,
+    providerLabel: provider.label,
+    model: settings.provider.model,
+    baseUrl: provider.baseUrl,
+    apiKeyLabel: 'Stored in app settings',
+    apiKeyPresent,
+    isReady: issues.length === 0,
+    issues,
+    hints,
+  })
 }
 
 async function ensureSettings(runtime: DesktopRuntime): Promise<void> {
@@ -180,6 +247,10 @@ function setupIpcHandlers(runtime: DesktopRuntime): void {
     return await runtime.store.listConversations()
   })
 
+  ipcMain.handle(desktopBridgeChannels.getProviderStatus, async () => {
+    return buildProviderStatus(await runtime.store.getSettings())
+  })
+
   ipcMain.handle(desktopBridgeChannels.getSettings, async () => {
     return await runtime.store.getSettings()
   })
@@ -220,6 +291,12 @@ function setupIpcHandlers(runtime: DesktopRuntime): void {
 }
 
 void app.whenReady().then(async () => {
+  Menu.setApplicationMenu(buildApplicationMenu())
+
+  if (process.platform === 'darwin' && app.dock) {
+    app.dock.setIcon(nativeImage.createFromPath(getAppIconPath()))
+  }
+
   const runtime = await createRuntime()
   setupIpcHandlers(runtime)
   setupEventForwarding(runtime)

@@ -12,6 +12,7 @@ import type {
   RunEvent,
   RunStatus,
 } from '@nano-harness/shared'
+import { getProviderDefinition } from '@nano-harness/shared'
 
 import type { ConversationSnapshot, Store } from './store'
 
@@ -439,7 +440,10 @@ export class CoreRunEngine implements RunEngine {
           runId: run.id,
           timestamp: this.now(),
           type: 'provider.requested',
-          payload: { model: context.settings.provider.model },
+          payload: {
+            provider: getProviderDefinition(context.settings.provider.provider).label,
+            model: context.settings.provider.model,
+          },
         })
 
         let streamedMessage = ''

@@ -1,12 +1,10 @@
-import type { ActionDefinition, AssistantToolCall, Message } from '@nano-harness/shared'
+import { getProviderDefinition, type ActionDefinition, type AssistantToolCall, type Message } from '@nano-harness/shared'
 import type { Provider, ProviderActionRequest, ProviderGenerateInput, ProviderGenerateResult } from '@nano-harness/core'
 
 type FetchLike = typeof fetch
 
 type OpenAICompatibleProviderOptions = {
   fetch?: FetchLike
-  defaultBaseUrl?: string
-  resolveApiKey?: (envVar: string) => string | undefined
 }
 
 type OpenAICompatibleMessage =
@@ -68,8 +66,6 @@ type PendingToolCall = {
   name: string
   argumentsText: string
 }
-
-const defaultBaseUrl = 'https://api.openai.com/v1'
 
 function normalizeBaseUrl(baseUrl: string): string {
   return baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl
@@ -217,24 +213,21 @@ async function readErrorResponse(response: Response): Promise<string> {
 
 export class OpenAICompatibleProvider implements Provider {
   private readonly fetchImplementation: FetchLike
-  private readonly defaultBaseUrl: string
-  private readonly resolveApiKey: (envVar: string) => string | undefined
 
   constructor(options: OpenAICompatibleProviderOptions = {}) {
     this.fetchImplementation = options.fetch ?? fetch
-    this.defaultBaseUrl = normalizeBaseUrl(options.defaultBaseUrl ?? defaultBaseUrl)
-    this.resolveApiKey = options.resolveApiKey ?? ((envVar) => process.env[envVar])
   }
 
   async generate(input: ProviderGenerateInput): Promise<ProviderGenerateResult> {
-    const apiKey = this.resolveApiKey(input.settings.provider.apiKeyEnvVar)
+    const providerDefinition = getProviderDefinition(input.settings.provider.provider)
+    const apiKey = input.settings.provider.apiKey.trim()
 
     if (!apiKey) {
-      throw new Error(`Missing provider API key in environment variable ${input.settings.provider.apiKeyEnvVar}`)
+      throw new Error(`Missing API key for ${providerDefinition.label}`)
     }
 
     const response = await this.fetchImplementation(
-      `${normalizeBaseUrl(input.settings.provider.baseUrl ?? this.defaultBaseUrl)}/chat/completions`,
+      `${normalizeBaseUrl(providerDefinition.baseUrl)}/chat/completions`,
       {
         method: 'POST',
         headers: {

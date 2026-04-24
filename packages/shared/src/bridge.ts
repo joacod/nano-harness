@@ -32,6 +32,20 @@ export const conversationListSchema = z.array(conversationSchema)
 
 export type ConversationList = z.infer<typeof conversationListSchema>
 
+export const providerStatusSchema = z.object({
+  providerId: z.string().min(1),
+  providerLabel: z.string().min(1),
+  model: z.string().min(1),
+  baseUrl: z.string().min(1),
+  apiKeyLabel: z.string().min(1),
+  apiKeyPresent: z.boolean(),
+  isReady: z.boolean(),
+  issues: z.array(z.string().min(1)),
+  hints: z.array(z.string().min(1)),
+})
+
+export type ProviderStatus = z.infer<typeof providerStatusSchema>
+
 export const resolveApprovalInputSchema = z.object({
   runId: z.string().min(1),
   approvalRequestId: z.string().min(1),
@@ -61,6 +75,7 @@ export type StartRunResult = z.infer<typeof startRunResultSchema>
 export const desktopBridgeChannels = {
   getContext: 'desktop:get-context',
   listConversations: 'desktop:list-conversations',
+  getProviderStatus: 'desktop:get-provider-status',
   getSettings: 'desktop:get-settings',
   saveSettings: 'desktop:save-settings',
   getConversation: 'desktop:get-conversation',
@@ -74,6 +89,7 @@ export const desktopBridgeChannels = {
 export type DesktopApi = {
   getContext(): Promise<DesktopContext>
   listConversations(): Promise<ConversationList>
+  getProviderStatus(): Promise<ProviderStatus | null>
   getSettings(): Promise<z.infer<typeof appSettingsSchema> | null>
   saveSettings(settings: z.infer<typeof appSettingsSchema>): Promise<z.infer<typeof appSettingsSchema>>
   getConversation(input: GetConversationInput): Promise<ConversationSnapshot>

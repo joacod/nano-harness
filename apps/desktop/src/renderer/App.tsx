@@ -19,8 +19,10 @@ import type {
   ApprovalRequest,
   ConversationSnapshot,
   DesktopContext,
+  ProviderStatus,
   RunEvent,
 } from '../../../../packages/shared/src'
+import { getProviderDefinition, providerOptions } from '../../../../packages/shared/src'
 
 const rootRoute = createRootRoute({
   component: RootLayout,
@@ -71,12 +73,23 @@ type RuntimeUiState = {
 }
 
 const RuntimeUiContext = createContext<RuntimeUiState | null>(null)
+const TechnicalUiContext = createContext<{ showTechnicalInfo: boolean; toggleTechnicalInfo: () => void } | null>(null)
 
 function useRuntimeUi(): RuntimeUiState {
   const value = useContext(RuntimeUiContext)
 
   if (!value) {
     throw new Error('Runtime UI context is unavailable')
+  }
+
+  return value
+}
+
+function useTechnicalUi() {
+  const value = useContext(TechnicalUiContext)
+
+  if (!value) {
+    throw new Error('Technical UI context is unavailable')
   }
 
   return value
@@ -90,6 +103,11 @@ const contextQueryOptions = queryOptions({
 const settingsQueryOptions = queryOptions({
   queryKey: ['settings'],
   queryFn: () => window.desktop.getSettings(),
+})
+
+const providerStatusQueryOptions = queryOptions({
+  queryKey: ['provider-status'],
+  queryFn: () => window.desktop.getProviderStatus(),
 })
 
 const conversationsQueryOptions = queryOptions({
@@ -257,7 +275,7 @@ function describeRunEvent(event: RunEvent) {
     case 'provider.requested':
       return {
         title: 'Provider request sent',
-        detail: `Model: ${event.payload.model}`,
+        detail: `${event.payload.provider} · ${event.payload.model}`,
       }
     case 'provider.delta':
       return {
@@ -347,12 +365,32 @@ function getPendingApproval(snapshot: ConversationSnapshot | undefined, runId: s
   )
 }
 
+function getProviderRequestForRun(events: RunEvent[], runId: string) {
+  const providerRequestedEvent = events.find((event) => event.runId === runId && event.type === 'provider.requested')
+
+  return providerRequestedEvent?.type === 'provider.requested' ? providerRequestedEvent : null
+}
+
+function applyProviderDefaults(settings: AppSettings, providerKey: AppSettings['provider']['provider']): AppSettings {
+  const provider = getProviderDefinition(providerKey)
+
+  return {
+    ...settings,
+    provider: {
+      ...settings.provider,
+      provider: provider.key,
+      model: provider.defaultModel,
+    },
+  }
+}
+
 function RuntimeUiProvider() {
   const queryClient = useQueryClient()
   const { data: context } = useQuery(contextQueryOptions)
   const [recentEvents, setRecentEvents] = useState<RunEvent[]>([])
   const [liveRunEvents, setLiveRunEvents] = useState<Record<string, RunEvent[]>>({})
   const [streamingRuns, setStreamingRuns] = useState<Record<string, StreamingRunState>>({})
+  const [showTechnicalInfo, setShowTechnicalInfo] = useState(false)
 
   useEffect(() => {
     const unsubscribe = window.desktop.onRunEvent((event) => {
@@ -381,25 +419,35 @@ function RuntimeUiProvider() {
   }, [queryClient])
 
   return (
-    <RuntimeUiContext.Provider
+    <TechnicalUiContext.Provider
       value={{
-        context: context ?? null,
-        recentEvents,
-        liveRunEvents,
-        streamingRuns,
+        showTechnicalInfo,
+        toggleTechnicalInfo: () => setShowTechnicalInfo((current) => !current),
       }}
     >
-      <RouterProvider router={router} />
-    </RuntimeUiContext.Provider>
+      <RuntimeUiContext.Provider
+        value={{
+          context: context ?? null,
+          recentEvents,
+          liveRunEvents,
+          streamingRuns,
+        }}
+      >
+        <RouterProvider router={router} />
+      </RuntimeUiContext.Provider>
+    </TechnicalUiContext.Provider>
   )
 }
 
 function RootLayout() {
   const { context, recentEvents } = useRuntimeUi()
+  const { showTechnicalInfo, toggleTechnicalInfo } = useTechnicalUi()
   const conversationsQuery = useQuery(conversationsQueryOptions)
   const settingsQuery = useQuery(settingsQueryOptions)
+  const providerStatusQuery = useQuery(providerStatusQueryOptions)
   const conversations = conversationsQuery.data ?? []
   const settings = settingsQuery.data
+  const providerStatus = providerStatusQuery.data
 
   return (
     <main className="workspace-shell">
@@ -444,63 +492,89 @@ function RootLayout() {
         </div>
 
         <div className="sidebar-section sidebar-footer">
-          <Link to="/settings" className="ghost-link" activeProps={{ className: 'ghost-link ghost-link-active' }}>
-            Provider Settings
-          </Link>
-          <p className="runtime-pill">{context ? `${context.platform} / v${context.version}` : 'Loading runtime...'}</p>
-        </div>
-
-        <div className="sidebar-section">
-          <div className="sidebar-header-row">
-            <h2>Configuration</h2>
-            {settings ? <span className="runtime-pill">ready</span> : null}
+          <div className="sidebar-footer-actions">
+            <Link to="/settings" className="ghost-link" activeProps={{ className: 'ghost-link ghost-link-active' }}>
+              Settings
+            </Link>
+            <button type="button" className="ghost-button" onClick={toggleTechnicalInfo}>
+              {showTechnicalInfo ? 'Hide technical info' : 'Show technical info'}
+            </button>
           </div>
-          {settingsQuery.isLoading ? <p className="muted-copy">Loading configuration...</p> : null}
-          {settingsQuery.isError ? <p className="error-copy">Failed to load provider settings.</p> : null}
-          {settings ? (
-            <dl className="summary-list">
-              <div>
-                <dt>Model</dt>
-                <dd>{settings.provider.model}</dd>
-              </div>
-              <div>
-                <dt>API key env</dt>
-                <dd>{settings.provider.apiKeyEnvVar}</dd>
-              </div>
-              <div>
-                <dt>Base URL</dt>
-                <dd>{settings.provider.baseUrl ?? 'Default OpenAI-compatible endpoint'}</dd>
-              </div>
-              <div>
-                <dt>Workspace</dt>
-                <dd>{settings.workspace.rootPath}</dd>
-              </div>
-            </dl>
-          ) : null}
+          <p className="runtime-pill">{providerStatus?.isReady ? 'Provider ready' : 'Provider needs setup'}</p>
         </div>
 
-        <div className="sidebar-section">
-          <h2>Recent Events</h2>
-          <ul className="event-list">
-            {recentEvents.length > 0 ? (
-              recentEvents.map((event) => {
-                const description = describeRunEvent(event)
-
-                return (
-                <li key={event.id} className="event-list-item">
+        {showTechnicalInfo ? (
+          <>
+            <div className="sidebar-section">
+              <div className="sidebar-header-row">
+                <h2>Configuration</h2>
+                {providerStatus ? (
+                  <span className={`runtime-pill ${providerStatus.isReady ? 'runtime-pill-ready' : 'runtime-pill-warning'}`}>
+                    {providerStatus.isReady ? 'ready' : 'action needed'}
+                  </span>
+                ) : null}
+              </div>
+              {settingsQuery.isLoading ? <p className="muted-copy">Loading configuration...</p> : null}
+              {settingsQuery.isError ? <p className="error-copy">Failed to load provider settings.</p> : null}
+              {settings ? (
+                <dl className="summary-list">
                   <div>
-                    <strong>{description.title}</strong>
-                    <small>{event.runId.slice(0, 8)}</small>
+                    <dt>Provider</dt>
+                    <dd>{providerStatus?.providerLabel ?? getProviderDefinition(settings.provider.provider).label}</dd>
                   </div>
-                  <small>{formatRelativeTimestamp(event.timestamp)}</small>
-                </li>
-                )
-              })
-            ) : (
-              <li>No events yet.</li>
-            )}
-          </ul>
-        </div>
+                  <div>
+                    <dt>Model</dt>
+                    <dd>{settings.provider.model}</dd>
+                  </div>
+                  <div>
+                    <dt>API key</dt>
+                    <dd>{providerStatus?.apiKeyPresent ? 'Configured' : 'Missing'}</dd>
+                  </div>
+                  <div>
+                    <dt>Workspace</dt>
+                    <dd>{settings.workspace.rootPath}</dd>
+                  </div>
+                  <div>
+                    <dt>Runtime</dt>
+                    <dd>{context ? `${context.platform} / v${context.version}` : 'Loading runtime...'}</dd>
+                  </div>
+                </dl>
+              ) : null}
+              {providerStatus && providerStatus.issues.length > 0 ? (
+                <div className="status-note-block">
+                  {providerStatus.issues.map((issue) => (
+                    <p key={issue} className="error-copy">
+                      {issue}
+                    </p>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+
+            <div className="sidebar-section">
+              <h2>Recent Events</h2>
+              <ul className="event-list">
+                {recentEvents.length > 0 ? (
+                  recentEvents.map((event) => {
+                    const description = describeRunEvent(event)
+
+                    return (
+                      <li key={event.id} className="event-list-item">
+                        <div>
+                          <strong>{description.title}</strong>
+                          <small>{event.runId.slice(0, 8)}</small>
+                        </div>
+                        <small>{formatRelativeTimestamp(event.timestamp)}</small>
+                      </li>
+                    )
+                  })
+                ) : (
+                  <li>No events yet.</li>
+                )}
+              </ul>
+            </div>
+          </>
+        ) : null}
       </aside>
 
       <section className="content-panel">
@@ -527,6 +601,7 @@ function HomeRoute() {
 
 function ConversationRoute() {
   const { conversationId } = useParams({ from: '/conversations/$conversationId' })
+  const { showTechnicalInfo } = useTechnicalUi()
   const snapshotQuery = useQuery(conversationQueryOptions(conversationId))
   const { liveRunEvents, streamingRuns } = useRuntimeUi()
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null)
@@ -590,14 +665,16 @@ function ConversationRoute() {
   }
 
   return (
-    <div className="conversation-grid">
+    <div className={`conversation-grid ${showTechnicalInfo ? 'conversation-grid-technical' : 'conversation-grid-simple'}`}>
       <div className="panel-stack">
         <section className="panel-card panel-card-hero">
           <p className="eyebrow">Conversation</p>
           <h2>{snapshotQuery.data?.conversation?.title ?? 'Loading conversation...'}</h2>
-          <p className="muted-copy">
-            Messages are persisted in SQLite and the run inspector shows the same event model both live and after relaunch.
-          </p>
+          {showTechnicalInfo ? (
+            <p className="muted-copy">
+              Messages are persisted in SQLite and the run inspector shows the same event model both live and after relaunch.
+            </p>
+          ) : null}
         </section>
 
         <section className="panel-card transcript-panel">
@@ -610,29 +687,34 @@ function ConversationRoute() {
         <ComposerCard conversationId={conversationId} />
       </div>
 
-      <div className="panel-stack">
-        <RunListCard
-          runs={snapshotQuery.data?.runs ?? []}
-          selectedRunId={selectedRunId}
-          onSelectRun={(runId) => setSelectedRunId(runId)}
-        />
-        <RunInspectorCard
-          run={selectedRun}
-          events={selectedRunEvents}
-          pendingApproval={pendingApproval}
-          streamingState={selectedRun ? streamingRuns[selectedRun.id] ?? null : null}
-        />
-      </div>
+      {showTechnicalInfo ? (
+        <div className="panel-stack">
+          <RunListCard
+            runs={snapshotQuery.data?.runs ?? []}
+            events={snapshotQuery.data?.events ?? []}
+            selectedRunId={selectedRunId}
+            onSelectRun={(runId) => setSelectedRunId(runId)}
+          />
+          <RunInspectorCard
+            run={selectedRun}
+            events={selectedRunEvents}
+            pendingApproval={pendingApproval}
+            streamingState={selectedRun ? streamingRuns[selectedRun.id] ?? null : null}
+          />
+        </div>
+      ) : null}
     </div>
   )
 }
 
 function RunListCard({
   runs,
+  events,
   selectedRunId,
   onSelectRun,
 }: {
   runs: ConversationSnapshot['runs']
+  events: RunEvent[]
   selectedRunId: string | null
   onSelectRun: (runId: string) => void
 }) {
@@ -651,21 +733,27 @@ function RunListCard({
       {sortedRuns.length === 0 ? <p className="muted-copy">No runs yet for this conversation.</p> : null}
 
       <div className="run-list">
-        {sortedRuns.map((run) => (
-          <button
-            key={run.id}
-            type="button"
-            className={`run-card ${selectedRunId === run.id ? 'run-card-active' : ''}`}
-            onClick={() => onSelectRun(run.id)}
-          >
-            <div className="run-card-header">
-              <strong>{run.status}</strong>
-              <span className={`status-badge status-${run.status}`}>{run.status}</span>
-            </div>
-            <small>{formatTimestamp(run.createdAt)}</small>
-            {run.failureMessage ? <span className="error-copy">{run.failureMessage}</span> : null}
-          </button>
-        ))}
+        {sortedRuns.map((run) => {
+          const providerRequest = getProviderRequestForRun(events, run.id)
+
+          return (
+            <button
+              key={run.id}
+              type="button"
+              className={`run-card ${selectedRunId === run.id ? 'run-card-active' : ''}`}
+              onClick={() => onSelectRun(run.id)}
+            >
+              <div className="run-card-header">
+                <strong>{run.status}</strong>
+                <span className={`status-badge status-${run.status}`}>{run.status}</span>
+              </div>
+              <small>{formatTimestamp(run.createdAt)}</small>
+              {providerRequest ? <span className="run-provider-label">{providerRequest.payload.provider}</span> : null}
+              {providerRequest ? <span className="muted-copy">{providerRequest.payload.model}</span> : null}
+              {run.failureMessage ? <span className="error-copy">{run.failureMessage}</span> : null}
+            </button>
+          )
+        })}
       </div>
     </section>
   )
@@ -844,10 +932,12 @@ function RunInspectorCard({
 function SettingsRoute() {
   const queryClient = useQueryClient()
   const settingsQuery = useQuery(settingsQueryOptions)
+  const providerStatusQuery = useQuery(providerStatusQueryOptions)
   const mutation = useMutation({
     mutationFn: async (settings: AppSettings) => window.desktop.saveSettings(settings),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['settings'] })
+      await queryClient.invalidateQueries({ queryKey: ['provider-status'] })
     },
   })
 
@@ -864,6 +954,7 @@ function SettingsRoute() {
     <SettingsFormCard
       key={JSON.stringify(settingsQuery.data)}
       initialSettings={settingsQuery.data}
+      providerStatus={providerStatusQuery.data ?? null}
       isSaving={mutation.isPending}
       saveError={mutation.error instanceof Error ? mutation.error.message : null}
       onSubmit={async (settings) => {
@@ -925,6 +1016,7 @@ function ChatTranscript({
 function ComposerCard({ conversationId }: { conversationId: string | null }) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const providerStatusQuery = useQuery(providerStatusQueryOptions)
   const [submitError, setSubmitError] = useState<string | null>(null)
   const startRunMutation = useMutation({
     mutationFn: async (prompt: string) => {
@@ -1005,6 +1097,11 @@ function ComposerCard({ conversationId }: { conversationId: string | null }) {
         </div>
       </form>
 
+      {providerStatusQuery.data && !providerStatusQuery.data.isReady ? (
+        <p className="warning-copy">
+          Provider setup is incomplete. Update settings before expecting a successful hosted-provider response.
+        </p>
+      ) : null}
       {submitError ? <p className="error-copy">{submitError}</p> : null}
       {startRunMutation.error instanceof Error ? <p className="error-copy">{startRunMutation.error.message}</p> : null}
     </section>
@@ -1013,11 +1110,13 @@ function ComposerCard({ conversationId }: { conversationId: string | null }) {
 
 function SettingsFormCard({
   initialSettings,
+  providerStatus,
   isSaving,
   saveError,
   onSubmit,
 }: {
   initialSettings: AppSettings
+  providerStatus: ProviderStatus | null
   isSaving: boolean
   saveError: string | null
   onSubmit: (settings: AppSettings) => Promise<void>
@@ -1029,11 +1128,9 @@ function SettingsFormCard({
     onSubmit: async ({ value }) => {
       const normalizedSettings: AppSettings = {
         provider: {
-          ...value.provider,
-          providerId: value.provider.providerId.trim(),
+          provider: value.provider.provider,
           model: value.provider.model.trim(),
-          apiKeyEnvVar: value.provider.apiKeyEnvVar.trim(),
-          baseUrl: value.provider.baseUrl?.trim() || undefined,
+          apiKey: value.provider.apiKey.trim(),
         },
         workspace: {
           ...value.workspace,
@@ -1051,8 +1148,44 @@ function SettingsFormCard({
       <p className="eyebrow">Settings</p>
       <h2>Provider configuration</h2>
       <p className="muted-copy">
-        These values are stored locally and used by the OpenAI-compatible provider adapter in Electron main.
+        Choose a provider, enter your API key, and select a model. Endpoint details are managed internally.
       </p>
+
+      {providerStatus ? (
+        <section className="provider-status-card">
+          <div className="sidebar-header-row">
+            <div>
+              <p className="eyebrow">Provider status</p>
+              <h3>{providerStatus.providerLabel}</h3>
+            </div>
+            <span className={`status-badge ${providerStatus.isReady ? 'status-completed' : 'status-waiting_approval'}`}>
+              {providerStatus.isReady ? 'ready' : 'check setup'}
+            </span>
+          </div>
+          <dl className="summary-list">
+            <div>
+              <dt>Model</dt>
+              <dd>{providerStatus.model}</dd>
+            </div>
+            <div>
+              <dt>API key</dt>
+              <dd>
+                {providerStatus.apiKeyLabel} {providerStatus.apiKeyPresent ? '(configured)' : '(missing)'}
+              </dd>
+            </div>
+          </dl>
+          {providerStatus.issues.map((issue) => (
+            <p key={issue} className="error-copy">
+              {issue}
+            </p>
+          ))}
+          {providerStatus.hints.map((hint) => (
+            <p key={hint} className="muted-copy">
+              {hint}
+            </p>
+          ))}
+        </section>
+      ) : null}
 
       <form
         className="settings-form"
@@ -1063,57 +1196,62 @@ function SettingsFormCard({
           void form.handleSubmit()
         }}
       >
-        <LabeledField label="Provider ID">
-          <FieldHint>Keep this as `openai-compatible` for OpenAI-style provider endpoints.</FieldHint>
+        <LabeledField label="Provider">
+          <FieldHint>Select the hosted provider you want to use.</FieldHint>
           <form.Field
-            name="provider.providerId"
-            validators={{
-              onChange: ({ value }) => (value.trim() ? undefined : 'Provider ID is required.'),
-            }}
-            children={(field) => <TextField field={field} placeholder="openai-compatible" />}
+            name="provider.provider"
+            children={(field) => (
+              <select
+                className="text-input"
+                value={field.state.value}
+                onChange={(event) => {
+                  const nextProvider = event.target.value as AppSettings['provider']['provider']
+                  field.handleChange(nextProvider)
+                  const nextSettings = applyProviderDefaults(form.state.values, nextProvider)
+                  form.setFieldValue('provider.model', nextSettings.provider.model)
+                }}
+              >
+                {providerOptions.map((provider) => (
+                  <option key={provider.key} value={provider.key}>
+                    {provider.label}
+                  </option>
+                ))}
+              </select>
+            )}
           />
+          <div className="preset-row">
+            <button
+              type="button"
+              className="ghost-button"
+              onClick={() => {
+                const providerKey = form.getFieldValue('provider.provider')
+                const nextSettings = applyProviderDefaults(form.state.values, providerKey)
+                form.setFieldValue('provider.model', nextSettings.provider.model)
+              }}
+            >
+              Use defaults
+            </button>
+          </div>
         </LabeledField>
 
         <LabeledField label="Model">
+          <FieldHint>
+            Choose a model available for your selected provider.
+          </FieldHint>
           <form.Field
             name="provider.model"
             validators={{
               onChange: ({ value }) => (value.trim() ? undefined : 'Model is required.'),
             }}
-            children={(field) => <TextField field={field} placeholder="gpt-4.1-mini" />}
+            children={(field) => <TextField field={field} placeholder="x-ai/grok-4.1-fast" />}
           />
         </LabeledField>
 
-        <LabeledField label="API Key Env Var">
-          <FieldHint>The desktop app reads your API key from this environment variable when a run starts.</FieldHint>
+        <LabeledField label="API Key">
+          <FieldHint>Your key is stored in the app settings so hosted-provider runs work without extra shell setup.</FieldHint>
           <form.Field
-            name="provider.apiKeyEnvVar"
-            validators={{
-              onChange: ({ value }) => (value.trim() ? undefined : 'API key environment variable is required.'),
-            }}
-            children={(field) => <TextField field={field} placeholder="OPENAI_API_KEY" />}
-          />
-        </LabeledField>
-
-        <LabeledField label="Base URL">
-          <FieldHint>Leave blank for the default endpoint, or set a custom OpenAI-compatible base URL.</FieldHint>
-          <form.Field
-            name="provider.baseUrl"
-            validators={{
-              onChange: ({ value }) => {
-                if (!value || !value.trim()) {
-                  return undefined
-                }
-
-                try {
-                  new URL(value)
-                  return undefined
-                } catch {
-                  return 'Base URL must be a valid URL.'
-                }
-              },
-            }}
-            children={(field) => <TextField field={field} placeholder="https://api.openai.com/v1" />}
+            name="provider.apiKey"
+            children={(field) => <TextField field={field} placeholder="Paste API key" inputType="password" />}
           />
         </LabeledField>
 
@@ -1174,6 +1312,7 @@ function FieldHint({ children }: { children: ReactNode }) {
 function TextField({
   field,
   placeholder,
+  inputType,
 }: {
   field: {
     state: {
@@ -1186,6 +1325,7 @@ function TextField({
     handleChange: (value: string) => void
   }
   placeholder: string
+  inputType?: 'password' | 'text'
 }) {
   const firstError = field.state.meta.errors[0]
 
@@ -1193,6 +1333,7 @@ function TextField({
     <>
       <input
         className="text-input"
+        type={inputType ?? 'text'}
         value={field.state.value ?? ''}
         onBlur={field.handleBlur}
         onChange={(event) => field.handleChange(event.target.value)}

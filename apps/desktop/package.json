@@ -1,5 +1,6 @@
 {
   "name": "@nano-harness/desktop",
+  "productName": "Nano Harness",
   "private": true,
   "version": "0.0.1",
   "type": "module",
