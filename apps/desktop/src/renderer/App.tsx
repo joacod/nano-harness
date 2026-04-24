@@ -22,6 +22,7 @@ import type {
   ProviderStatus,
   RunEvent,
 } from '../../../../packages/shared/src'
+import { getProviderDefinition, providerOptions } from '../../../../packages/shared/src'
 
 const rootRoute = createRootRoute({
   component: RootLayout,
@@ -353,6 +354,19 @@ function getPendingApproval(snapshot: ConversationSnapshot | undefined, runId: s
   )
 }
 
+function applyProviderDefaults(settings: AppSettings, providerKey: AppSettings['provider']['provider']): AppSettings {
+  const provider = getProviderDefinition(providerKey)
+
+  return {
+    ...settings,
+    provider: {
+      ...settings.provider,
+      provider: provider.key,
+      model: provider.defaultModel,
+    },
+  }
+}
+
 function RuntimeUiProvider() {
   const queryClient = useQueryClient()
   const { data: context } = useQuery(contextQueryOptions)
@@ -473,19 +487,15 @@ function RootLayout() {
             <dl className="summary-list">
               <div>
                 <dt>Provider</dt>
-                <dd>{providerStatus?.providerLabel ?? settings.provider.providerId}</dd>
+                <dd>{providerStatus?.providerLabel ?? getProviderDefinition(settings.provider.provider).label}</dd>
               </div>
               <div>
                 <dt>Model</dt>
                 <dd>{settings.provider.model}</dd>
               </div>
               <div>
-                <dt>API key env</dt>
-                <dd>{settings.provider.apiKeyEnvVar}</dd>
-              </div>
-              <div>
-                <dt>Base URL</dt>
-                <dd>{providerStatus?.baseUrl ?? settings.provider.baseUrl ?? 'Default OpenAI-compatible endpoint'}</dd>
+                <dt>API key</dt>
+                <dd>{providerStatus?.apiKeyPresent ? 'Configured' : 'Missing'}</dd>
               </div>
               <div>
                 <dt>Workspace</dt>
@@ -1065,11 +1075,9 @@ function SettingsFormCard({
     onSubmit: async ({ value }) => {
       const normalizedSettings: AppSettings = {
         provider: {
-          ...value.provider,
-          providerId: value.provider.providerId.trim(),
+          provider: value.provider.provider,
           model: value.provider.model.trim(),
-          apiKeyEnvVar: value.provider.apiKeyEnvVar.trim(),
-          baseUrl: value.provider.baseUrl?.trim() || undefined,
+          apiKey: value.provider.apiKey.trim(),
         },
         workspace: {
           ...value.workspace,
@@ -1087,39 +1095,8 @@ function SettingsFormCard({
       <p className="eyebrow">Settings</p>
       <h2>Provider configuration</h2>
       <p className="muted-copy">
-        These values are stored locally and used by the OpenAI-compatible provider adapter in Electron main.
+        Choose a provider, enter your API key, and select a model. Endpoint details are managed internally.
       </p>
-
-      <div className="preset-row">
-        <button
-          type="button"
-          className="ghost-button"
-          onClick={() => {
-            form.setFieldValue('provider.providerId', 'openai-compatible')
-            form.setFieldValue('provider.baseUrl', 'https://openrouter.ai/api/v1')
-            form.setFieldValue('provider.apiKeyEnvVar', 'OPENROUTER_API_KEY')
-            if (!form.getFieldValue('provider.model')?.trim()) {
-              form.setFieldValue('provider.model', 'openai/gpt-4.1-mini')
-            }
-          }}
-        >
-          Use OpenRouter defaults
-        </button>
-        <button
-          type="button"
-          className="ghost-button"
-          onClick={() => {
-            form.setFieldValue('provider.providerId', 'openai-compatible')
-            form.setFieldValue('provider.baseUrl', 'https://api.openai.com/v1')
-            form.setFieldValue('provider.apiKeyEnvVar', 'OPENAI_API_KEY')
-            if (!form.getFieldValue('provider.model')?.trim()) {
-              form.setFieldValue('provider.model', 'gpt-4.1-mini')
-            }
-          }}
-        >
-          Use OpenAI defaults
-        </button>
-      </div>
 
       {providerStatus ? (
         <section className="provider-status-card">
@@ -1138,13 +1115,9 @@ function SettingsFormCard({
               <dd>{providerStatus.model}</dd>
             </div>
             <div>
-              <dt>Base URL</dt>
-              <dd>{providerStatus.baseUrl}</dd>
-            </div>
-            <div>
-              <dt>API key env</dt>
+              <dt>API key</dt>
               <dd>
-                {providerStatus.apiKeyEnvVar} {providerStatus.apiKeyPresent ? '(found)' : '(missing)'}
+                {providerStatus.apiKeyLabel} {providerStatus.apiKeyPresent ? '(configured)' : '(missing)'}
               </dd>
             </div>
           </dl>
@@ -1170,58 +1143,63 @@ function SettingsFormCard({
           void form.handleSubmit()
         }}
       >
-        <LabeledField label="Provider ID">
-          <FieldHint>Keep this as `openai-compatible` for OpenAI-style provider endpoints.</FieldHint>
+        <LabeledField label="Provider">
+          <FieldHint>Select the hosted provider you want to use.</FieldHint>
           <form.Field
-            name="provider.providerId"
-            validators={{
-              onChange: ({ value }) => (value.trim() ? undefined : 'Provider ID is required.'),
-            }}
-            children={(field) => <TextField field={field} placeholder="openai-compatible" />}
+            name="provider.provider"
+            children={(field) => (
+              <select
+                className="text-input"
+                value={field.state.value}
+                onChange={(event) => {
+                  const nextProvider = event.target.value as AppSettings['provider']['provider']
+                  field.handleChange(nextProvider)
+                  const nextSettings = applyProviderDefaults(form.state.values, nextProvider)
+                  form.setFieldValue('provider.model', nextSettings.provider.model)
+                }}
+              >
+                {providerOptions.map((provider) => (
+                  <option key={provider.key} value={provider.key}>
+                    {provider.label}
+                  </option>
+                ))}
+              </select>
+            )}
           />
+          <div className="preset-row">
+            <button
+              type="button"
+              className="ghost-button"
+              onClick={() => {
+                const providerKey = form.getFieldValue('provider.provider')
+                const nextSettings = applyProviderDefaults(form.state.values, providerKey)
+                form.setFieldValue('provider.model', nextSettings.provider.model)
+              }}
+            >
+              Use defaults
+            </button>
+          </div>
         </LabeledField>
 
         <LabeledField label="Model">
-          <FieldHint>For OpenRouter, enter the routed model id like `openai/gpt-4.1-mini`.</FieldHint>
+          <FieldHint>
+            Default for {getProviderDefinition(form.state.values.provider.provider).label}:{' '}
+            <code>{getProviderDefinition(form.state.values.provider.provider).defaultModel}</code>
+          </FieldHint>
           <form.Field
             name="provider.model"
             validators={{
               onChange: ({ value }) => (value.trim() ? undefined : 'Model is required.'),
             }}
-            children={(field) => <TextField field={field} placeholder="gpt-4.1-mini" />}
+            children={(field) => <TextField field={field} placeholder="x-ai/grok-4.1-fast" />}
           />
         </LabeledField>
 
-        <LabeledField label="API Key Env Var">
-          <FieldHint>The desktop app reads your API key from this environment variable when a run starts.</FieldHint>
+        <LabeledField label="API Key">
+          <FieldHint>Your key is stored in the app settings so hosted-provider runs work without extra shell setup.</FieldHint>
           <form.Field
-            name="provider.apiKeyEnvVar"
-            validators={{
-              onChange: ({ value }) => (value.trim() ? undefined : 'API key environment variable is required.'),
-            }}
-            children={(field) => <TextField field={field} placeholder="OPENAI_API_KEY" />}
-          />
-        </LabeledField>
-
-        <LabeledField label="Base URL">
-          <FieldHint>For OpenRouter, use `https://openrouter.ai/api/v1`.</FieldHint>
-          <form.Field
-            name="provider.baseUrl"
-            validators={{
-              onChange: ({ value }) => {
-                if (!value || !value.trim()) {
-                  return undefined
-                }
-
-                try {
-                  new URL(value)
-                  return undefined
-                } catch {
-                  return 'Base URL must be a valid URL.'
-                }
-              },
-            }}
-            children={(field) => <TextField field={field} placeholder="https://api.openai.com/v1" />}
+            name="provider.apiKey"
+            children={(field) => <TextField field={field} placeholder="Paste API key" inputType="password" />}
           />
         </LabeledField>
 
@@ -1282,6 +1260,7 @@ function FieldHint({ children }: { children: ReactNode }) {
 function TextField({
   field,
   placeholder,
+  inputType,
 }: {
   field: {
     state: {
@@ -1294,6 +1273,7 @@ function TextField({
     handleChange: (value: string) => void
   }
   placeholder: string
+  inputType?: 'password' | 'text'
 }) {
   const firstError = field.state.meta.errors[0]
 
@@ -1301,6 +1281,7 @@ function TextField({
     <>
       <input
         className="text-input"
+        type={inputType ?? 'text'}
         value={field.state.value ?? ''}
         onBlur={field.handleBlur}
         onChange={(event) => field.handleChange(event.target.value)}

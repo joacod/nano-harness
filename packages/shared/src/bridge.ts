@@ -37,7 +37,7 @@ export const providerStatusSchema = z.object({
   providerLabel: z.string().min(1),
   model: z.string().min(1),
   baseUrl: z.string().min(1),
-  apiKeyEnvVar: z.string().min(1),
+  apiKeyLabel: z.string().min(1),
   apiKeyPresent: z.boolean(),
   isReady: z.boolean(),
   issues: z.array(z.string().min(1)),

@@ -10,6 +10,7 @@ import {
   desktopBridgeChannels,
   desktopContextSchema,
   getConversationInputSchema,
+  getProviderDefinition,
   providerStatusSchema,
   resolveApprovalInputSchema,
   runCreateInputSchema,
@@ -80,12 +81,13 @@ class DesktopApprovalCoordinator implements ApprovalCoordinator {
 }
 
 function buildDefaultSettings(): AppSettings {
+  const provider = getProviderDefinition('openrouter')
+
   return {
     provider: {
-      providerId: 'openai-compatible',
-      model: process.env['OPENAI_MODEL'] ?? 'gpt-4.1-mini',
-      apiKeyEnvVar: process.env['OPENAI_API_KEY_ENV_VAR'] ?? 'OPENAI_API_KEY',
-      baseUrl: process.env['OPENAI_BASE_URL'] || undefined,
+      provider: provider.key,
+      model: provider.defaultModel,
+      apiKey: '',
     },
     workspace: {
       rootPath: join(app.getPath('home'), 'nano-harness'),
@@ -116,34 +118,25 @@ function buildProviderStatus(settings: AppSettings | null) {
     return null
   }
 
-  const isOpenRouter = (settings.provider.baseUrl ?? '').includes('openrouter.ai')
-  const apiKeyPresent = Boolean(process.env[settings.provider.apiKeyEnvVar]?.trim())
-  const baseUrl = settings.provider.baseUrl ?? 'https://api.openai.com/v1'
+  const provider = getProviderDefinition(settings.provider.provider)
+  const apiKeyPresent = Boolean(settings.provider.apiKey.trim())
   const issues: string[] = []
   const hints: string[] = []
 
   if (!apiKeyPresent) {
-    issues.push(`Environment variable ${settings.provider.apiKeyEnvVar} is not set for the desktop process.`)
+    issues.push(`Add your ${provider.label} API key before starting a hosted-provider run.`)
   }
 
-  if (isOpenRouter && settings.provider.apiKeyEnvVar !== 'OPENROUTER_API_KEY') {
-    hints.push('OpenRouter commonly uses OPENROUTER_API_KEY as the API key environment variable.')
-  }
-
-  if (isOpenRouter && settings.provider.model.startsWith('gpt-')) {
-    hints.push('For OpenRouter, use the provider-prefixed model id you want to route to, for example openai/gpt-4.1-mini.')
-  }
-
-  if (!isOpenRouter && !settings.provider.baseUrl) {
-    hints.push('The default base URL is the OpenAI-compatible endpoint from the provider adapter.')
+  if (settings.provider.provider === 'openrouter' && !settings.provider.model.includes('/')) {
+    hints.push('OpenRouter models usually include the provider prefix, for example x-ai/grok-4.1-fast.')
   }
 
   return providerStatusSchema.parse({
-    providerId: settings.provider.providerId,
-    providerLabel: isOpenRouter ? 'OpenRouter' : 'OpenAI-compatible provider',
+    providerId: provider.adapterId,
+    providerLabel: provider.label,
     model: settings.provider.model,
-    baseUrl,
-    apiKeyEnvVar: settings.provider.apiKeyEnvVar,
+    baseUrl: provider.baseUrl,
+    apiKeyLabel: 'Stored in app settings',
     apiKeyPresent,
     isReady: issues.length === 0,
     issues,
