@@ -143,6 +143,18 @@ async function createRuntime(): Promise<DesktopRuntime> {
   return runtime
 }
 
+async function recoverInterruptedRuns(runtime: DesktopRuntime): Promise<void> {
+  const recoverableRuns = await runtime.store.listRuns(['created', 'started', 'waiting_approval'])
+
+  for (const run of recoverableRuns) {
+    try {
+      await runtime.runEngine.resumeRun(run.id)
+    } catch {
+      // Leave the persisted run state intact so the renderer can still expose the failure context.
+    }
+  }
+}
+
 function setupEventForwarding(runtime: DesktopRuntime): void {
   runtime.eventBus.subscribe((event) => {
     const parsedEvent = runEventSchema.parse(event)
@@ -208,6 +220,7 @@ void app.whenReady().then(async () => {
   const runtime = await createRuntime()
   setupIpcHandlers(runtime)
   setupEventForwarding(runtime)
+  await recoverInterruptedRuns(runtime)
   createWindow()
 
   app.on('activate', () => {

@@ -191,6 +191,46 @@ a {
   gap: 12px;
 }
 
+.event-list-item > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.event-list-item strong {
+  font-size: 0.92rem;
+  color: var(--foreground);
+}
+
+.event-list-item small {
+  color: var(--muted-foreground);
+}
+
+.summary-list {
+  display: grid;
+  gap: 12px;
+  margin: 12px 0 0;
+}
+
+.summary-list div {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.summary-list dt {
+  font-size: 0.76rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #8fb7d9;
+}
+
+.summary-list dd {
+  margin: 0;
+  color: var(--foreground);
+  overflow-wrap: anywhere;
+}
+
 .event-list li + li {
   margin-top: 8px;
 }
@@ -476,6 +516,12 @@ a {
   gap: 12px;
 }
 
+.run-controls {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
 .composer-form,
 .settings-form {
   display: flex;
@@ -551,6 +597,11 @@ a {
   color: #8fb7d9;
 }
 
+.field-hint {
+  color: var(--muted-foreground);
+  line-height: 1.5;
+}
+
 .field-error,
 .error-copy {
   color: #fda4af;
@@ -593,6 +644,11 @@ a {
 
   .inspector-summary {
     grid-template-columns: 1fr;
+  }
+
+  .approval-actions,
+  .run-controls {
+    flex-direction: column;
   }
 
   .message-user,

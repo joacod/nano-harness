@@ -190,6 +190,28 @@ function formatTimestamp(value: string) {
   return new Date(value).toLocaleString()
 }
 
+function formatRelativeTimestamp(value: string) {
+  const deltaMs = Date.now() - new Date(value).getTime()
+  const deltaMinutes = Math.round(deltaMs / 60000)
+
+  if (Math.abs(deltaMinutes) < 1) {
+    return 'just now'
+  }
+
+  if (Math.abs(deltaMinutes) < 60) {
+    return `${deltaMinutes}m ago`
+  }
+
+  const deltaHours = Math.round(deltaMinutes / 60)
+
+  if (Math.abs(deltaHours) < 24) {
+    return `${deltaHours}h ago`
+  }
+
+  const deltaDays = Math.round(deltaHours / 24)
+  return `${deltaDays}d ago`
+}
+
 function previewText(value: string, maxLength = 120) {
   const normalized = value.trim().replace(/\s+/g, ' ')
 
@@ -299,6 +321,18 @@ function getEventFamily(eventType: RunEvent['type']) {
   return eventType.split('.')[0]
 }
 
+function getRecoverableRunAction(run: ConversationSnapshot['runs'][number], pendingApproval: ApprovalRequest | null) {
+  if (run.status === 'created' || run.status === 'started') {
+    return 'resume'
+  }
+
+  if (run.status === 'waiting_approval' && !pendingApproval) {
+    return 'resume'
+  }
+
+  return null
+}
+
 function getPendingApproval(snapshot: ConversationSnapshot | undefined, runId: string | null): ApprovalRequest | null {
   if (!snapshot || !runId) {
     return null
@@ -363,7 +397,9 @@ function RuntimeUiProvider() {
 function RootLayout() {
   const { context, recentEvents } = useRuntimeUi()
   const conversationsQuery = useQuery(conversationsQueryOptions)
+  const settingsQuery = useQuery(settingsQueryOptions)
   const conversations = conversationsQuery.data ?? []
+  const settings = settingsQuery.data
 
   return (
     <main className="workspace-shell">
@@ -415,15 +451,51 @@ function RootLayout() {
         </div>
 
         <div className="sidebar-section">
+          <div className="sidebar-header-row">
+            <h2>Configuration</h2>
+            {settings ? <span className="runtime-pill">ready</span> : null}
+          </div>
+          {settingsQuery.isLoading ? <p className="muted-copy">Loading configuration...</p> : null}
+          {settingsQuery.isError ? <p className="error-copy">Failed to load provider settings.</p> : null}
+          {settings ? (
+            <dl className="summary-list">
+              <div>
+                <dt>Model</dt>
+                <dd>{settings.provider.model}</dd>
+              </div>
+              <div>
+                <dt>API key env</dt>
+                <dd>{settings.provider.apiKeyEnvVar}</dd>
+              </div>
+              <div>
+                <dt>Base URL</dt>
+                <dd>{settings.provider.baseUrl ?? 'Default OpenAI-compatible endpoint'}</dd>
+              </div>
+              <div>
+                <dt>Workspace</dt>
+                <dd>{settings.workspace.rootPath}</dd>
+              </div>
+            </dl>
+          ) : null}
+        </div>
+
+        <div className="sidebar-section">
           <h2>Recent Events</h2>
           <ul className="event-list">
             {recentEvents.length > 0 ? (
-              recentEvents.map((event) => (
+              recentEvents.map((event) => {
+                const description = describeRunEvent(event)
+
+                return (
                 <li key={event.id} className="event-list-item">
-                  <span>{event.type}</span>
-                  <small>{new Date(event.timestamp).toLocaleTimeString()}</small>
+                  <div>
+                    <strong>{description.title}</strong>
+                    <small>{event.runId.slice(0, 8)}</small>
+                  </div>
+                  <small>{formatRelativeTimestamp(event.timestamp)}</small>
                 </li>
-              ))
+                )
+              })
             ) : (
               <li>No events yet.</li>
             )}
@@ -611,6 +683,25 @@ function RunInspectorCard({
   streamingState: StreamingRunState | null
 }) {
   const queryClient = useQueryClient()
+  const recoverableAction = run ? getRecoverableRunAction(run, pendingApproval) : null
+  const runControlMutation = useMutation({
+    mutationFn: async (action: 'resume' | 'cancel') => {
+      if (!run) {
+        throw new Error('No run is selected')
+      }
+
+      if (action === 'resume') {
+        await window.desktop.resumeRun({ runId: run.id })
+        return
+      }
+
+      await window.desktop.cancelRun({ runId: run.id })
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['conversation'] })
+      await queryClient.invalidateQueries({ queryKey: ['conversations'] })
+    },
+  })
   const approvalMutation = useMutation({
     mutationFn: async (decision: 'granted' | 'rejected') => {
       if (!run || !pendingApproval) {
@@ -642,6 +733,31 @@ function RunInspectorCard({
         ) : null}
       </div>
 
+      {run && (recoverableAction || run.status === 'started' || run.status === 'waiting_approval') ? (
+        <div className="run-controls">
+          {recoverableAction ? (
+            <button
+              type="button"
+              className="ghost-button"
+              disabled={runControlMutation.isPending}
+              onClick={() => runControlMutation.mutate('resume')}
+            >
+              {runControlMutation.isPending ? 'Working...' : 'Resume run'}
+            </button>
+          ) : null}
+          {(run.status === 'created' || run.status === 'started' || run.status === 'waiting_approval') ? (
+            <button
+              type="button"
+              className="ghost-button"
+              disabled={runControlMutation.isPending}
+              onClick={() => runControlMutation.mutate('cancel')}
+            >
+              Cancel run
+            </button>
+          ) : null}
+        </div>
+      ) : null}
+
       {!run ? <p className="muted-copy">Choose a run to inspect its persisted and live event sequence.</p> : null}
 
       {run ? (
@@ -663,6 +779,7 @@ function RunInspectorCard({
 
           {run.failureMessage ? <p className="error-copy">{run.failureMessage}</p> : null}
           {!run.failureMessage && streamingState?.errorMessage ? <p className="error-copy">{streamingState.errorMessage}</p> : null}
+          {runControlMutation.error instanceof Error ? <p className="error-copy">{runControlMutation.error.message}</p> : null}
 
           {pendingApproval ? (
             <section className="approval-card">
@@ -947,6 +1064,7 @@ function SettingsFormCard({
         }}
       >
         <LabeledField label="Provider ID">
+          <FieldHint>Keep this as `openai-compatible` for OpenAI-style provider endpoints.</FieldHint>
           <form.Field
             name="provider.providerId"
             validators={{
@@ -967,6 +1085,7 @@ function SettingsFormCard({
         </LabeledField>
 
         <LabeledField label="API Key Env Var">
+          <FieldHint>The desktop app reads your API key from this environment variable when a run starts.</FieldHint>
           <form.Field
             name="provider.apiKeyEnvVar"
             validators={{
@@ -977,6 +1096,7 @@ function SettingsFormCard({
         </LabeledField>
 
         <LabeledField label="Base URL">
+          <FieldHint>Leave blank for the default endpoint, or set a custom OpenAI-compatible base URL.</FieldHint>
           <form.Field
             name="provider.baseUrl"
             validators={{
@@ -998,6 +1118,7 @@ function SettingsFormCard({
         </LabeledField>
 
         <LabeledField label="Workspace Root">
+          <FieldHint>Built-in file actions are restricted to this directory tree.</FieldHint>
           <form.Field
             name="workspace.rootPath"
             validators={{
@@ -1044,6 +1165,10 @@ function LabeledField({ label, children }: { label: string; children: ReactNode 
       {children}
     </label>
   )
+}
+
+function FieldHint({ children }: { children: ReactNode }) {
+  return <span className="field-hint">{children}</span>
 }
 
 function TextField({
