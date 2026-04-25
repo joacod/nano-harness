@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "pnpm --filter @nano-harness/desktop dev",
     "build": "pnpm -r run build",
+    "pack:mac": "pnpm --filter @nano-harness/desktop pack:mac",
+    "dist:mac": "pnpm --filter @nano-harness/desktop dist:mac",
     "typecheck": "pnpm -r run typecheck",
     "lint": "pnpm -r run lint"
   },

@@ -8,6 +8,9 @@
   "scripts": {
     "dev": "electron-vite dev",
     "build": "electron-vite build",
+    "prepare:mac-icon": "sh scripts/generate-mac-icon.sh",
+    "pack:mac": "pnpm prepare:mac-icon && pnpm build && electron-builder --mac --dir --config electron-builder.yml",
+    "dist:mac": "pnpm prepare:mac-icon && pnpm build && electron-builder --mac --config electron-builder.yml",
     "typecheck": "tsc -p tsconfig.node.json --noEmit && tsc -p tsconfig.web.json --noEmit",
     "lint": "eslint ."
   },
@@ -30,6 +33,7 @@
     "@types/react-dom": "19.2.3",
     "@vitejs/plugin-react": "5.2.0",
     "electron": "41.3.0",
+    "electron-builder": "26.8.1",
     "electron-vite": "5.0.0",
     "eslint": "10.2.1",
     "vite": "7.3.2"
