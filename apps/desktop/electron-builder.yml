@@ -1,0 +1,13 @@
+appId: com.nanoharness.desktop
+productName: Nano Harness
+directories:
+  buildResources: build
+  output: dist
+files:
+  - out/**/*
+  - resources/**/*
+  - package.json
+mac:
+  icon: build/icon.icns
+  target:
+    - dmg

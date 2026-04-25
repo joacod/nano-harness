@@ -16,6 +16,16 @@ Start the desktop app in development:
 pnpm dev
 ```
 
+Package the macOS app:
+
+```bash
+pnpm pack:mac
+pnpm dist:mac
+```
+
+- `pnpm pack:mac` creates an unpacked app bundle for local verification at `apps/desktop/dist/mac-arm64/Nano Harness.app`.
+- `pnpm dist:mac` creates a macOS disk image at `apps/desktop/dist/Nano Harness-<version>-arm64.dmg`.
+
 Build everything:
 
 ```bash

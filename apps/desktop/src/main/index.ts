@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, Menu, nativeImage } from 'electron'
+import { app, BrowserWindow, ipcMain, Menu } from 'electron'
 import { mkdir } from 'node:fs/promises'
 import { join } from 'node:path'
 
@@ -292,10 +292,6 @@ function setupIpcHandlers(runtime: DesktopRuntime): void {
 
 void app.whenReady().then(async () => {
   Menu.setApplicationMenu(buildApplicationMenu())
-
-  if (process.platform === 'darwin' && app.dock) {
-    app.dock.setIcon(nativeImage.createFromPath(getAppIconPath()))
-  }
 
   const runtime = await createRuntime()
   setupIpcHandlers(runtime)

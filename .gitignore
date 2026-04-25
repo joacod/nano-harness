@@ -2,6 +2,7 @@
 node_modules/
 dist/
 out/
+apps/desktop/build/
 *.log
 coverage/
 *.tsbuildinfo
