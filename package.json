@@ -8,6 +8,10 @@
     "build": "pnpm -r run build",
     "pack:mac": "pnpm --filter @nano-harness/desktop pack:mac",
     "dist:mac": "pnpm --filter @nano-harness/desktop dist:mac",
+    "pack:win": "pnpm --filter @nano-harness/desktop pack:win",
+    "dist:win": "pnpm --filter @nano-harness/desktop dist:win",
+    "pack:linux": "pnpm --filter @nano-harness/desktop pack:linux",
+    "dist:linux": "pnpm --filter @nano-harness/desktop dist:linux",
     "typecheck": "pnpm -r run typecheck",
     "lint": "pnpm -r run lint"
   },

@@ -14,6 +14,10 @@
     "prepare:mac-icon": "sh scripts/generate-mac-icon.sh",
     "pack:mac": "pnpm prepare:mac-icon && pnpm build && electron-builder --mac --dir --config electron-builder.yml",
     "dist:mac": "pnpm prepare:mac-icon && pnpm build && electron-builder --mac --config electron-builder.yml",
+    "pack:win": "pnpm build && electron-builder --win --dir --config electron-builder.yml",
+    "dist:win": "pnpm build && electron-builder --win --config electron-builder.yml",
+    "pack:linux": "pnpm build && electron-builder --linux --dir --config electron-builder.yml",
+    "dist:linux": "pnpm build && electron-builder --linux --config electron-builder.yml",
     "typecheck": "tsc -p tsconfig.node.json --noEmit && tsc -p tsconfig.web.json --noEmit",
     "lint": "eslint ."
   },
