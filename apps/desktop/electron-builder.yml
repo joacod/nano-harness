@@ -11,3 +11,9 @@ mac:
   icon: build/icon.icns
   target:
     - dmg
+win:
+  target:
+    - nsis
+linux:
+  target:
+    - AppImage

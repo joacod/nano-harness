@@ -16,15 +16,21 @@ Start the desktop app in development:
 pnpm dev
 ```
 
-Package the macOS app:
+Package the desktop app:
 
 ```bash
 pnpm pack:mac
 pnpm dist:mac
+pnpm pack:win
+pnpm dist:win
+pnpm pack:linux
+pnpm dist:linux
 ```
 
 - `pnpm pack:mac` creates an unpacked app bundle for local verification at `apps/desktop/dist/mac-arm64/Nano Harness.app`.
 - `pnpm dist:mac` creates a macOS disk image at `apps/desktop/dist/Nano Harness-<version>-arm64.dmg`.
+- `pnpm pack:win` and `pnpm dist:win` build Windows NSIS targets.
+- `pnpm pack:linux` and `pnpm dist:linux` build Linux AppImage targets.
 
 Build everything:
 
