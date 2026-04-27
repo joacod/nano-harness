@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { getProviderDefinition } from '../../../../../packages/shared/src'
 import { conversationsQueryOptions, providerStatusQueryOptions, settingsQueryOptions } from '../queries'
 import { useRuntimeUi, useTechnicalUi } from '../runtime-ui'
-import { formatRelativeTimestamp } from '../utils/formatting'
+import { formatRelativeTimestamp, formatTimestamp } from '../utils/formatting'
 import { describeRunEvent } from '../utils/run-events'
 
 export function RootLayout() {
@@ -36,8 +36,12 @@ export function RootLayout() {
             </Link>
           </div>
           <nav className="conversation-nav">
-            {conversationsQuery.isLoading ? <p className="muted-copy">Loading conversations...</p> : null}
-            {conversationsQuery.isError ? <p className="error-copy">Failed to load conversations.</p> : null}
+            {conversationsQuery.isLoading ? <p className="muted-copy">Loading conversations…</p> : null}
+            {conversationsQuery.isError ? (
+              <p className="error-copy" aria-live="polite">
+                Failed to load conversations.
+              </p>
+            ) : null}
             {!conversationsQuery.isLoading && !conversationsQuery.isError && conversations.length > 0 ? (
               conversations.map((conversation) => (
                 <Link
@@ -48,7 +52,7 @@ export function RootLayout() {
                   activeProps={{ className: 'conversation-link conversation-link-active' }}
                 >
                   <span>{conversation.title}</span>
-                  <small>{new Date(conversation.updatedAt).toLocaleString()}</small>
+                  <small>{formatTimestamp(conversation.updatedAt)}</small>
                 </Link>
               ))
             ) : (
@@ -68,7 +72,9 @@ export function RootLayout() {
               {showTechnicalInfo ? 'Hide technical info' : 'Show technical info'}
             </button>
           </div>
-          <p className="runtime-pill">{providerStatus?.isReady ? 'Provider ready' : 'Provider needs setup'}</p>
+          <p className="runtime-pill" aria-live="polite">
+            {providerStatus?.isReady ? 'Provider ready' : 'Provider needs setup'}
+          </p>
         </div>
 
         {showTechnicalInfo ? (
@@ -82,8 +88,12 @@ export function RootLayout() {
                   </span>
                 ) : null}
               </div>
-              {settingsQuery.isLoading ? <p className="muted-copy">Loading configuration...</p> : null}
-              {settingsQuery.isError ? <p className="error-copy">Failed to load provider settings.</p> : null}
+              {settingsQuery.isLoading ? <p className="muted-copy">Loading configuration…</p> : null}
+              {settingsQuery.isError ? (
+                <p className="error-copy" aria-live="polite">
+                  Failed to load provider settings.
+                </p>
+              ) : null}
               {settings ? (
                 <dl className="summary-list">
                   <div>
@@ -104,14 +114,14 @@ export function RootLayout() {
                   </div>
                   <div>
                     <dt>Runtime</dt>
-                    <dd>{context ? `${context.platform} / v${context.version}` : 'Loading runtime...'}</dd>
+                    <dd>{context ? `${context.platform} / v${context.version}` : 'Loading runtime…'}</dd>
                   </div>
                 </dl>
               ) : null}
               {providerStatus && providerStatus.issues.length > 0 ? (
                 <div className="status-note-block">
                   {providerStatus.issues.map((issue) => (
-                    <p key={issue} className="error-copy">
+                    <p key={issue} className="error-copy" aria-live="polite">
                       {issue}
                     </p>
                   ))}

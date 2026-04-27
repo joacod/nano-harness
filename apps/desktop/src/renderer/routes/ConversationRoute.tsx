@@ -59,7 +59,7 @@ export function ConversationRoute() {
       <section className="panel-card panel-card-hero">
         <p className="eyebrow">Conversation</p>
         <h2>Failed to load conversation</h2>
-        <p className="error-copy">
+        <p className="error-copy" aria-live="polite">
           {snapshotQuery.error instanceof Error ? snapshotQuery.error.message : 'The conversation snapshot could not be loaded.'}
         </p>
       </section>
@@ -81,7 +81,7 @@ export function ConversationRoute() {
       <div className="panel-stack">
         <section className="panel-card panel-card-hero">
           <p className="eyebrow">Conversation</p>
-          <h2>{snapshotQuery.data?.conversation?.title ?? 'Loading conversation...'}</h2>
+          <h2>{snapshotQuery.data?.conversation?.title ?? 'Loading conversation…'}</h2>
           {showTechnicalInfo ? (
             <p className="muted-copy">
               Messages are persisted in SQLite and the run inspector shows the same event model both live and after relaunch.
@@ -90,7 +90,7 @@ export function ConversationRoute() {
         </section>
 
         <section className="panel-card transcript-panel">
-          {snapshotQuery.isLoading ? <p className="muted-copy">Loading messages...</p> : null}
+          {snapshotQuery.isLoading ? <p className="muted-copy">Loading messages…</p> : null}
           {!snapshotQuery.isLoading && snapshotQuery.data ? (
             <ChatTranscript snapshot={snapshotQuery.data} streamingEntry={streamingEntry ?? null} />
           ) : null}

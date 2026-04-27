@@ -1,5 +1,10 @@
+const timestampFormatter = new Intl.DateTimeFormat(undefined, {
+  dateStyle: 'medium',
+  timeStyle: 'short',
+})
+
 export function formatTimestamp(value: string) {
-  return new Date(value).toLocaleString()
+  return timestampFormatter.format(new Date(value))
 }
 
 export function formatRelativeTimestamp(value: string) {
@@ -31,5 +36,5 @@ export function previewText(value: string, maxLength = 120) {
     return 'No additional detail.'
   }
 
-  return normalized.length > maxLength ? `${normalized.slice(0, maxLength - 3)}...` : normalized
+  return normalized.length > maxLength ? `${normalized.slice(0, maxLength - 1)}…` : normalized
 }

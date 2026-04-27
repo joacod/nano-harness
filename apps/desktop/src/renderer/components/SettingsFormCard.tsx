@@ -145,6 +145,7 @@ export function SettingsFormCard({
             children={(field) => (
               <select
                 className="text-input"
+                name="provider"
                 value={field.state.value}
                 onChange={(event) => {
                   const nextProvider = event.target.value as AppSettings['provider']['provider']
@@ -185,7 +186,15 @@ export function SettingsFormCard({
             validators={{
               onChange: ({ value }) => (value.trim() ? undefined : 'Model is required.'),
             }}
-            children={(field) => <TextField field={field} placeholder="x-ai/grok-4.1-fast" />}
+            children={(field) => (
+              <TextField
+                field={field}
+                name="model"
+                placeholder="Example: x-ai/grok-4.1-fast"
+                autoComplete="off"
+                spellCheck={false}
+              />
+            )}
           />
         </LabeledField>
 
@@ -196,7 +205,9 @@ export function SettingsFormCard({
             validators={{
               onChange: ({ value }) => (value.trim() ? undefined : 'Workspace root is required.'),
             }}
-            children={(field) => <TextField field={field} placeholder="/Users/name/project" />}
+            children={(field) => (
+              <TextField field={field} name="workspace-root" placeholder="Example: /Users/name/project" autoComplete="off" spellCheck={false} />
+            )}
           />
         </LabeledField>
 
@@ -206,6 +217,7 @@ export function SettingsFormCard({
             children={(field) => (
               <select
                 className="text-input"
+                name="approval-policy"
                 value={field.state.value}
                 onChange={(event) => field.handleChange(event.target.value as AppSettings['workspace']['approvalPolicy'])}
               >
@@ -219,13 +231,21 @@ export function SettingsFormCard({
 
         <div className="form-row">
           <button type="submit" className="primary-button" disabled={isSaving}>
-            {isSaving ? 'Saving...' : 'Save settings'}
+            {isSaving ? 'Saving…' : 'Save settings'}
           </button>
         </div>
       </form>
 
-      {saveMessage ? <p className="success-copy">{saveMessage}</p> : null}
-      {saveError ? <p className="error-copy">{saveError}</p> : null}
+      {saveMessage ? (
+        <p className="success-copy" aria-live="polite">
+          {saveMessage}
+        </p>
+      ) : null}
+      {saveError ? (
+        <p className="error-copy" aria-live="polite">
+          {saveError}
+        </p>
+      ) : null}
 
       <form
         className="settings-form"
@@ -245,13 +265,22 @@ export function SettingsFormCard({
             validators={{
               onChange: ({ value }) => (value.trim() ? undefined : 'API key is required.'),
             }}
-            children={(field) => <TextField field={field} placeholder="Paste API key" inputType="password" />}
+            children={(field) => (
+              <TextField
+                field={field}
+                name="api-key"
+                placeholder="Paste API key"
+                autoComplete="off"
+                inputType="password"
+                spellCheck={false}
+              />
+            )}
           />
         </LabeledField>
 
         <div className="form-row">
           <button type="submit" className="primary-button" disabled={isSavingApiKey}>
-            {isSavingApiKey ? 'Saving API key...' : 'Save API key'}
+            {isSavingApiKey ? 'Saving API key…' : 'Save API key'}
           </button>
           <button
             type="button"
@@ -264,13 +293,21 @@ export function SettingsFormCard({
               })
             }}
           >
-            {isClearingApiKey ? 'Clearing...' : 'Clear API key'}
+            {isClearingApiKey ? 'Clearing…' : 'Clear API key'}
           </button>
         </div>
       </form>
 
-      {apiKeyMessage ? <p className="success-copy">{apiKeyMessage}</p> : null}
-      {apiKeyError ? <p className="error-copy">{apiKeyError}</p> : null}
+      {apiKeyMessage ? (
+        <p className="success-copy" aria-live="polite">
+          {apiKeyMessage}
+        </p>
+      ) : null}
+      {apiKeyError ? (
+        <p className="error-copy" aria-live="polite">
+          {apiKeyError}
+        </p>
+      ) : null}
 
       <section className="provider-status-card">
         <div className="sidebar-header-row">
@@ -282,7 +319,7 @@ export function SettingsFormCard({
         <dl className="summary-list">
           <div>
             <dt>Database</dt>
-            <dd>{dataPath ?? 'Loading data location...'}</dd>
+            <dd>{dataPath ?? 'Loading data location…'}</dd>
           </div>
         </dl>
         <p className="warning-copy">
@@ -304,7 +341,7 @@ export function SettingsFormCard({
               void onExportData()
             }}
           >
-            {isExportingData ? 'Exporting...' : 'Export data'}
+            {isExportingData ? 'Exporting…' : 'Export data'}
           </button>
           <button
             type="button"
@@ -318,12 +355,24 @@ export function SettingsFormCard({
               void onImportData()
             }}
           >
-            {isImportingData ? 'Importing...' : 'Import data'}
+            {isImportingData ? 'Importing…' : 'Import data'}
           </button>
         </div>
-        {exportDataResult ? <p className="success-copy">Exported to {exportDataResult}</p> : null}
-        {importDataResult ? <p className="success-copy">Safety backup created at {importDataResult}</p> : null}
-        {dataError ? <p className="error-copy">{dataError}</p> : null}
+        {exportDataResult ? (
+          <p className="success-copy" aria-live="polite">
+            Exported to {exportDataResult}
+          </p>
+        ) : null}
+        {importDataResult ? (
+          <p className="success-copy" aria-live="polite">
+            Safety backup created at {importDataResult}
+          </p>
+        ) : null}
+        {dataError ? (
+          <p className="error-copy" aria-live="polite">
+            {dataError}
+          </p>
+        ) : null}
       </section>
     </section>
   )

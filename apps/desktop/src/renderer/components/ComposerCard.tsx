@@ -59,7 +59,11 @@ export function ComposerCard({ conversationId }: { conversationId: string | null
     <section className="panel-card composer-card">
       <div className="sidebar-header-row">
         <h2>{conversationId ? 'Continue conversation' : 'First prompt'}</h2>
-        {startRunMutation.isPending ? <span className="runtime-pill">Sending...</span> : null}
+        {startRunMutation.isPending ? (
+          <span className="runtime-pill" aria-live="polite">
+            Sending…
+          </span>
+        ) : null}
       </div>
 
       <form
@@ -75,9 +79,10 @@ export function ComposerCard({ conversationId }: { conversationId: string | null
           children={(field) => (
             <textarea
               className="text-input composer-input"
+              name="prompt"
               value={field.state.value}
               onChange={(event) => field.handleChange(event.target.value)}
-              placeholder="Ask the local harness to summarize a file, explain a bug, or sketch a plan."
+              placeholder="Ask the local harness to summarize a file, explain a bug, or sketch a plan…"
               rows={5}
             />
           )}
@@ -91,12 +96,20 @@ export function ComposerCard({ conversationId }: { conversationId: string | null
       </form>
 
       {providerStatusQuery.data && !providerStatusQuery.data.isReady ? (
-        <p className="warning-copy">
+        <p className="warning-copy" aria-live="polite">
           Provider setup is incomplete. Update settings before expecting a successful hosted-provider response.
         </p>
       ) : null}
-      {submitError ? <p className="error-copy">{submitError}</p> : null}
-      {startRunMutation.error instanceof Error ? <p className="error-copy">{startRunMutation.error.message}</p> : null}
+      {submitError ? (
+        <p className="error-copy" aria-live="polite">
+          {submitError}
+        </p>
+      ) : null}
+      {startRunMutation.error instanceof Error ? (
+        <p className="error-copy" aria-live="polite">
+          {startRunMutation.error.message}
+        </p>
+      ) : null}
     </section>
   )
 }

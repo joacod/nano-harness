@@ -75,7 +75,7 @@ export function RunInspectorCard({
               disabled={runControlMutation.isPending}
               onClick={() => runControlMutation.mutate('resume')}
             >
-              {runControlMutation.isPending ? 'Working...' : 'Resume run'}
+              {runControlMutation.isPending ? 'Working…' : 'Resume run'}
             </button>
           ) : null}
           {run.status === 'created' || run.status === 'started' || run.status === 'waiting_approval' ? (
@@ -110,9 +110,21 @@ export function RunInspectorCard({
             </div>
           </div>
 
-          {run.failureMessage ? <p className="error-copy">{run.failureMessage}</p> : null}
-          {!run.failureMessage && streamingState?.errorMessage ? <p className="error-copy">{streamingState.errorMessage}</p> : null}
-          {runControlMutation.error instanceof Error ? <p className="error-copy">{runControlMutation.error.message}</p> : null}
+          {run.failureMessage ? (
+            <p className="error-copy" aria-live="polite">
+              {run.failureMessage}
+            </p>
+          ) : null}
+          {!run.failureMessage && streamingState?.errorMessage ? (
+            <p className="error-copy" aria-live="polite">
+              {streamingState.errorMessage}
+            </p>
+          ) : null}
+          {runControlMutation.error instanceof Error ? (
+            <p className="error-copy" aria-live="polite">
+              {runControlMutation.error.message}
+            </p>
+          ) : null}
 
           {pendingApproval ? (
             <section className="approval-card">
@@ -140,10 +152,14 @@ export function RunInspectorCard({
                   disabled={approvalMutation.isPending}
                   onClick={() => approvalMutation.mutate('granted')}
                 >
-                  {approvalMutation.isPending ? 'Submitting...' : 'Grant approval'}
+                  {approvalMutation.isPending ? 'Submitting…' : 'Grant approval'}
                 </button>
               </div>
-              {approvalMutation.error instanceof Error ? <p className="error-copy">{approvalMutation.error.message}</p> : null}
+              {approvalMutation.error instanceof Error ? (
+                <p className="error-copy" aria-live="polite">
+                  {approvalMutation.error.message}
+                </p>
+              ) : null}
             </section>
           ) : null}
 

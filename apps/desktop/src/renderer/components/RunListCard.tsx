@@ -45,7 +45,11 @@ export function RunListCard({
               <small>{formatTimestamp(run.createdAt)}</small>
               {providerRequest ? <span className="run-provider-label">{providerRequest.payload.provider}</span> : null}
               {providerRequest ? <span className="muted-copy">{providerRequest.payload.model}</span> : null}
-              {run.failureMessage ? <span className="error-copy">{run.failureMessage}</span> : null}
+              {run.failureMessage ? (
+                <span className="error-copy" aria-live="polite">
+                  {run.failureMessage}
+                </span>
+              ) : null}
             </button>
           )
         })}

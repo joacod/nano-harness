@@ -121,7 +121,23 @@ a {
 .conversation-link,
 .ghost-button,
 .primary-button {
-  transition: 140ms ease;
+  transition:
+    background-color 140ms ease,
+    border-color 140ms ease,
+    color 140ms ease,
+    filter 140ms ease,
+    box-shadow 140ms ease;
+}
+
+.ghost-link:focus-visible,
+.conversation-link:focus-visible,
+.ghost-button:focus-visible,
+.primary-button:focus-visible,
+.run-card:focus-visible,
+.text-input:focus-visible {
+  outline: 2px solid rgba(125, 211, 252, 0.72);
+  outline-offset: 3px;
+  box-shadow: 0 0 0 5px rgba(125, 211, 252, 0.14);
 }
 
 .ghost-link {
@@ -156,6 +172,15 @@ a {
   border-radius: 16px;
   border: 1px solid transparent;
   background: rgba(17, 30, 50, 0.7);
+  min-width: 0;
+}
+
+.conversation-link span,
+.conversation-link small {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .conversation-link small {
@@ -215,6 +240,7 @@ a {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  min-width: 0;
 }
 
 .event-list-item strong {
@@ -224,6 +250,7 @@ a {
 
 .event-list-item small {
   color: var(--muted-foreground);
+  overflow-wrap: anywhere;
 }
 
 .summary-list {
@@ -326,6 +353,8 @@ a {
   border-radius: 20px;
   border: 1px solid var(--border);
   overflow-wrap: anywhere;
+  content-visibility: auto;
+  contain-intrinsic-size: auto 180px;
 }
 
 .message-user {
@@ -381,6 +410,7 @@ a {
 .message-tool-call-chip span {
   font-size: 0.76rem;
   color: var(--muted-foreground);
+  overflow-wrap: anywhere;
 }
 
 .message-pre {
@@ -434,6 +464,10 @@ a {
   background: rgba(11, 21, 37, 0.76);
   color: inherit;
   text-align: left;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  content-visibility: auto;
+  contain-intrinsic-size: auto 120px;
 }
 
 .run-card:hover,
@@ -455,6 +489,13 @@ a {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  min-width: 0;
+}
+
+.run-card-header strong,
+.timeline-header strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .status-badge {
@@ -560,6 +601,10 @@ a {
   border: 1px solid var(--border);
   border-radius: 18px;
   background: rgba(11, 21, 37, 0.74);
+  min-width: 0;
+  overflow-wrap: anywhere;
+  content-visibility: auto;
+  contain-intrinsic-size: auto 140px;
 }
 
 .timeline-type {
@@ -612,6 +657,11 @@ a {
 .text-input:focus {
   outline: 2px solid rgba(125, 211, 252, 0.28);
   border-color: rgba(125, 211, 252, 0.5);
+}
+
+select.text-input {
+  background-color: rgba(7, 17, 31, 0.96);
+  color: var(--foreground);
 }
 
 .composer-input {
@@ -676,6 +726,7 @@ a {
 .field-error,
 .error-copy {
   color: #fda4af;
+  overflow-wrap: anywhere;
 }
 
 .warning-copy {
