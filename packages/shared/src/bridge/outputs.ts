@@ -1,0 +1,72 @@
+import { z } from 'zod'
+
+import { approvalRequestSchema, approvalResolutionSchema } from '../approvals'
+import { runEventSchema } from '../events'
+import { conversationSchema, messageSchema } from '../messages'
+import { runSchema } from '../runs'
+
+export const desktopPlatformSchema = z.enum(['darwin', 'linux', 'win32'])
+
+export type DesktopPlatform = z.infer<typeof desktopPlatformSchema>
+
+export const desktopContextSchema = z.object({
+  platform: desktopPlatformSchema,
+  version: z.string().min(1),
+  dataPath: z.string().min(1),
+})
+
+export type DesktopContext = z.infer<typeof desktopContextSchema>
+
+export const conversationSnapshotSchema = z.object({
+  conversation: conversationSchema.nullable(),
+  runs: z.array(runSchema),
+  messages: z.array(messageSchema),
+  events: z.array(runEventSchema),
+  approvalRequests: z.array(approvalRequestSchema),
+  approvalResolutions: z.array(approvalResolutionSchema),
+})
+
+export type ConversationSnapshot = z.infer<typeof conversationSnapshotSchema>
+
+export const conversationListSchema = z.array(conversationSchema)
+
+export type ConversationList = z.infer<typeof conversationListSchema>
+
+export const providerStatusSchema = z.object({
+  providerId: z.string().min(1),
+  providerLabel: z.string().min(1),
+  model: z.string().min(1),
+  baseUrl: z.string().min(1),
+  apiKeyLabel: z.string().min(1),
+  apiKeyPresent: z.boolean(),
+  isReady: z.boolean(),
+  issues: z.array(z.string().min(1)),
+  hints: z.array(z.string().min(1)),
+})
+
+export type ProviderStatus = z.infer<typeof providerStatusSchema>
+
+export const providerCredentialStatusSchema = z.object({
+  apiKeyPresent: z.boolean(),
+})
+
+export type ProviderCredentialStatus = z.infer<typeof providerCredentialStatusSchema>
+
+export const startRunResultSchema = z.object({
+  runId: z.string().min(1),
+})
+
+export type StartRunResult = z.infer<typeof startRunResultSchema>
+
+export const exportDataResultSchema = z.object({
+  exportedFilePath: z.string().min(1).nullable(),
+})
+
+export type ExportDataResult = z.infer<typeof exportDataResultSchema>
+
+export const importDataResultSchema = z.object({
+  imported: z.boolean(),
+  backupFilePath: z.string().min(1).optional(),
+})
+
+export type ImportDataResult = z.infer<typeof importDataResultSchema>

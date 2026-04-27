@@ -1,0 +1,18 @@
+export const desktopBridgeChannels = {
+  getContext: 'desktop:get-context',
+  listConversations: 'desktop:list-conversations',
+  getProviderStatus: 'desktop:get-provider-status',
+  getProviderCredentialStatus: 'desktop:get-provider-credential-status',
+  saveProviderApiKey: 'desktop:save-provider-api-key',
+  clearProviderApiKey: 'desktop:clear-provider-api-key',
+  exportData: 'desktop:export-data',
+  importData: 'desktop:import-data',
+  getSettings: 'desktop:get-settings',
+  saveSettings: 'desktop:save-settings',
+  getConversation: 'desktop:get-conversation',
+  startRun: 'desktop:start-run',
+  resumeRun: 'desktop:resume-run',
+  cancelRun: 'desktop:cancel-run',
+  resolveApproval: 'desktop:resolve-approval',
+  runEvent: 'desktop:run-event',
+} as const
