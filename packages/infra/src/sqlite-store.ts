@@ -1,5 +1,5 @@
 import { mkdirSync } from 'node:fs'
-import { mkdir } from 'node:fs/promises'
+import { copyFile, mkdir, rm } from 'node:fs/promises'
 import path from 'node:path'
 
 import { createClient } from '@libsql/client/node'
@@ -12,7 +12,9 @@ import {
   approvalResolutionSchema,
   conversationSchema,
   messageSchema,
+  providerKeySchema,
   runStatusSchema,
+  type ProviderKey,
   type Message,
   runEventSchema,
   runSchema,
@@ -25,6 +27,7 @@ import {
   approvalResolutionsTable,
   conversationsTable,
   messagesTable,
+  providerCredentialsTable,
   runEventsTable,
   runsTable,
   schema,
@@ -34,6 +37,16 @@ import {
 const SETTINGS_ROW_ID = 'app'
 const DEFAULT_DATA_DIR_NAME = '.nano-harness'
 const DEFAULT_DATABASE_FILE_NAME = 'nano-harness.db'
+const REQUIRED_DATABASE_TABLES = [
+  'conversations',
+  'runs',
+  'messages',
+  'run_events',
+  'approval_requests',
+  'approval_resolutions',
+  'settings',
+  'provider_credentials',
+] as const
 
 const initializationStatements = [
   `CREATE TABLE IF NOT EXISTS conversations (
@@ -90,6 +103,11 @@ const initializationStatements = [
     payload TEXT NOT NULL,
     updated_at TEXT NOT NULL
   )`,
+  `CREATE TABLE IF NOT EXISTS provider_credentials (
+    provider TEXT PRIMARY KEY NOT NULL,
+    encrypted_api_key TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  )`,
 ] as const
 
 export interface SqliteStoreOptions {
@@ -134,6 +152,10 @@ function parseJson<T>(value: string): T {
 
 function serializeJson(value: unknown): string {
   return JSON.stringify(value)
+}
+
+function quoteSqliteString(value: string): string {
+  return `'${value.replaceAll("'", "''")}'`
 }
 
 function serializeRunEvent(event: ReturnType<typeof runEventSchema.parse>) {
@@ -487,6 +509,92 @@ export class SqliteStore implements Store {
           updatedAt: new Date().toISOString(),
         },
       })
+  }
+
+  async getProviderCredentialStatus(provider: ProviderKey): Promise<{ apiKeyPresent: boolean }> {
+    const parsedProvider = providerKeySchema.parse(provider)
+    const [credentialRow] = await this.db
+      .select({ provider: providerCredentialsTable.provider })
+      .from(providerCredentialsTable)
+      .where(eq(providerCredentialsTable.provider, parsedProvider))
+
+    return {
+      apiKeyPresent: Boolean(credentialRow),
+    }
+  }
+
+  async saveProviderCredential(provider: ProviderKey, encryptedApiKey: string): Promise<void> {
+    const parsedProvider = providerKeySchema.parse(provider)
+    const updatedAt = new Date().toISOString()
+
+    await this.db
+      .insert(providerCredentialsTable)
+      .values({
+        provider: parsedProvider,
+        encryptedApiKey,
+        updatedAt,
+      })
+      .onConflictDoUpdate({
+        target: providerCredentialsTable.provider,
+        set: {
+          encryptedApiKey,
+          updatedAt,
+        },
+      })
+  }
+
+  async clearProviderCredential(provider: ProviderKey): Promise<void> {
+    const parsedProvider = providerKeySchema.parse(provider)
+    await this.db.delete(providerCredentialsTable).where(eq(providerCredentialsTable.provider, parsedProvider))
+  }
+
+  async getEncryptedProviderCredential(provider: ProviderKey): Promise<string | null> {
+    const parsedProvider = providerKeySchema.parse(provider)
+    const [credentialRow] = await this.db
+      .select({ encryptedApiKey: providerCredentialsTable.encryptedApiKey })
+      .from(providerCredentialsTable)
+      .where(eq(providerCredentialsTable.provider, parsedProvider))
+
+    return credentialRow?.encryptedApiKey ?? null
+  }
+
+  async backupToFile(filePath: string): Promise<void> {
+    await rm(filePath, { force: true })
+    await this.client.execute(`VACUUM INTO ${quoteSqliteString(filePath)}`)
+  }
+
+  async validateDatabaseFile(filePath: string): Promise<void> {
+    const validationClient = createClient({ url: toFileDatabaseUrl(filePath) })
+
+    try {
+      const result = await validationClient.execute(
+        `SELECT name FROM sqlite_master WHERE type = 'table' AND name IN (${REQUIRED_DATABASE_TABLES.map(quoteSqliteString).join(', ')})`,
+      )
+      const tableNames = new Set(result.rows.map((row) => String(row['name'])))
+      const missingTables = REQUIRED_DATABASE_TABLES.filter((tableName) => !tableNames.has(tableName))
+
+      if (missingTables.length > 0) {
+        throw new Error(`Selected file is not a valid Nano Harness database. Missing tables: ${missingTables.join(', ')}`)
+      }
+    } finally {
+      await validationClient.close()
+    }
+  }
+
+  async sanitizeDatabaseFile(filePath: string): Promise<void> {
+    const sanitizeClient = createClient({ url: toFileDatabaseUrl(filePath) })
+
+    try {
+      await sanitizeClient.execute('DELETE FROM provider_credentials')
+    } finally {
+      await sanitizeClient.close()
+    }
+  }
+
+  async createStagedImportCopy(sourceFilePath: string): Promise<string> {
+    const stagedFilePath = path.join(this.paths.dataDir, `nano-harness-import-${Date.now()}.db`)
+    await copyFile(sourceFilePath, stagedFilePath)
+    return stagedFilePath
   }
 
   async close(): Promise<void> {
