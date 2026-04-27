@@ -6,7 +6,9 @@ import {
   conversationSnapshotSchema,
   desktopBridgeChannels,
   desktopContextSchema,
+  exportDataResultSchema,
   getConversationInputSchema,
+  importDataResultSchema,
   providerCredentialInputSchema,
   providerCredentialStatusSchema,
   providerStatusSchema,
@@ -42,6 +44,12 @@ const desktopApi: DesktopApi = {
   async clearProviderApiKey(input) {
     const payload = providerCredentialInputSchema.parse(input)
     await ipcRenderer.invoke(desktopBridgeChannels.clearProviderApiKey, payload)
+  },
+  async exportData() {
+    return exportDataResultSchema.parse(await ipcRenderer.invoke(desktopBridgeChannels.exportData))
+  },
+  async importData() {
+    return importDataResultSchema.parse(await ipcRenderer.invoke(desktopBridgeChannels.importData))
   },
   async getSettings() {
     return appSettingsSchema.nullable().parse(await ipcRenderer.invoke(desktopBridgeChannels.getSettings))

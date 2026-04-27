@@ -931,6 +931,7 @@ function RunInspectorCard({
 
 function SettingsRoute() {
   const queryClient = useQueryClient()
+  const contextQuery = useQuery(contextQueryOptions)
   const settingsQuery = useQuery(settingsQueryOptions)
   const providerStatusQuery = useQuery(providerStatusQueryOptions)
   const mutation = useMutation({
@@ -953,6 +954,12 @@ function SettingsRoute() {
       await queryClient.invalidateQueries({ queryKey: ['provider-status'] })
     },
   })
+  const exportDataMutation = useMutation({
+    mutationFn: async () => window.desktop.exportData(),
+  })
+  const importDataMutation = useMutation({
+    mutationFn: async () => window.desktop.importData(),
+  })
 
   if (!settingsQuery.data) {
     return (
@@ -967,12 +974,18 @@ function SettingsRoute() {
     <SettingsFormCard
       key={JSON.stringify(settingsQuery.data)}
       initialSettings={settingsQuery.data}
+      dataPath={contextQuery.data?.dataPath ?? null}
       providerStatus={providerStatusQuery.data ?? null}
       isSaving={mutation.isPending}
       isSavingApiKey={saveApiKeyMutation.isPending}
       isClearingApiKey={clearApiKeyMutation.isPending}
+      isExportingData={exportDataMutation.isPending}
+      isImportingData={importDataMutation.isPending}
       saveError={mutation.error instanceof Error ? mutation.error.message : null}
       apiKeyError={saveApiKeyMutation.error instanceof Error ? saveApiKeyMutation.error.message : clearApiKeyMutation.error instanceof Error ? clearApiKeyMutation.error.message : null}
+      exportDataResult={exportDataMutation.data?.exportedFilePath ?? null}
+      importDataResult={importDataMutation.data?.backupFilePath ?? null}
+      dataError={exportDataMutation.error instanceof Error ? exportDataMutation.error.message : importDataMutation.error instanceof Error ? importDataMutation.error.message : null}
       onSubmit={async (settings) => {
         await mutation.mutateAsync(settings)
       }}
@@ -981,6 +994,12 @@ function SettingsRoute() {
       }}
       onClearApiKey={async (input) => {
         await clearApiKeyMutation.mutateAsync(input)
+      }}
+      onExportData={async () => {
+        await exportDataMutation.mutateAsync()
+      }}
+      onImportData={async () => {
+        await importDataMutation.mutateAsync()
       }}
     />
   )
@@ -1132,26 +1151,42 @@ function ComposerCard({ conversationId }: { conversationId: string | null }) {
 
 function SettingsFormCard({
   initialSettings,
+  dataPath,
   providerStatus,
   isSaving,
   isSavingApiKey,
   isClearingApiKey,
+  isExportingData,
+  isImportingData,
   saveError,
   apiKeyError,
+  exportDataResult,
+  importDataResult,
+  dataError,
   onSubmit,
   onSaveApiKey,
   onClearApiKey,
+  onExportData,
+  onImportData,
 }: {
   initialSettings: AppSettings
+  dataPath: string | null
   providerStatus: ProviderStatus | null
   isSaving: boolean
   isSavingApiKey: boolean
   isClearingApiKey: boolean
+  isExportingData: boolean
+  isImportingData: boolean
   saveError: string | null
   apiKeyError: string | null
+  exportDataResult: string | null
+  importDataResult: string | null
+  dataError: string | null
   onSubmit: (settings: AppSettings) => Promise<void>
   onSaveApiKey: (input: { provider: AppSettings['provider']['provider']; apiKey: string }) => Promise<void>
   onClearApiKey: (input: { provider: AppSettings['provider']['provider'] }) => Promise<void>
+  onExportData: () => Promise<void>
+  onImportData: () => Promise<void>
 }) {
   const [saveMessage, setSaveMessage] = useState<string | null>(null)
   const [apiKeyMessage, setApiKeyMessage] = useState<string | null>(null)
@@ -1378,6 +1413,60 @@ function SettingsFormCard({
 
       {apiKeyMessage ? <p className="success-copy">{apiKeyMessage}</p> : null}
       {apiKeyError ? <p className="error-copy">{apiKeyError}</p> : null}
+
+      <section className="provider-status-card">
+        <div className="sidebar-header-row">
+          <div>
+            <p className="eyebrow">Data</p>
+            <h3>Backup and restore</h3>
+          </div>
+        </div>
+        <dl className="summary-list">
+          <div>
+            <dt>Database</dt>
+            <dd>{dataPath ?? 'Loading data location...'}</dd>
+          </div>
+        </dl>
+        <p className="warning-copy">
+          Export includes conversations, run history, approvals, and non-sensitive settings. API keys are not included and must be re-entered after import.
+        </p>
+        <p className="warning-copy">
+          Import replaces your current Nano Harness data. A local safety backup is created first, and the app relaunches after import.
+        </p>
+        <div className="form-row">
+          <button
+            type="button"
+            className="primary-button"
+            disabled={isExportingData}
+            onClick={() => {
+              if (!window.confirm('Export Nano Harness data without API keys? Keep the backup file private.')) {
+                return
+              }
+
+              void onExportData()
+            }}
+          >
+            {isExportingData ? 'Exporting...' : 'Export data'}
+          </button>
+          <button
+            type="button"
+            className="ghost-button"
+            disabled={isImportingData}
+            onClick={() => {
+              if (!window.confirm('Import replaces current app data and does not restore API keys. Continue?')) {
+                return
+              }
+
+              void onImportData()
+            }}
+          >
+            {isImportingData ? 'Importing...' : 'Import data'}
+          </button>
+        </div>
+        {exportDataResult ? <p className="success-copy">Exported to {exportDataResult}</p> : null}
+        {importDataResult ? <p className="success-copy">Safety backup created at {importDataResult}</p> : null}
+        {dataError ? <p className="error-copy">{dataError}</p> : null}
+      </section>
     </section>
   )
 }

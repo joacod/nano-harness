@@ -13,6 +13,7 @@ export type DesktopPlatform = z.infer<typeof desktopPlatformSchema>
 export const desktopContextSchema = z.object({
   platform: desktopPlatformSchema,
   version: z.string().min(1),
+  dataPath: z.string().min(1),
 })
 
 export type DesktopContext = z.infer<typeof desktopContextSchema>
@@ -91,6 +92,19 @@ export const startRunResultSchema = z.object({
 
 export type StartRunResult = z.infer<typeof startRunResultSchema>
 
+export const exportDataResultSchema = z.object({
+  exportedFilePath: z.string().min(1).nullable(),
+})
+
+export type ExportDataResult = z.infer<typeof exportDataResultSchema>
+
+export const importDataResultSchema = z.object({
+  imported: z.boolean(),
+  backupFilePath: z.string().min(1).optional(),
+})
+
+export type ImportDataResult = z.infer<typeof importDataResultSchema>
+
 export const desktopBridgeChannels = {
   getContext: 'desktop:get-context',
   listConversations: 'desktop:list-conversations',
@@ -98,6 +112,8 @@ export const desktopBridgeChannels = {
   getProviderCredentialStatus: 'desktop:get-provider-credential-status',
   saveProviderApiKey: 'desktop:save-provider-api-key',
   clearProviderApiKey: 'desktop:clear-provider-api-key',
+  exportData: 'desktop:export-data',
+  importData: 'desktop:import-data',
   getSettings: 'desktop:get-settings',
   saveSettings: 'desktop:save-settings',
   getConversation: 'desktop:get-conversation',
@@ -115,6 +131,8 @@ export type DesktopApi = {
   getProviderCredentialStatus(input: ProviderCredentialInput): Promise<ProviderCredentialStatus>
   saveProviderApiKey(input: SaveProviderApiKeyInput): Promise<void>
   clearProviderApiKey(input: ProviderCredentialInput): Promise<void>
+  exportData(): Promise<ExportDataResult>
+  importData(): Promise<ImportDataResult>
   getSettings(): Promise<z.infer<typeof appSettingsSchema> | null>
   saveSettings(settings: z.infer<typeof appSettingsSchema>): Promise<z.infer<typeof appSettingsSchema>>
   getConversation(input: GetConversationInput): Promise<ConversationSnapshot>
