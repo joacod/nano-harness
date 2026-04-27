@@ -5,6 +5,12 @@ import { formatTimestamp, previewText } from './formatting'
 export type StreamingRunState = {
   conversationId: string
   content: string
+  reasoning: {
+    text: string
+    summaries: string[]
+    encryptedCount: number
+    isStreaming: boolean
+  }
   phase: 'queued' | 'started' | 'contacting_provider' | 'streaming' | 'using_tools' | 'waiting_approval'
   activity: Array<{ id: string; title: string; detail: string }>
   isStreaming: boolean
@@ -53,6 +59,12 @@ export function updateStreamingState(current: Record<string, StreamingRunState>,
       [event.runId]: {
         conversationId: event.payload.run.conversationId,
         content: '',
+        reasoning: {
+          text: '',
+          summaries: [],
+          encryptedCount: 0,
+          isStreaming: false,
+        },
         phase: 'queued',
         activity: [{ id: event.id, title: 'Run queued', detail: 'Preparing the agent runtime.' }],
         isStreaming: false,
@@ -93,8 +105,37 @@ export function updateStreamingState(current: Record<string, StreamingRunState>,
       [event.runId]: {
         ...existing,
         content: `${existing.content}${event.payload.delta}`,
+        reasoning: {
+          ...existing.reasoning,
+          isStreaming: false,
+        },
         phase: 'streaming',
         isStreaming: true,
+      },
+    }
+  }
+
+  if (event.type === 'provider.reasoning_delta') {
+    const existing = current[event.runId]
+
+    if (!existing) {
+      return current
+    }
+
+    const textDetails = event.payload.details?.flatMap((detail) => detail.type === 'reasoning.text' ? [detail.text] : []) ?? []
+    const summaries = event.payload.details?.flatMap((detail) => detail.type === 'reasoning.summary' ? [detail.summary] : []) ?? []
+    const encryptedCount = event.payload.details?.filter((detail) => detail.type === 'reasoning.encrypted' || detail.type === 'reasoning.unknown').length ?? 0
+
+    return {
+      ...current,
+      [event.runId]: {
+        ...existing,
+        reasoning: {
+          text: `${existing.reasoning.text}${event.payload.text ?? ''}${textDetails.join('')}`,
+          summaries: [...existing.reasoning.summaries, ...summaries],
+          encryptedCount: existing.reasoning.encryptedCount + encryptedCount,
+          isStreaming: true,
+        },
       },
     }
   }
@@ -166,6 +207,21 @@ export function describeRunEvent(event: RunEvent) {
       return { title: 'Provider request sent', detail: `${event.payload.provider} · ${event.payload.model}` }
     case 'provider.delta':
       return { title: 'Provider streamed delta', detail: previewText(event.payload.delta, 160) }
+    case 'provider.reasoning_delta': {
+      const text = event.payload.text ?? event.payload.details?.map((detail) => {
+        if (detail.type === 'reasoning.summary') {
+          return detail.summary
+        }
+
+        if (detail.type === 'reasoning.text') {
+          return detail.text
+        }
+
+        return 'Encrypted reasoning block'
+      }).join(' ')
+
+      return { title: 'Provider streamed reasoning', detail: previewText(text ?? 'Reasoning metadata received', 160) }
+    }
     case 'provider.completed':
       return { title: 'Provider stream completed', detail: `Assistant message ${event.payload.messageId}` }
     case 'provider.error':

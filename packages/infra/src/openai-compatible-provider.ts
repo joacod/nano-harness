@@ -1,4 +1,4 @@
-import { getProviderDefinition, type ActionDefinition, type AssistantToolCall, type Message } from '@nano-harness/shared'
+import { getProviderDefinition, reasoningDetailSchema, type ActionDefinition, type AssistantToolCall, type JsonValue, type Message, type ProviderReasoningDelta, type ReasoningDetail } from '@nano-harness/shared'
 import type { Provider, ProviderActionRequest, ProviderGenerateInput, ProviderGenerateResult } from '@nano-harness/core'
 
 type FetchLike = typeof fetch
@@ -15,6 +15,8 @@ type OpenAICompatibleMessage =
   | {
       role: 'assistant'
       content: string | null
+      reasoning?: string
+      reasoning_details?: ReasoningDetail[]
       tool_calls?: Array<{
         id: string
         type: 'function'
@@ -48,6 +50,9 @@ type OpenAICompatibleStreamChunk = {
     finish_reason?: string | null
     delta?: {
       content?: string | null
+      reasoning?: string | null
+      reasoning_content?: string | null
+      reasoning_details?: unknown[]
       tool_calls?: Array<{
         index?: number
         id?: string
@@ -61,10 +66,17 @@ type OpenAICompatibleStreamChunk = {
   }>
 }
 
+type OpenAICompatibleStreamDelta = NonNullable<NonNullable<OpenAICompatibleStreamChunk['choices']>[number]['delta']>
+
 type PendingToolCall = {
   id?: string
   name: string
   argumentsText: string
+}
+
+type ReasoningAccumulator = {
+  text: string
+  details: ReasoningDetail[]
 }
 
 function normalizeBaseUrl(baseUrl: string): string {
@@ -96,6 +108,8 @@ function toOpenAICompatibleMessages(messages: Message[]): OpenAICompatibleMessag
       return {
         role: 'assistant',
         content: message.content || null,
+        reasoning: message.reasoning,
+        reasoning_details: message.reasoningDetails,
         tool_calls: message.toolCalls?.length ? toOpenAICompatibleAssistantToolCalls(message.toolCalls) : undefined,
       }
     }
@@ -105,6 +119,23 @@ function toOpenAICompatibleMessages(messages: Message[]): OpenAICompatibleMessag
       content: message.content,
     }
   })
+}
+
+function toOpenAICompatibleReasoning(settings: ProviderGenerateInput['settings']): Record<string, unknown> | undefined {
+  const reasoning = settings.provider.reasoning
+
+  if (!reasoning || reasoning.mode === 'auto') {
+    return undefined
+  }
+
+  if (reasoning.mode === 'off') {
+    return { exclude: true }
+  }
+
+  return {
+    effort: reasoning.effort,
+    exclude: false,
+  }
 }
 
 function toOpenAICompatibleTools(actions: ActionDefinition[]): OpenAICompatibleTool[] {
@@ -166,6 +197,47 @@ function updatePendingToolCalls(
       })
     }
   }
+}
+
+function parseReasoningDetails(details: unknown[] | undefined): ReasoningDetail[] {
+  if (!details?.length) {
+    return []
+  }
+
+  return details.flatMap((detail) => {
+    const result = reasoningDetailSchema.safeParse(detail)
+    return result.success
+      ? [result.data]
+      : [reasoningDetailSchema.parse({ type: 'reasoning.unknown', data: detail as JsonValue })]
+  })
+}
+
+async function handleReasoningDelta(
+  input: ProviderGenerateInput,
+  accumulator: ReasoningAccumulator,
+  delta: OpenAICompatibleStreamDelta | undefined,
+): Promise<void> {
+  const text = delta?.reasoning ?? delta?.reasoning_content ?? ''
+  const details = parseReasoningDetails(delta?.reasoning_details)
+
+  if (!text && details.length === 0) {
+    return
+  }
+
+  accumulator.text += text
+  accumulator.details = [...accumulator.details, ...details]
+
+  const reasoningDelta: ProviderReasoningDelta = {}
+
+  if (text) {
+    reasoningDelta.text = text
+  }
+
+  if (details.length > 0) {
+    reasoningDelta.details = details
+  }
+
+  await input.onReasoningDelta?.(reasoningDelta)
 }
 
 function toProviderActionRequests(pendingToolCalls: Map<number, PendingToolCall>): ProviderActionRequest[] {
@@ -239,6 +311,7 @@ export class OpenAICompatibleProvider implements Provider {
           stream: true,
           messages: toOpenAICompatibleMessages(input.messages),
           tools: toOpenAICompatibleTools(input.actions),
+          reasoning: toOpenAICompatibleReasoning(input.settings),
           parallel_tool_calls: false,
         }),
         signal: input.signal,
@@ -256,6 +329,7 @@ export class OpenAICompatibleProvider implements Provider {
     const reader = response.body.getReader()
     const decoder = new TextDecoder()
     const pendingToolCalls = new Map<number, PendingToolCall>()
+    const reasoning: ReasoningAccumulator = { text: '', details: [] }
     let remainder = ''
     let message = ''
 
@@ -277,6 +351,8 @@ export class OpenAICompatibleProvider implements Provider {
         if (data === '[DONE]') {
           return {
             content: message,
+            reasoning: reasoning.text || undefined,
+            reasoningDetails: reasoning.details.length > 0 ? reasoning.details : undefined,
             actionCalls: pendingToolCalls.size > 0 ? toProviderActionRequests(pendingToolCalls) : undefined,
           }
         }
@@ -291,6 +367,8 @@ export class OpenAICompatibleProvider implements Provider {
         updatePendingToolCalls(pendingToolCalls, chunk)
 
         for (const choice of chunk.choices ?? []) {
+          await handleReasoningDelta(input, reasoning, choice.delta)
+
           const delta = choice.delta?.content ?? ''
 
           if (!delta) {
@@ -320,6 +398,8 @@ export class OpenAICompatibleProvider implements Provider {
       updatePendingToolCalls(pendingToolCalls, trailingChunk)
 
       for (const choice of trailingChunk.choices ?? []) {
+        await handleReasoningDelta(input, reasoning, choice.delta)
+
         const delta = choice.delta?.content ?? ''
 
         if (!delta) {
@@ -333,6 +413,8 @@ export class OpenAICompatibleProvider implements Provider {
 
     return {
       content: message,
+      reasoning: reasoning.text || undefined,
+      reasoningDetails: reasoning.details.length > 0 ? reasoning.details : undefined,
       actionCalls: pendingToolCalls.size > 0 ? toProviderActionRequests(pendingToolCalls) : undefined,
     }
   }

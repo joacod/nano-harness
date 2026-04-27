@@ -1,8 +1,14 @@
 import { Streamdown } from 'streamdown'
 import type { RefObject } from 'react'
 
-import type { ConversationSnapshot } from '../../../../../packages/shared/src'
+import type { ConversationSnapshot, ReasoningDetail } from '../../../../../packages/shared/src'
 import type { StreamingRunState } from '../utils/run-events'
+
+type ReasoningDisplay = {
+  text: string
+  summaries: string[]
+  encryptedCount: number
+}
 
 function getStreamingLabel(streamingState: StreamingRunState) {
   if (streamingState.content) {
@@ -23,6 +29,45 @@ function getStreamingLabel(streamingState: StreamingRunState) {
     case 'streaming':
       return 'Receiving response…'
   }
+}
+
+function getReasoningDisplay(reasoning?: string, details?: ReasoningDetail[]): ReasoningDisplay | null {
+  const summaries = details?.flatMap((detail) => detail.type === 'reasoning.summary' ? [detail.summary] : []) ?? []
+  const textDetails = details?.flatMap((detail) => detail.type === 'reasoning.text' ? [detail.text] : []) ?? []
+  const encryptedCount = details?.filter((detail) => detail.type === 'reasoning.encrypted' || detail.type === 'reasoning.unknown').length ?? 0
+  const text = `${reasoning ?? ''}${textDetails.join('')}`.trim()
+
+  if (!text && summaries.length === 0 && encryptedCount === 0) {
+    return null
+  }
+
+  return { text, summaries, encryptedCount }
+}
+
+function ThinkingPanel({ display, defaultOpen }: { display: ReasoningDisplay; defaultOpen: boolean }) {
+  return (
+    <details className="thinking-panel" open={defaultOpen}>
+      <summary>
+        <span>Thinking</span>
+        <span className="thinking-count">
+          {display.encryptedCount > 0 && !display.text && display.summaries.length === 0
+            ? 'not displayable'
+            : 'available'}
+        </span>
+      </summary>
+      <div className="thinking-body">
+        {display.summaries.map((summary, index) => (
+          <p key={`${summary}-${index}`}>{summary}</p>
+        ))}
+        {display.text ? <pre>{display.text}</pre> : null}
+        {display.encryptedCount > 0 ? (
+          <p className="muted-copy">
+            {display.encryptedCount} encrypted reasoning block{display.encryptedCount === 1 ? '' : 's'} preserved but not displayable.
+          </p>
+        ) : null}
+      </div>
+    </details>
+  )
 }
 
 export function ChatTranscript({
@@ -56,6 +101,10 @@ export function ChatTranscript({
               ))}
             </div>
           ) : null}
+          {message.role === 'assistant' ? (() => {
+            const reasoningDisplay = getReasoningDisplay(message.reasoning, message.reasoningDetails)
+            return reasoningDisplay ? <ThinkingPanel display={reasoningDisplay} defaultOpen={false} /> : null
+          })() : null}
           {message.role === 'assistant' ? (
             <Streamdown>{message.content}</Streamdown>
           ) : (
@@ -79,6 +128,16 @@ export function ChatTranscript({
                 </div>
               ))}
             </div>
+          ) : null}
+          {streamingState.reasoning.text || streamingState.reasoning.summaries.length > 0 || streamingState.reasoning.encryptedCount > 0 ? (
+            <ThinkingPanel
+              display={{
+                text: streamingState.reasoning.text,
+                summaries: streamingState.reasoning.summaries,
+                encryptedCount: streamingState.reasoning.encryptedCount,
+              }}
+              defaultOpen
+            />
           ) : null}
           {streamingState.content ? (
             <Streamdown isAnimating mode="streaming">

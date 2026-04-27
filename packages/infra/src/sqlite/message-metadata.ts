@@ -1,12 +1,16 @@
-import { assistantToolCallSchema, messageSchema, type Message } from '@nano-harness/shared'
+import { assistantToolCallSchema, messageSchema, reasoningDetailSchema, type Message } from '@nano-harness/shared'
 
 import { parseJson, serializeJson } from './serializers'
 
 export function serializeMessageMetadata(message: Message): string | null {
-  if (message.role === 'assistant' && message.toolCalls && message.toolCalls.length > 0) {
-    return serializeJson({
-      toolCalls: message.toolCalls,
-    })
+  if (message.role === 'assistant') {
+    const metadata = {
+      toolCalls: message.toolCalls && message.toolCalls.length > 0 ? message.toolCalls : undefined,
+      reasoning: message.reasoning,
+      reasoningDetails: message.reasoningDetails && message.reasoningDetails.length > 0 ? message.reasoningDetails : undefined,
+    }
+
+    return metadata.toolCalls || metadata.reasoning || metadata.reasoningDetails ? serializeJson(metadata) : null
   }
 
   if (message.role === 'tool') {
@@ -39,6 +43,10 @@ export function deserializeMessage(row: {
       content: row.content,
       toolCalls: Array.isArray(metadata?.['toolCalls'])
         ? metadata?.['toolCalls'].map((toolCall) => assistantToolCallSchema.parse(toolCall))
+        : undefined,
+      reasoning: typeof metadata?.['reasoning'] === 'string' ? metadata['reasoning'] : undefined,
+      reasoningDetails: Array.isArray(metadata?.['reasoningDetails'])
+        ? metadata?.['reasoningDetails'].map((detail) => reasoningDetailSchema.parse(detail))
         : undefined,
       createdAt: row.createdAt,
     })
