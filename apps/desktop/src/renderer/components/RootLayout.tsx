@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { getProviderDefinition } from '../../../../../packages/shared/src'
 import { conversationsQueryOptions, providerStatusQueryOptions, settingsQueryOptions } from '../queries'
 import { useRuntimeUi, useTechnicalUi } from '../runtime-ui'
-import { formatRelativeTimestamp } from '../utils/formatting'
+import { formatRelativeTimestamp, formatTimestamp } from '../utils/formatting'
 import { describeRunEvent } from '../utils/run-events'
 
 export function RootLayout() {
@@ -22,22 +22,26 @@ export function RootLayout() {
       <aside className="sidebar">
         <div className="sidebar-section">
           <p className="eyebrow">nano-harness</p>
-          <h1 className="sidebar-title">Desktop chat harness</h1>
+          <h1 className="sidebar-title">Agent control deck</h1>
           <p className="sidebar-copy">
-            Local runtime wiring is live. Use the conversation pane to send prompts and the settings screen to change provider config.
+            Local runtime, provider routing, approvals, and persisted run telemetry are wired through this desktop console.
           </p>
         </div>
 
         <div className="sidebar-section">
           <div className="sidebar-header-row">
-            <h2>Conversations</h2>
+            <h2>Sessions</h2>
             <Link to="/" className="ghost-link">
-              New
+              New session
             </Link>
           </div>
           <nav className="conversation-nav">
-            {conversationsQuery.isLoading ? <p className="muted-copy">Loading conversations...</p> : null}
-            {conversationsQuery.isError ? <p className="error-copy">Failed to load conversations.</p> : null}
+            {conversationsQuery.isLoading ? <p className="muted-copy">Loading conversations…</p> : null}
+            {conversationsQuery.isError ? (
+              <p className="error-copy" aria-live="polite">
+                Failed to load conversations.
+              </p>
+            ) : null}
             {!conversationsQuery.isLoading && !conversationsQuery.isError && conversations.length > 0 ? (
               conversations.map((conversation) => (
                 <Link
@@ -48,12 +52,12 @@ export function RootLayout() {
                   activeProps={{ className: 'conversation-link conversation-link-active' }}
                 >
                   <span>{conversation.title}</span>
-                  <small>{new Date(conversation.updatedAt).toLocaleString()}</small>
+                  <small>{formatTimestamp(conversation.updatedAt)}</small>
                 </Link>
               ))
             ) : (
               !conversationsQuery.isLoading && !conversationsQuery.isError ? (
-                <p className="muted-copy">No conversations yet. Start with a prompt.</p>
+                <p className="muted-copy">No sessions yet. Open a prompt channel to begin.</p>
               ) : null
             )}
           </nav>
@@ -65,10 +69,12 @@ export function RootLayout() {
               Settings
             </Link>
             <button type="button" className="ghost-button" onClick={toggleTechnicalInfo}>
-              {showTechnicalInfo ? 'Hide technical info' : 'Show technical info'}
+              {showTechnicalInfo ? 'Hide telemetry' : 'Show telemetry'}
             </button>
           </div>
-          <p className="runtime-pill">{providerStatus?.isReady ? 'Provider ready' : 'Provider needs setup'}</p>
+          <p className="runtime-pill" aria-live="polite">
+            {providerStatus?.isReady ? 'Provider online' : 'Provider setup required'}
+          </p>
         </div>
 
         {showTechnicalInfo ? (
@@ -82,8 +88,12 @@ export function RootLayout() {
                   </span>
                 ) : null}
               </div>
-              {settingsQuery.isLoading ? <p className="muted-copy">Loading configuration...</p> : null}
-              {settingsQuery.isError ? <p className="error-copy">Failed to load provider settings.</p> : null}
+              {settingsQuery.isLoading ? <p className="muted-copy">Loading configuration…</p> : null}
+              {settingsQuery.isError ? (
+                <p className="error-copy" aria-live="polite">
+                  Failed to load provider settings.
+                </p>
+              ) : null}
               {settings ? (
                 <dl className="summary-list">
                   <div>
@@ -104,14 +114,14 @@ export function RootLayout() {
                   </div>
                   <div>
                     <dt>Runtime</dt>
-                    <dd>{context ? `${context.platform} / v${context.version}` : 'Loading runtime...'}</dd>
+                    <dd>{context ? `${context.platform} / v${context.version}` : 'Loading runtime…'}</dd>
                   </div>
                 </dl>
               ) : null}
               {providerStatus && providerStatus.issues.length > 0 ? (
                 <div className="status-note-block">
                   {providerStatus.issues.map((issue) => (
-                    <p key={issue} className="error-copy">
+                    <p key={issue} className="error-copy" aria-live="polite">
                       {issue}
                     </p>
                   ))}
@@ -120,7 +130,7 @@ export function RootLayout() {
             </div>
 
             <div className="sidebar-section">
-              <h2>Recent Events</h2>
+              <h2>Recent Signals</h2>
               <ul className="event-list">
                 {recentEvents.length > 0 ? (
                   recentEvents.map((event) => {
@@ -137,7 +147,7 @@ export function RootLayout() {
                     )
                   })
                 ) : (
-                  <li>No events yet.</li>
+                  <li>No signals yet.</li>
                 )}
               </ul>
             </div>

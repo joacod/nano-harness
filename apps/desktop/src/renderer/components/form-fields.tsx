@@ -15,8 +15,11 @@ export function FieldHint({ children }: { children: ReactNode }) {
 
 export function TextField({
   field,
+  name,
   placeholder,
+  autoComplete,
   inputType,
+  spellCheck,
 }: {
   field: {
     state: {
@@ -28,8 +31,11 @@ export function TextField({
     handleBlur: () => void
     handleChange: (value: string) => void
   }
+  name: string
   placeholder: string
+  autoComplete?: string
   inputType?: 'password' | 'text'
+  spellCheck?: boolean
 }) {
   const firstError = field.state.meta.errors[0]
 
@@ -37,7 +43,10 @@ export function TextField({
     <>
       <input
         className="text-input"
+        name={name}
         type={inputType ?? 'text'}
+        autoComplete={autoComplete}
+        spellCheck={spellCheck}
         value={field.state.value ?? ''}
         onBlur={field.handleBlur}
         onChange={(event) => field.handleChange(event.target.value)}

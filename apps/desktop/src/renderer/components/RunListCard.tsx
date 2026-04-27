@@ -20,7 +20,7 @@ export function RunListCard({
       <div className="sidebar-header-row">
         <div>
           <p className="eyebrow">Runs</p>
-          <h2>Conversation history</h2>
+          <h2>Session telemetry</h2>
         </div>
         <span className="runtime-pill">{runs.length} total</span>
       </div>
@@ -45,7 +45,11 @@ export function RunListCard({
               <small>{formatTimestamp(run.createdAt)}</small>
               {providerRequest ? <span className="run-provider-label">{providerRequest.payload.provider}</span> : null}
               {providerRequest ? <span className="muted-copy">{providerRequest.payload.model}</span> : null}
-              {run.failureMessage ? <span className="error-copy">{run.failureMessage}</span> : null}
+              {run.failureMessage ? (
+                <span className="error-copy" aria-live="polite">
+                  {run.failureMessage}
+                </span>
+              ) : null}
             </button>
           )
         })}

@@ -47,7 +47,11 @@ export function ChatTranscript({
         </article>
       ) : null}
 
-      {streamingEntry?.[1].errorMessage ? <p className="error-copy">{streamingEntry[1].errorMessage}</p> : null}
+      {streamingEntry?.[1].errorMessage ? (
+        <p className="error-copy" aria-live="polite">
+          {streamingEntry[1].errorMessage}
+        </p>
+      ) : null}
     </div>
   )
 }

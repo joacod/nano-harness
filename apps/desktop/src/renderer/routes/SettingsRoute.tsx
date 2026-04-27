@@ -40,7 +40,7 @@ export function SettingsRoute() {
     return (
       <section className="panel-card panel-card-hero">
         <p className="eyebrow">Settings</p>
-        <h2>Loading provider settings...</h2>
+        <h2>Loading provider settings…</h2>
       </section>
     )
   }

@@ -57,10 +57,10 @@ export function ConversationRoute() {
   if (snapshotQuery.isError) {
     return (
       <section className="panel-card panel-card-hero">
-        <p className="eyebrow">Conversation</p>
-        <h2>Failed to load conversation</h2>
-        <p className="error-copy">
-          {snapshotQuery.error instanceof Error ? snapshotQuery.error.message : 'The conversation snapshot could not be loaded.'}
+        <p className="eyebrow">Session</p>
+        <h2>Failed to load session</h2>
+        <p className="error-copy" aria-live="polite">
+          {snapshotQuery.error instanceof Error ? snapshotQuery.error.message : 'The session snapshot could not be loaded.'}
         </p>
       </section>
     )
@@ -69,9 +69,9 @@ export function ConversationRoute() {
   if (!snapshotQuery.isLoading && !snapshotQuery.data?.conversation) {
     return (
       <section className="panel-card panel-card-hero">
-        <p className="eyebrow">Conversation</p>
-        <h2>Conversation not found</h2>
-        <p className="muted-copy">This conversation may have been removed or has not been created yet.</p>
+        <p className="eyebrow">Session</p>
+        <h2>Session not found</h2>
+        <p className="muted-copy">This session may have been removed or has not been created yet.</p>
       </section>
     )
   }
@@ -80,17 +80,17 @@ export function ConversationRoute() {
     <div className={`conversation-grid ${showTechnicalInfo ? 'conversation-grid-technical' : 'conversation-grid-simple'}`}>
       <div className="panel-stack">
         <section className="panel-card panel-card-hero">
-          <p className="eyebrow">Conversation</p>
-          <h2>{snapshotQuery.data?.conversation?.title ?? 'Loading conversation...'}</h2>
+          <p className="eyebrow">Session</p>
+          <h2>{snapshotQuery.data?.conversation?.title ?? 'Loading conversation…'}</h2>
           {showTechnicalInfo ? (
             <p className="muted-copy">
-              Messages are persisted in SQLite and the run inspector shows the same event model both live and after relaunch.
+              Messages persist locally while the inspector mirrors live and restored event telemetry.
             </p>
           ) : null}
         </section>
 
         <section className="panel-card transcript-panel">
-          {snapshotQuery.isLoading ? <p className="muted-copy">Loading messages...</p> : null}
+          {snapshotQuery.isLoading ? <p className="muted-copy">Loading messages…</p> : null}
           {!snapshotQuery.isLoading && snapshotQuery.data ? (
             <ChatTranscript snapshot={snapshotQuery.data} streamingEntry={streamingEntry ?? null} />
           ) : null}
