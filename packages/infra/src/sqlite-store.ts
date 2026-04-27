@@ -12,7 +12,9 @@ import {
   approvalResolutionSchema,
   conversationSchema,
   messageSchema,
+  providerKeySchema,
   runStatusSchema,
+  type ProviderKey,
   type Message,
   runEventSchema,
   runSchema,
@@ -25,6 +27,7 @@ import {
   approvalResolutionsTable,
   conversationsTable,
   messagesTable,
+  providerCredentialsTable,
   runEventsTable,
   runsTable,
   schema,
@@ -88,6 +91,11 @@ const initializationStatements = [
   `CREATE TABLE IF NOT EXISTS settings (
     id TEXT PRIMARY KEY NOT NULL,
     payload TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  )`,
+  `CREATE TABLE IF NOT EXISTS provider_credentials (
+    provider TEXT PRIMARY KEY NOT NULL,
+    encrypted_api_key TEXT NOT NULL,
     updated_at TEXT NOT NULL
   )`,
 ] as const
@@ -487,6 +495,53 @@ export class SqliteStore implements Store {
           updatedAt: new Date().toISOString(),
         },
       })
+  }
+
+  async getProviderCredentialStatus(provider: ProviderKey): Promise<{ apiKeyPresent: boolean }> {
+    const parsedProvider = providerKeySchema.parse(provider)
+    const [credentialRow] = await this.db
+      .select({ provider: providerCredentialsTable.provider })
+      .from(providerCredentialsTable)
+      .where(eq(providerCredentialsTable.provider, parsedProvider))
+
+    return {
+      apiKeyPresent: Boolean(credentialRow),
+    }
+  }
+
+  async saveProviderCredential(provider: ProviderKey, encryptedApiKey: string): Promise<void> {
+    const parsedProvider = providerKeySchema.parse(provider)
+    const updatedAt = new Date().toISOString()
+
+    await this.db
+      .insert(providerCredentialsTable)
+      .values({
+        provider: parsedProvider,
+        encryptedApiKey,
+        updatedAt,
+      })
+      .onConflictDoUpdate({
+        target: providerCredentialsTable.provider,
+        set: {
+          encryptedApiKey,
+          updatedAt,
+        },
+      })
+  }
+
+  async clearProviderCredential(provider: ProviderKey): Promise<void> {
+    const parsedProvider = providerKeySchema.parse(provider)
+    await this.db.delete(providerCredentialsTable).where(eq(providerCredentialsTable.provider, parsedProvider))
+  }
+
+  async getEncryptedProviderCredential(provider: ProviderKey): Promise<string | null> {
+    const parsedProvider = providerKeySchema.parse(provider)
+    const [credentialRow] = await this.db
+      .select({ encryptedApiKey: providerCredentialsTable.encryptedApiKey })
+      .from(providerCredentialsTable)
+      .where(eq(providerCredentialsTable.provider, parsedProvider))
+
+    return credentialRow?.encryptedApiKey ?? null
   }
 
   async close(): Promise<void> {

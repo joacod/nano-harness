@@ -7,11 +7,14 @@ import {
   desktopBridgeChannels,
   desktopContextSchema,
   getConversationInputSchema,
+  providerCredentialInputSchema,
+  providerCredentialStatusSchema,
   providerStatusSchema,
   resolveApprovalInputSchema,
   runCreateInputSchema,
   runEventSchema,
   runIdInputSchema,
+  saveProviderApiKeyInputSchema,
   startRunResultSchema,
   type DesktopApi,
 } from '../../../../packages/shared/src'
@@ -25,6 +28,20 @@ const desktopApi: DesktopApi = {
   },
   async getProviderStatus() {
     return providerStatusSchema.nullable().parse(await ipcRenderer.invoke(desktopBridgeChannels.getProviderStatus))
+  },
+  async getProviderCredentialStatus(input) {
+    const payload = providerCredentialInputSchema.parse(input)
+    return providerCredentialStatusSchema.parse(
+      await ipcRenderer.invoke(desktopBridgeChannels.getProviderCredentialStatus, payload),
+    )
+  },
+  async saveProviderApiKey(input) {
+    const payload = saveProviderApiKeyInputSchema.parse(input)
+    await ipcRenderer.invoke(desktopBridgeChannels.saveProviderApiKey, payload)
+  },
+  async clearProviderApiKey(input) {
+    const payload = providerCredentialInputSchema.parse(input)
+    await ipcRenderer.invoke(desktopBridgeChannels.clearProviderApiKey, payload)
   },
   async getSettings() {
     return appSettingsSchema.nullable().parse(await ipcRenderer.invoke(desktopBridgeChannels.getSettings))

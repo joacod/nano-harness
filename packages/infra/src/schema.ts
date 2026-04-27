@@ -78,6 +78,12 @@ export const settingsTable = sqliteTable('settings', {
   updatedAt: text('updated_at').notNull(),
 })
 
+export const providerCredentialsTable = sqliteTable('provider_credentials', {
+  provider: text('provider').primaryKey(),
+  encryptedApiKey: text('encrypted_api_key').notNull(),
+  updatedAt: text('updated_at').notNull(),
+})
+
 export const schema = {
   conversationsTable,
   runsTable,
@@ -86,4 +92,5 @@ export const schema = {
   approvalRequestsTable,
   approvalResolutionsTable,
   settingsTable,
+  providerCredentialsTable,
 }

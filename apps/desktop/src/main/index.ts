@@ -1,8 +1,9 @@
-import { app, BrowserWindow, ipcMain, Menu } from 'electron'
+import { app, BrowserWindow, ipcMain, Menu, safeStorage } from 'electron'
+import { Buffer } from 'node:buffer'
 import { mkdir } from 'node:fs/promises'
 import { join } from 'node:path'
 
-import type { ApprovalCoordinator } from '../../../../packages/core/src'
+import type { ApprovalCoordinator, ProviderCredentialResolver } from '../../../../packages/core/src'
 import { CoreRunEngine, InMemoryEventBus, StaticPolicy } from '../../../../packages/core/src'
 import { BuiltInActionExecutor, OpenAICompatibleProvider, createSqliteStore } from '../../../../packages/infra/src'
 import {
@@ -11,16 +12,20 @@ import {
   desktopContextSchema,
   getConversationInputSchema,
   getProviderDefinition,
+  providerCredentialInputSchema,
   providerStatusSchema,
   resolveApprovalInputSchema,
   runCreateInputSchema,
   runEventSchema,
   runIdInputSchema,
+  saveProviderApiKeyInputSchema,
   startRunResultSchema,
   type AppSettings,
 } from '../../../../packages/shared/src'
 
 app.setName('Nano Harness')
+
+const SAFE_STORAGE_PREFIX = 'safe-storage:v1:'
 
 function getAppIconPath(): string {
   return join(app.getAppPath(), 'resources', 'icon.png')
@@ -56,6 +61,22 @@ type DesktopRuntime = {
   runEngine: CoreRunEngine
   eventBus: InMemoryEventBus
   approvalCoordinator: DesktopApprovalCoordinator
+}
+
+function encryptApiKey(apiKey: string): string {
+  if (!safeStorage.isEncryptionAvailable()) {
+    throw new Error('Secure API key storage is not available on this system.')
+  }
+
+  return `${SAFE_STORAGE_PREFIX}${safeStorage.encryptString(apiKey).toString('base64')}`
+}
+
+function decryptApiKey(encryptedApiKey: string): string {
+  if (!encryptedApiKey.startsWith(SAFE_STORAGE_PREFIX)) {
+    throw new Error('Stored API key uses an unsupported secure storage format.')
+  }
+
+  return safeStorage.decryptString(Buffer.from(encryptedApiKey.slice(SAFE_STORAGE_PREFIX.length), 'base64'))
 }
 
 class DesktopApprovalCoordinator implements ApprovalCoordinator {
@@ -118,7 +139,6 @@ function buildDefaultSettings(): AppSettings {
     provider: {
       provider: provider.key,
       model: provider.defaultModel,
-      apiKey: '',
     },
     workspace: {
       rootPath: join(app.getPath('home'), 'nano-harness'),
@@ -146,13 +166,13 @@ function createWindow(): void {
   void window.loadURL(process.env['ELECTRON_RENDERER_URL'] ?? `file://${join(__dirname, '../renderer/index.html')}`)
 }
 
-function buildProviderStatus(settings: AppSettings | null) {
+async function buildProviderStatus(runtime: DesktopRuntime, settings: AppSettings | null) {
   if (!settings) {
     return null
   }
 
   const provider = getProviderDefinition(settings.provider.provider)
-  const apiKeyPresent = Boolean(settings.provider.apiKey.trim())
+  const { apiKeyPresent } = await runtime.store.getProviderCredentialStatus(settings.provider.provider)
   const issues: string[] = []
   const hints: string[] = []
 
@@ -169,7 +189,7 @@ function buildProviderStatus(settings: AppSettings | null) {
     providerLabel: provider.label,
     model: settings.provider.model,
     baseUrl: provider.baseUrl,
-    apiKeyLabel: 'Stored in app settings',
+    apiKeyLabel: 'Stored securely on this device',
     apiKeyPresent,
     isReady: issues.length === 0,
     issues,
@@ -193,9 +213,16 @@ async function createRuntime(): Promise<DesktopRuntime> {
   })
   const eventBus = new InMemoryEventBus()
   const approvalCoordinator = new DesktopApprovalCoordinator()
+  const providerCredentialResolver: ProviderCredentialResolver = {
+    async getProviderApiKey(provider) {
+      const encryptedApiKey = await store.getEncryptedProviderCredential(provider)
+      return encryptedApiKey ? decryptApiKey(encryptedApiKey) : null
+    },
+  }
   const runEngine = new CoreRunEngine({
     store,
     provider: new OpenAICompatibleProvider(),
+    providerCredentialResolver,
     actionExecutor: new BuiltInActionExecutor(),
     policy: new StaticPolicy(),
     eventBus,
@@ -248,7 +275,22 @@ function setupIpcHandlers(runtime: DesktopRuntime): void {
   })
 
   ipcMain.handle(desktopBridgeChannels.getProviderStatus, async () => {
-    return buildProviderStatus(await runtime.store.getSettings())
+    return await buildProviderStatus(runtime, await runtime.store.getSettings())
+  })
+
+  ipcMain.handle(desktopBridgeChannels.getProviderCredentialStatus, async (_event, payload) => {
+    const input = providerCredentialInputSchema.parse(payload)
+    return await runtime.store.getProviderCredentialStatus(input.provider)
+  })
+
+  ipcMain.handle(desktopBridgeChannels.saveProviderApiKey, async (_event, payload) => {
+    const input = saveProviderApiKeyInputSchema.parse(payload)
+    await runtime.store.saveProviderCredential(input.provider, encryptApiKey(input.apiKey.trim()))
+  })
+
+  ipcMain.handle(desktopBridgeChannels.clearProviderApiKey, async (_event, payload) => {
+    const input = providerCredentialInputSchema.parse(payload)
+    await runtime.store.clearProviderCredential(input.provider)
   })
 
   ipcMain.handle(desktopBridgeChannels.getSettings, async () => {

@@ -7,6 +7,7 @@ import type {
   ApprovalResolution,
   JsonValue,
   Message,
+  ProviderKey,
   Run,
   RunCreateInput,
   RunEvent,
@@ -31,6 +32,7 @@ export interface ProviderGenerateInput {
   messages: Message[]
   actions: ActionDefinition[]
   settings: AppSettings
+  providerApiKey: string
   signal: AbortSignal
   onDelta?: (delta: string) => Promise<void> | void
 }
@@ -42,6 +44,10 @@ export interface ProviderGenerateResult {
 
 export interface Provider {
   generate(input: ProviderGenerateInput): Promise<ProviderGenerateResult>
+}
+
+export interface ProviderCredentialResolver {
+  getProviderApiKey(provider: ProviderKey): Promise<string | null>
 }
 
 export interface ActionExecutionInput {
@@ -87,6 +93,7 @@ export interface ApprovalCoordinator {
 export interface RunEngineDependencies {
   store: Store
   provider: Provider
+  providerCredentialResolver: ProviderCredentialResolver
   actionExecutor: ActionExecutor
   policy: Policy
   eventBus?: EventBus
@@ -207,6 +214,7 @@ function getLatestPendingApproval(snapshot: ConversationSnapshot): PendingApprov
 export class CoreRunEngine implements RunEngine {
   private readonly store: Store
   private readonly provider: Provider
+  private readonly providerCredentialResolver: ProviderCredentialResolver
   private readonly actionExecutor: ActionExecutor
   private readonly policy: Policy
   private readonly eventBus: EventBus
@@ -219,6 +227,7 @@ export class CoreRunEngine implements RunEngine {
   constructor(dependencies: RunEngineDependencies) {
     this.store = dependencies.store
     this.provider = dependencies.provider
+    this.providerCredentialResolver = dependencies.providerCredentialResolver
     this.actionExecutor = dependencies.actionExecutor
     this.policy = dependencies.policy
     this.eventBus = dependencies.eventBus ?? noopEventBus
@@ -448,11 +457,19 @@ export class CoreRunEngine implements RunEngine {
 
         let streamedMessage = ''
         const actions = await this.actionExecutor.listDefinitions()
+        const providerDefinition = getProviderDefinition(context.settings.provider.provider)
+        const providerApiKey = await this.providerCredentialResolver.getProviderApiKey(context.settings.provider.provider)
+
+        if (!providerApiKey) {
+          throw new Error(`Missing API key for ${providerDefinition.label}`)
+        }
+
         const providerResult = await this.provider.generate({
           run,
           messages,
           actions,
           settings: context.settings,
+          providerApiKey,
           signal: context.signal,
           onDelta: async (delta) => {
             streamedMessage += delta

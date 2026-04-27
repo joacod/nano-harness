@@ -45,30 +45,9 @@ export const providerOptions = Object.values(providerCatalog).map((provider) =>
 const currentProviderSettingsSchema = z.object({
   provider: providerKeySchema,
   model: z.string().min(1),
-  apiKey: z.string(),
 })
 
-const legacyProviderSettingsSchema = z.object({
-  providerId: z.string().min(1),
-  model: z.string().min(1),
-  apiKeyEnvVar: z.string().min(1),
-  baseUrl: z.url().optional(),
-})
-
-export const providerSettingsSchema = z
-  .union([currentProviderSettingsSchema, legacyProviderSettingsSchema])
-  .transform((value) => {
-    if ('provider' in value) {
-      return value
-    }
-
-    return {
-      provider: value.baseUrl?.includes('openrouter.ai') ? 'openrouter' : 'openrouter',
-      model: value.model,
-      apiKey: '',
-    }
-  })
-  .pipe(currentProviderSettingsSchema)
+export const providerSettingsSchema = currentProviderSettingsSchema
 
 export type ProviderSettings = z.infer<typeof providerSettingsSchema>
 

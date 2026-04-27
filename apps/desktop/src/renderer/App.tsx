@@ -940,6 +940,19 @@ function SettingsRoute() {
       await queryClient.invalidateQueries({ queryKey: ['provider-status'] })
     },
   })
+  const saveApiKeyMutation = useMutation({
+    mutationFn: async (input: { provider: AppSettings['provider']['provider']; apiKey: string }) =>
+      window.desktop.saveProviderApiKey(input),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['provider-status'] })
+    },
+  })
+  const clearApiKeyMutation = useMutation({
+    mutationFn: async (input: { provider: AppSettings['provider']['provider'] }) => window.desktop.clearProviderApiKey(input),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['provider-status'] })
+    },
+  })
 
   if (!settingsQuery.data) {
     return (
@@ -956,9 +969,18 @@ function SettingsRoute() {
       initialSettings={settingsQuery.data}
       providerStatus={providerStatusQuery.data ?? null}
       isSaving={mutation.isPending}
+      isSavingApiKey={saveApiKeyMutation.isPending}
+      isClearingApiKey={clearApiKeyMutation.isPending}
       saveError={mutation.error instanceof Error ? mutation.error.message : null}
+      apiKeyError={saveApiKeyMutation.error instanceof Error ? saveApiKeyMutation.error.message : clearApiKeyMutation.error instanceof Error ? clearApiKeyMutation.error.message : null}
       onSubmit={async (settings) => {
         await mutation.mutateAsync(settings)
+      }}
+      onSaveApiKey={async (input) => {
+        await saveApiKeyMutation.mutateAsync(input)
+      }}
+      onClearApiKey={async (input) => {
+        await clearApiKeyMutation.mutateAsync(input)
       }}
     />
   )
@@ -1112,16 +1134,27 @@ function SettingsFormCard({
   initialSettings,
   providerStatus,
   isSaving,
+  isSavingApiKey,
+  isClearingApiKey,
   saveError,
+  apiKeyError,
   onSubmit,
+  onSaveApiKey,
+  onClearApiKey,
 }: {
   initialSettings: AppSettings
   providerStatus: ProviderStatus | null
   isSaving: boolean
+  isSavingApiKey: boolean
+  isClearingApiKey: boolean
   saveError: string | null
+  apiKeyError: string | null
   onSubmit: (settings: AppSettings) => Promise<void>
+  onSaveApiKey: (input: { provider: AppSettings['provider']['provider']; apiKey: string }) => Promise<void>
+  onClearApiKey: (input: { provider: AppSettings['provider']['provider'] }) => Promise<void>
 }) {
   const [saveMessage, setSaveMessage] = useState<string | null>(null)
+  const [apiKeyMessage, setApiKeyMessage] = useState<string | null>(null)
 
   const form = useForm({
     defaultValues: initialSettings,
@@ -1130,7 +1163,6 @@ function SettingsFormCard({
         provider: {
           provider: value.provider.provider,
           model: value.provider.model.trim(),
-          apiKey: value.provider.apiKey.trim(),
         },
         workspace: {
           ...value.workspace,
@@ -1142,13 +1174,30 @@ function SettingsFormCard({
       setSaveMessage('Settings saved.')
     },
   })
+  const apiKeyForm = useForm({
+    defaultValues: {
+      apiKey: '',
+    },
+    onSubmit: async ({ value }) => {
+      const apiKey = value.apiKey.trim()
+
+      if (!apiKey) {
+        setApiKeyMessage(null)
+        return
+      }
+
+      await onSaveApiKey({ provider: form.getFieldValue('provider.provider'), apiKey })
+      apiKeyForm.reset()
+      setApiKeyMessage('API key saved securely on this device.')
+    },
+  })
 
   return (
     <section className="panel-card settings-card">
       <p className="eyebrow">Settings</p>
       <h2>Provider configuration</h2>
       <p className="muted-copy">
-        Choose a provider, enter your API key, and select a model. Endpoint details are managed internally.
+        Choose a provider and model. API keys are stored separately using this device's secure storage.
       </p>
 
       {providerStatus ? (
@@ -1247,14 +1296,6 @@ function SettingsFormCard({
           />
         </LabeledField>
 
-        <LabeledField label="API Key">
-          <FieldHint>Your key is stored in the app settings so hosted-provider runs work without extra shell setup.</FieldHint>
-          <form.Field
-            name="provider.apiKey"
-            children={(field) => <TextField field={field} placeholder="Paste API key" inputType="password" />}
-          />
-        </LabeledField>
-
         <LabeledField label="Workspace Root">
           <FieldHint>Built-in file actions are restricted to this directory tree.</FieldHint>
           <form.Field
@@ -1292,6 +1333,51 @@ function SettingsFormCard({
 
       {saveMessage ? <p className="success-copy">{saveMessage}</p> : null}
       {saveError ? <p className="error-copy">{saveError}</p> : null}
+
+      <form
+        className="settings-form"
+        onSubmit={(event) => {
+          event.preventDefault()
+          event.stopPropagation()
+          setApiKeyMessage(null)
+          void apiKeyForm.handleSubmit()
+        }}
+      >
+        <LabeledField label="API Key">
+          <FieldHint>
+            API keys are encrypted with OS-backed secure storage and are not included in portable backups.
+          </FieldHint>
+          <apiKeyForm.Field
+            name="apiKey"
+            validators={{
+              onChange: ({ value }) => (value.trim() ? undefined : 'API key is required.'),
+            }}
+            children={(field) => <TextField field={field} placeholder="Paste API key" inputType="password" />}
+          />
+        </LabeledField>
+
+        <div className="form-row">
+          <button type="submit" className="primary-button" disabled={isSavingApiKey}>
+            {isSavingApiKey ? 'Saving API key...' : 'Save API key'}
+          </button>
+          <button
+            type="button"
+            className="ghost-button"
+            disabled={isClearingApiKey || !providerStatus?.apiKeyPresent}
+            onClick={() => {
+              setApiKeyMessage(null)
+              void onClearApiKey({ provider: form.getFieldValue('provider.provider') }).then(() => {
+                setApiKeyMessage('API key cleared.')
+              })
+            }}
+          >
+            {isClearingApiKey ? 'Clearing...' : 'Clear API key'}
+          </button>
+        </div>
+      </form>
+
+      {apiKeyMessage ? <p className="success-copy">{apiKeyMessage}</p> : null}
+      {apiKeyError ? <p className="error-copy">{apiKeyError}</p> : null}
     </section>
   )
 }

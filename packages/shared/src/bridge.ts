@@ -4,7 +4,7 @@ import { approvalRequestSchema, approvalResolutionSchema } from './approvals'
 import { runEventSchema } from './events'
 import { conversationSchema, messageSchema } from './messages'
 import { runCreateInputSchema, runSchema } from './runs'
-import { appSettingsSchema } from './settings'
+import { appSettingsSchema, providerKeySchema } from './settings'
 
 export const desktopPlatformSchema = z.enum(['darwin', 'linux', 'win32'])
 
@@ -46,6 +46,25 @@ export const providerStatusSchema = z.object({
 
 export type ProviderStatus = z.infer<typeof providerStatusSchema>
 
+export const providerCredentialInputSchema = z.object({
+  provider: providerKeySchema,
+})
+
+export type ProviderCredentialInput = z.infer<typeof providerCredentialInputSchema>
+
+export const providerCredentialStatusSchema = z.object({
+  apiKeyPresent: z.boolean(),
+})
+
+export type ProviderCredentialStatus = z.infer<typeof providerCredentialStatusSchema>
+
+export const saveProviderApiKeyInputSchema = z.object({
+  provider: providerKeySchema,
+  apiKey: z.string().min(1),
+})
+
+export type SaveProviderApiKeyInput = z.infer<typeof saveProviderApiKeyInputSchema>
+
 export const resolveApprovalInputSchema = z.object({
   runId: z.string().min(1),
   approvalRequestId: z.string().min(1),
@@ -76,6 +95,9 @@ export const desktopBridgeChannels = {
   getContext: 'desktop:get-context',
   listConversations: 'desktop:list-conversations',
   getProviderStatus: 'desktop:get-provider-status',
+  getProviderCredentialStatus: 'desktop:get-provider-credential-status',
+  saveProviderApiKey: 'desktop:save-provider-api-key',
+  clearProviderApiKey: 'desktop:clear-provider-api-key',
   getSettings: 'desktop:get-settings',
   saveSettings: 'desktop:save-settings',
   getConversation: 'desktop:get-conversation',
@@ -90,6 +112,9 @@ export type DesktopApi = {
   getContext(): Promise<DesktopContext>
   listConversations(): Promise<ConversationList>
   getProviderStatus(): Promise<ProviderStatus | null>
+  getProviderCredentialStatus(input: ProviderCredentialInput): Promise<ProviderCredentialStatus>
+  saveProviderApiKey(input: SaveProviderApiKeyInput): Promise<void>
+  clearProviderApiKey(input: ProviderCredentialInput): Promise<void>
   getSettings(): Promise<z.infer<typeof appSettingsSchema> | null>
   saveSettings(settings: z.infer<typeof appSettingsSchema>): Promise<z.infer<typeof appSettingsSchema>>
   getConversation(input: GetConversationInput): Promise<ConversationSnapshot>
