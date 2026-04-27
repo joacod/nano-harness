@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { useQuery } from '@tanstack/react-query'
 import { useParams } from '@tanstack/react-router'
@@ -17,6 +17,9 @@ export function ConversationRoute() {
   const snapshotQuery = useQuery(conversationQueryOptions(conversationId))
   const { liveRunEvents, streamingRuns } = useRuntimeUi()
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null)
+  const transcriptPanelRef = useRef<HTMLElement | null>(null)
+  const transcriptEndRef = useRef<HTMLDivElement | null>(null)
+  const isTranscriptPinnedRef = useRef(true)
 
   useEffect(() => {
     const runs = snapshotQuery.data?.runs ?? []
@@ -34,6 +37,31 @@ export function ConversationRoute() {
   const streamingEntry = useMemo(() => {
     return Object.entries(streamingRuns).find(([, run]) => run.conversationId === conversationId)
   }, [conversationId, streamingRuns])
+  const streamingRunId = streamingEntry?.[0] ?? null
+  const streamingContentLength = streamingEntry?.[1].content.length ?? 0
+  const messageCount = snapshotQuery.data?.messages.length ?? 0
+
+  useEffect(() => {
+    isTranscriptPinnedRef.current = true
+    transcriptEndRef.current?.scrollIntoView({ block: 'end' })
+  }, [conversationId, streamingRunId])
+
+  useEffect(() => {
+    if (isTranscriptPinnedRef.current) {
+      transcriptEndRef.current?.scrollIntoView({ block: 'end' })
+    }
+  }, [messageCount, streamingContentLength])
+
+  function handleTranscriptScroll() {
+    const panel = transcriptPanelRef.current
+
+    if (!panel) {
+      return
+    }
+
+    const distanceFromBottom = panel.scrollHeight - panel.scrollTop - panel.clientHeight
+    isTranscriptPinnedRef.current = distanceFromBottom < 96
+  }
 
   const selectedRun = useMemo(() => {
     return snapshotQuery.data?.runs.find((run) => run.id === selectedRunId) ?? null
@@ -78,8 +106,8 @@ export function ConversationRoute() {
 
   return (
     <div className={`conversation-grid ${showTechnicalInfo ? 'conversation-grid-technical' : 'conversation-grid-simple'}`}>
-      <div className="panel-stack">
-        <section className="panel-card panel-card-hero">
+      <div className="panel-stack chat-panel-stack">
+        <section className="panel-card panel-card-hero conversation-hero-card">
           <p className="eyebrow">Session</p>
           <h2>{snapshotQuery.data?.conversation?.title ?? 'Loading conversation…'}</h2>
           {showTechnicalInfo ? (
@@ -89,18 +117,20 @@ export function ConversationRoute() {
           ) : null}
         </section>
 
-        <section className="panel-card transcript-panel">
+        <section ref={transcriptPanelRef} className="panel-card transcript-panel" onScroll={handleTranscriptScroll}>
           {snapshotQuery.isLoading ? <p className="muted-copy">Loading messages…</p> : null}
           {!snapshotQuery.isLoading && snapshotQuery.data ? (
-            <ChatTranscript snapshot={snapshotQuery.data} streamingEntry={streamingEntry ?? null} />
+            <ChatTranscript snapshot={snapshotQuery.data} streamingEntry={streamingEntry ?? null} endRef={transcriptEndRef} />
           ) : null}
         </section>
 
-        <ComposerCard conversationId={conversationId} />
+        <div className="composer-sticky-shell">
+          <ComposerCard conversationId={conversationId} />
+        </div>
       </div>
 
       {showTechnicalInfo ? (
-        <div className="panel-stack">
+        <div className="panel-stack inspector-panel-stack">
           <RunListCard
             runs={snapshotQuery.data?.runs ?? []}
             events={snapshotQuery.data?.events ?? []}

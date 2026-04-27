@@ -5,19 +5,79 @@ import { formatTimestamp, previewText } from './formatting'
 export type StreamingRunState = {
   conversationId: string
   content: string
+  phase: 'queued' | 'started' | 'contacting_provider' | 'streaming' | 'using_tools' | 'waiting_approval'
+  activity: Array<{ id: string; title: string; detail: string }>
   isStreaming: boolean
   errorMessage?: string
 }
 
-export function updateStreamingState(current: Record<string, StreamingRunState>, event: RunEvent) {
+function appendActivity(run: StreamingRunState, event: RunEvent): StreamingRunState {
+  const description = describeRunEvent(event)
+
+  return {
+    ...run,
+    activity: [
+      ...run.activity,
+      {
+        id: event.id,
+        title: description.title,
+        detail: description.detail,
+      },
+    ].slice(-3),
+  }
+}
+
+function getActivityPhase(event: RunEvent): StreamingRunState['phase'] | null {
+  switch (event.type) {
+    case 'run.started':
+      return 'started'
+    case 'provider.requested':
+      return 'contacting_provider'
+    case 'action.requested':
+    case 'action.started':
+    case 'action.completed':
+    case 'action.failed':
+      return 'using_tools'
+    case 'approval.required':
+    case 'run.waiting_approval':
+      return 'waiting_approval'
+    default:
+      return null
+  }
+}
+
+export function updateStreamingState(current: Record<string, StreamingRunState>, event: RunEvent): Record<string, StreamingRunState> {
   if (event.type === 'run.created') {
     return {
       ...current,
       [event.runId]: {
         conversationId: event.payload.run.conversationId,
         content: '',
+        phase: 'queued',
+        activity: [{ id: event.id, title: 'Run queued', detail: 'Preparing the agent runtime.' }],
         isStreaming: false,
       },
+    }
+  }
+
+  const activityPhase = getActivityPhase(event)
+
+  if (activityPhase) {
+    const existing = current[event.runId]
+
+    if (!existing) {
+      return current
+    }
+
+    return {
+      ...current,
+      [event.runId]: appendActivity(
+        {
+          ...existing,
+          phase: activityPhase,
+        },
+        event,
+      ),
     }
   }
 
@@ -33,6 +93,7 @@ export function updateStreamingState(current: Record<string, StreamingRunState>,
       [event.runId]: {
         ...existing,
         content: `${existing.content}${event.payload.delta}`,
+        phase: 'streaming',
         isStreaming: true,
       },
     }
