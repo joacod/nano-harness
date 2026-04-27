@@ -20,12 +20,9 @@ export function RootLayout() {
   return (
     <main className="workspace-shell">
       <aside className="sidebar">
-        <div className="sidebar-section">
+        <div className="sidebar-section sidebar-brand-section">
           <p className="eyebrow">nano-harness</p>
-          <h1 className="sidebar-title">Agent control deck</h1>
-          <p className="sidebar-copy">
-            Local runtime, provider routing, approvals, and persisted run telemetry are wired through this desktop console.
-          </p>
+          <h1 className="sidebar-title">Agent deck</h1>
         </div>
 
         <div className="sidebar-section">
@@ -68,8 +65,17 @@ export function RootLayout() {
             <Link to="/settings" className="ghost-link" activeProps={{ className: 'ghost-link ghost-link-active' }}>
               Settings
             </Link>
-            <button type="button" className="ghost-button" onClick={toggleTechnicalInfo}>
-              {showTechnicalInfo ? 'Hide telemetry' : 'Show telemetry'}
+            <button
+              type="button"
+              className={`switch-button ${showTechnicalInfo ? 'switch-button-active' : ''}`}
+              role="switch"
+              aria-checked={showTechnicalInfo}
+              onClick={toggleTechnicalInfo}
+            >
+              <span>Telemetry</span>
+              <span className="switch-track" aria-hidden="true">
+                <span className="switch-thumb" />
+              </span>
             </button>
           </div>
           <p className="runtime-pill" aria-live="polite">

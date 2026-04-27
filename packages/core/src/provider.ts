@@ -1,4 +1,4 @@
-import type { ActionDefinition, AppSettings, JsonValue, Message, ProviderKey, Run } from '@nano-harness/shared'
+import type { ActionDefinition, AppSettings, JsonValue, Message, ProviderKey, ProviderReasoningDelta, ReasoningDetail, Run } from '@nano-harness/shared'
 
 export interface ProviderActionRequest {
   toolCallId: string
@@ -14,10 +14,13 @@ export interface ProviderGenerateInput {
   providerApiKey: string
   signal: AbortSignal
   onDelta?: (delta: string) => Promise<void> | void
+  onReasoningDelta?: (delta: ProviderReasoningDelta) => Promise<void> | void
 }
 
 export interface ProviderGenerateResult {
   content?: string
+  reasoning?: string
+  reasoningDetails?: ReasoningDetail[]
   actionCalls?: ProviderActionRequest[]
 }
 

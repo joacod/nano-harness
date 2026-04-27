@@ -96,7 +96,7 @@ a {
   position: relative;
   z-index: 2;
   display: grid;
-  grid-template-columns: 336px minmax(0, 1fr);
+  grid-template-columns: 292px minmax(0, 1fr);
   height: 100vh;
   overflow: hidden;
 }
@@ -119,8 +119,8 @@ a {
 .sidebar {
   display: flex;
   flex-direction: column;
-  gap: 18px;
-  padding: 24px;
+  gap: 14px;
+  padding: 18px;
   min-height: 0;
   overflow: auto;
   border-right: 1px solid rgba(67, 255, 157, 0.18);
@@ -154,7 +154,11 @@ a {
 }
 
 .sidebar-section {
-  padding: 18px;
+  padding: 14px;
+}
+
+.sidebar-brand-section {
+  padding-block: 16px;
 }
 
 .sidebar-title,
@@ -166,6 +170,10 @@ a {
   letter-spacing: -0.04em;
   line-height: 1.08;
   text-shadow: 0 0 22px rgba(67, 255, 157, 0.2);
+}
+
+.sidebar-title {
+  font-size: clamp(1.1rem, 1.4vw, 1.32rem);
 }
 
 .sidebar-copy,
@@ -203,6 +211,7 @@ a {
 .ghost-link,
 .conversation-link,
 .ghost-button,
+.switch-button,
 .primary-button,
 .run-card,
 .text-input {
@@ -218,6 +227,7 @@ a {
 .ghost-link:focus-visible,
 .conversation-link:focus-visible,
 .ghost-button:focus-visible,
+.switch-button:focus-visible,
 .primary-button:focus-visible,
 .run-card:focus-visible,
 .text-input:focus-visible {
@@ -258,16 +268,16 @@ a {
 .conversation-nav {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  margin-top: 14px;
+  gap: 8px;
+  margin-top: 12px;
 }
 
 .conversation-link {
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 13px 14px 13px 16px;
+  gap: 4px;
+  padding: 10px 12px 10px 14px;
   min-width: 0;
   border: 1px solid rgba(67, 255, 157, 0.08);
   border-left-color: rgba(67, 231, 255, 0.32);
@@ -300,7 +310,7 @@ a {
 
 .conversation-link small {
   color: var(--muted-foreground);
-  font-size: 0.78rem;
+  font-size: 0.72rem;
 }
 
 .conversation-link:hover,
@@ -322,7 +332,59 @@ a {
 .sidebar-footer-actions {
   display: flex;
   flex-direction: column;
+  gap: 10px;
+}
+
+.switch-button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   gap: 12px;
+  width: 100%;
+  min-height: 40px;
+  padding: 9px 10px 9px 12px;
+  border: 1px solid rgba(67, 231, 255, 0.28);
+  border-radius: 2px;
+  background: rgba(3, 20, 18, 0.76);
+  color: #c6fff0;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.switch-button:hover,
+.switch-button-active {
+  border-color: rgba(67, 255, 157, 0.58);
+  color: #ffffff;
+  background: rgba(9, 45, 34, 0.72);
+  box-shadow: 0 0 22px rgba(67, 255, 157, 0.14), inset 0 0 20px rgba(67, 255, 157, 0.06);
+}
+
+.switch-track {
+  position: relative;
+  width: 42px;
+  height: 22px;
+  border: 1px solid rgba(67, 231, 255, 0.34);
+  border-radius: 999px;
+  background: rgba(1, 9, 7, 0.88);
+  box-shadow: inset 0 0 14px rgba(67, 231, 255, 0.08);
+}
+
+.switch-thumb {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  background: var(--muted-foreground);
+  box-shadow: 0 0 10px rgba(145, 189, 169, 0.22);
+  transition: left 140ms ease, background-color 140ms ease, box-shadow 140ms ease;
+}
+
+.switch-button-active .switch-thumb {
+  left: 23px;
+  background: var(--primary);
+  box-shadow: 0 0 16px rgba(67, 255, 157, 0.72);
 }
 
 .runtime-pill {
@@ -454,6 +516,7 @@ a {
   align-items: start;
   min-height: 0;
   height: 100%;
+  overflow: hidden;
 }
 
 .conversation-grid-simple {
@@ -467,7 +530,16 @@ a {
 .conversation-grid > .panel-stack {
   min-height: 0;
   max-height: 100%;
-  overflow: auto;
+  overflow: hidden;
+}
+
+.chat-panel-stack {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+}
+
+.inspector-panel-stack {
+  overflow: auto !important;
 }
 
 .panel-card {
@@ -486,6 +558,16 @@ a {
     linear-gradient(90deg, rgba(67, 231, 255, 0.1), transparent 42%);
 }
 
+.conversation-hero-card {
+  min-height: auto;
+  padding-block: 18px;
+}
+
+.conversation-hero-card h2 {
+  max-width: min(860px, 100%);
+  overflow-wrap: anywhere;
+}
+
 .panel-card-hero::after {
   position: absolute;
   right: 22px;
@@ -500,7 +582,7 @@ a {
 }
 
 .transcript-panel {
-  min-height: 360px;
+  min-height: 0;
   overflow: auto;
 }
 
@@ -508,6 +590,11 @@ a {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  min-height: 100%;
+}
+
+.transcript-end {
+  min-height: 1px;
 }
 
 .message-bubble {
@@ -569,6 +656,14 @@ a {
   animation: signal-pulse 1.8s ease-in-out infinite;
 }
 
+.message-meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
 .message-meta {
   margin-bottom: 12px;
   color: #8ffff0;
@@ -604,6 +699,89 @@ a {
   overflow-wrap: anywhere;
 }
 
+.message-activity {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border: 1px solid rgba(67, 231, 255, 0.18);
+  background: rgba(2, 18, 18, 0.58);
+}
+
+.message-activity-item {
+  display: grid;
+  grid-template-columns: minmax(120px, 0.36fr) minmax(0, 1fr);
+  gap: 10px;
+  color: var(--muted-foreground);
+  font-size: 0.8rem;
+}
+
+.message-activity-item strong {
+  color: #d6fff0;
+  overflow-wrap: anywhere;
+}
+
+.message-activity-item span {
+  overflow-wrap: anywhere;
+}
+
+.thinking-panel {
+  margin-bottom: 12px;
+  border: 1px solid rgba(67, 255, 157, 0.16);
+  background: rgba(4, 26, 18, 0.5);
+}
+
+.thinking-panel summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  color: #d6fff0;
+  cursor: pointer;
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.thinking-panel summary:focus-visible {
+  outline: 2px solid rgba(67, 255, 157, 0.88);
+  outline-offset: 3px;
+  box-shadow: 0 0 0 5px rgba(67, 255, 157, 0.16), 0 0 28px rgba(67, 255, 157, 0.2);
+}
+
+.thinking-count {
+  color: var(--muted-foreground);
+  font-size: 0.68rem;
+}
+
+.thinking-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 0 12px 12px;
+  color: var(--muted-foreground);
+}
+
+.thinking-body p {
+  margin: 0;
+  line-height: 1.55;
+}
+
+.thinking-body pre {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: #c6fff0;
+  line-height: 1.55;
+}
+
+.streaming-placeholder {
+  margin: 0;
+  color: #d6fff0;
+}
+
 .message-pre {
   margin: 0;
   white-space: pre-wrap;
@@ -615,6 +793,18 @@ a {
   display: flex;
   flex-direction: column;
   gap: 16px;
+}
+
+.composer-sticky-shell {
+  position: sticky;
+  bottom: 0;
+  z-index: 3;
+  padding-top: 10px;
+  background: linear-gradient(180deg, transparent, rgba(2, 6, 4, 0.88) 34%);
+}
+
+.composer-sticky-shell .composer-card {
+  box-shadow: 0 -18px 46px rgba(0, 0, 0, 0.24), var(--shadow-glow), inset 0 1px 0 rgba(218, 255, 238, 0.08);
 }
 
 .preset-row {

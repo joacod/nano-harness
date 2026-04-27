@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { actionCallSchema, actionResultSchema } from './actions'
 import { approvalRequestSchema, approvalResolutionSchema } from './approvals'
 import { messageSchema } from './messages'
+import { providerReasoningDeltaSchema } from './reasoning'
 import { runSchema } from './runs'
 
 const eventBaseSchema = z.object({
@@ -66,6 +67,11 @@ export const providerDeltaEventSchema = eventBaseSchema.extend({
   payload: z.object({
     delta: z.string(),
   }),
+})
+
+export const providerReasoningDeltaEventSchema = eventBaseSchema.extend({
+  type: z.literal('provider.reasoning_delta'),
+  payload: providerReasoningDeltaSchema,
 })
 
 export const providerCompletedEventSchema = eventBaseSchema.extend({
@@ -153,6 +159,7 @@ export const runEventSchema = z.discriminatedUnion('type', [
   runCancelledEventSchema,
   providerRequestedEventSchema,
   providerDeltaEventSchema,
+  providerReasoningDeltaEventSchema,
   providerCompletedEventSchema,
   providerErrorEventSchema,
   actionRequestedEventSchema,

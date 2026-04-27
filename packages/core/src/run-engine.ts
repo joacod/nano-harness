@@ -357,6 +357,15 @@ export class CoreRunEngine implements RunEngine {
               payload: { delta },
             })
           },
+          onReasoningDelta: async (delta) => {
+            await this.emitEvent({
+              id: this.createId(),
+              runId: run.id,
+              timestamp: this.now(),
+              type: 'provider.reasoning_delta',
+              payload: delta,
+            })
+          },
         })
 
         const assistantContent = providerResult.content ?? streamedMessage
@@ -375,6 +384,8 @@ export class CoreRunEngine implements RunEngine {
             role: 'assistant',
             content: assistantContent,
             toolCalls: assistantToolCalls,
+            reasoning: providerResult.reasoning,
+            reasoningDetails: providerResult.reasoningDetails,
             createdAt: this.now(),
           }
 

@@ -8,6 +8,21 @@ export const providerKeySchema = z.enum(['openrouter'])
 
 export type ProviderKey = z.infer<typeof providerKeySchema>
 
+export const reasoningEffortSchema = z.enum(['minimal', 'low', 'medium', 'high', 'xhigh'])
+
+export type ReasoningEffort = z.infer<typeof reasoningEffortSchema>
+
+export const reasoningSettingsSchema = z.discriminatedUnion('mode', [
+  z.object({ mode: z.literal('auto') }),
+  z.object({ mode: z.literal('off') }),
+  z.object({
+    mode: z.literal('effort'),
+    effort: reasoningEffortSchema,
+  }),
+])
+
+export type ReasoningSettings = z.infer<typeof reasoningSettingsSchema>
+
 export const providerCatalog = {
   openrouter: {
     key: 'openrouter',
@@ -45,6 +60,7 @@ export const providerOptions = Object.values(providerCatalog).map((provider) =>
 const currentProviderSettingsSchema = z.object({
   provider: providerKeySchema,
   model: z.string().min(1),
+  reasoning: reasoningSettingsSchema.optional(),
 })
 
 export const providerSettingsSchema = currentProviderSettingsSchema

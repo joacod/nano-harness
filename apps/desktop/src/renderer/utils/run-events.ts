@@ -5,19 +5,91 @@ import { formatTimestamp, previewText } from './formatting'
 export type StreamingRunState = {
   conversationId: string
   content: string
+  reasoning: {
+    text: string
+    summaries: string[]
+    encryptedCount: number
+    isStreaming: boolean
+  }
+  phase: 'queued' | 'started' | 'contacting_provider' | 'streaming' | 'using_tools' | 'waiting_approval'
+  activity: Array<{ id: string; title: string; detail: string }>
   isStreaming: boolean
   errorMessage?: string
 }
 
-export function updateStreamingState(current: Record<string, StreamingRunState>, event: RunEvent) {
+function appendActivity(run: StreamingRunState, event: RunEvent): StreamingRunState {
+  const description = describeRunEvent(event)
+
+  return {
+    ...run,
+    activity: [
+      ...run.activity,
+      {
+        id: event.id,
+        title: description.title,
+        detail: description.detail,
+      },
+    ].slice(-3),
+  }
+}
+
+function getActivityPhase(event: RunEvent): StreamingRunState['phase'] | null {
+  switch (event.type) {
+    case 'run.started':
+      return 'started'
+    case 'provider.requested':
+      return 'contacting_provider'
+    case 'action.requested':
+    case 'action.started':
+    case 'action.completed':
+    case 'action.failed':
+      return 'using_tools'
+    case 'approval.required':
+    case 'run.waiting_approval':
+      return 'waiting_approval'
+    default:
+      return null
+  }
+}
+
+export function updateStreamingState(current: Record<string, StreamingRunState>, event: RunEvent): Record<string, StreamingRunState> {
   if (event.type === 'run.created') {
     return {
       ...current,
       [event.runId]: {
         conversationId: event.payload.run.conversationId,
         content: '',
+        reasoning: {
+          text: '',
+          summaries: [],
+          encryptedCount: 0,
+          isStreaming: false,
+        },
+        phase: 'queued',
+        activity: [{ id: event.id, title: 'Run queued', detail: 'Preparing the agent runtime.' }],
         isStreaming: false,
       },
+    }
+  }
+
+  const activityPhase = getActivityPhase(event)
+
+  if (activityPhase) {
+    const existing = current[event.runId]
+
+    if (!existing) {
+      return current
+    }
+
+    return {
+      ...current,
+      [event.runId]: appendActivity(
+        {
+          ...existing,
+          phase: activityPhase,
+        },
+        event,
+      ),
     }
   }
 
@@ -33,7 +105,37 @@ export function updateStreamingState(current: Record<string, StreamingRunState>,
       [event.runId]: {
         ...existing,
         content: `${existing.content}${event.payload.delta}`,
+        reasoning: {
+          ...existing.reasoning,
+          isStreaming: false,
+        },
+        phase: 'streaming',
         isStreaming: true,
+      },
+    }
+  }
+
+  if (event.type === 'provider.reasoning_delta') {
+    const existing = current[event.runId]
+
+    if (!existing) {
+      return current
+    }
+
+    const textDetails = event.payload.details?.flatMap((detail) => detail.type === 'reasoning.text' ? [detail.text] : []) ?? []
+    const summaries = event.payload.details?.flatMap((detail) => detail.type === 'reasoning.summary' ? [detail.summary] : []) ?? []
+    const encryptedCount = event.payload.details?.filter((detail) => detail.type === 'reasoning.encrypted' || detail.type === 'reasoning.unknown').length ?? 0
+
+    return {
+      ...current,
+      [event.runId]: {
+        ...existing,
+        reasoning: {
+          text: `${existing.reasoning.text}${event.payload.text ?? ''}${textDetails.join('')}`,
+          summaries: [...existing.reasoning.summaries, ...summaries],
+          encryptedCount: existing.reasoning.encryptedCount + encryptedCount,
+          isStreaming: true,
+        },
       },
     }
   }
@@ -105,6 +207,21 @@ export function describeRunEvent(event: RunEvent) {
       return { title: 'Provider request sent', detail: `${event.payload.provider} · ${event.payload.model}` }
     case 'provider.delta':
       return { title: 'Provider streamed delta', detail: previewText(event.payload.delta, 160) }
+    case 'provider.reasoning_delta': {
+      const text = event.payload.text ?? event.payload.details?.map((detail) => {
+        if (detail.type === 'reasoning.summary') {
+          return detail.summary
+        }
+
+        if (detail.type === 'reasoning.text') {
+          return detail.text
+        }
+
+        return 'Encrypted reasoning block'
+      }).join(' ')
+
+      return { title: 'Provider streamed reasoning', detail: previewText(text ?? 'Reasoning metadata received', 160) }
+    }
     case 'provider.completed':
       return { title: 'Provider stream completed', detail: `Assistant message ${event.payload.messageId}` }
     case 'provider.error':

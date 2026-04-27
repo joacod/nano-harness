@@ -56,6 +56,7 @@ export function SettingsFormCard({
         provider: {
           provider: value.provider.provider,
           model: value.provider.model.trim(),
+          reasoning: value.provider.reasoning,
         },
         workspace: {
           ...value.workspace,
@@ -195,6 +196,42 @@ export function SettingsFormCard({
                 spellCheck={false}
               />
             )}
+          />
+        </LabeledField>
+
+        <LabeledField label="Reasoning">
+          <FieldHint>Show provider-supplied model thinking when the selected provider and model expose it. Effort modes may increase cost and latency.</FieldHint>
+          <form.Field
+            name="provider.reasoning"
+            children={(field) => {
+              const value = field.state.value?.mode === 'effort' ? field.state.value.effort : field.state.value?.mode ?? 'auto'
+
+              return (
+                <select
+                  className="text-input"
+                  name="provider-reasoning"
+                  value={value}
+                  onChange={(event) => {
+                    const nextValue = event.target.value
+
+                    if (nextValue === 'auto' || nextValue === 'off') {
+                      field.handleChange({ mode: nextValue })
+                      return
+                    }
+
+                    field.handleChange({ mode: 'effort', effort: nextValue as 'minimal' | 'low' | 'medium' | 'high' | 'xhigh' })
+                  }}
+                >
+                  <option value="auto">auto</option>
+                  <option value="off">off</option>
+                  <option value="minimal">minimal effort</option>
+                  <option value="low">low effort</option>
+                  <option value="medium">medium effort</option>
+                  <option value="high">high effort</option>
+                  <option value="xhigh">xhigh effort</option>
+                </select>
+              )
+            }}
           />
         </LabeledField>
 

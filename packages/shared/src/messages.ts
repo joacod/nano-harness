@@ -1,6 +1,7 @@
 import { z } from 'zod'
 
 import { jsonValueSchema } from './actions'
+import { reasoningDetailSchema } from './reasoning'
 
 export const messageRoleSchema = z.enum(['system', 'user', 'assistant', 'tool'])
 
@@ -33,6 +34,8 @@ export const userMessageSchema = messageBaseSchema.extend({
 export const assistantMessageSchema = messageBaseSchema.extend({
   role: z.literal('assistant'),
   toolCalls: z.array(assistantToolCallSchema).optional(),
+  reasoning: z.string().optional(),
+  reasoningDetails: z.array(reasoningDetailSchema).optional(),
 })
 
 export const toolMessageSchema = messageBaseSchema.extend({
