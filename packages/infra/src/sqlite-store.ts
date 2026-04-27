@@ -1,12 +1,10 @@
 import { mkdirSync } from 'node:fs'
-import { copyFile, mkdir, rm } from 'node:fs/promises'
-import path from 'node:path'
+import { mkdir } from 'node:fs/promises'
 
 import { createClient } from '@libsql/client/node'
 import type { Client } from '@libsql/client'
 import type { ConversationSnapshot, Store, UpdateRunStatusInput } from '@nano-harness/core'
 import {
-  assistantToolCallSchema,
   appSettingsSchema,
   approvalRequestSchema,
   approvalResolutionSchema,
@@ -15,7 +13,6 @@ import {
   providerKeySchema,
   runStatusSchema,
   type ProviderKey,
-  type Message,
   runEventSchema,
   runSchema,
 } from '@nano-harness/shared'
@@ -33,255 +30,22 @@ import {
   schema,
   settingsTable,
 } from './schema'
+import { backupDatabaseToFile, createStagedImportCopy, sanitizeDatabaseFile, validateDatabaseFile } from './sqlite/database-files'
+import { initializationStatements } from './sqlite/initialize'
+import { deserializeMessage, serializeMessageMetadata } from './sqlite/message-metadata'
+import { resolveSqliteStorePaths, type SqliteStoreOptions, type SqliteStorePaths } from './sqlite/paths'
+import {
+  deserializeRunEvent,
+  normalizeNullableMessageRow,
+  normalizeNullableRunRow,
+  parseJson,
+  serializeJson,
+  serializeRunEvent,
+} from './sqlite/serializers'
 
 const SETTINGS_ROW_ID = 'app'
-const DEFAULT_DATA_DIR_NAME = '.nano-harness'
-const DEFAULT_DATABASE_FILE_NAME = 'nano-harness.db'
-const REQUIRED_DATABASE_TABLES = [
-  'conversations',
-  'runs',
-  'messages',
-  'run_events',
-  'approval_requests',
-  'approval_resolutions',
-  'settings',
-  'provider_credentials',
-] as const
 
-const initializationStatements = [
-  `CREATE TABLE IF NOT EXISTS conversations (
-    id TEXT PRIMARY KEY NOT NULL,
-    title TEXT NOT NULL,
-    created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL
-  )`,
-  `CREATE TABLE IF NOT EXISTS runs (
-    id TEXT PRIMARY KEY NOT NULL,
-    conversation_id TEXT NOT NULL,
-    status TEXT NOT NULL,
-    created_at TEXT NOT NULL,
-    started_at TEXT,
-    finished_at TEXT,
-    failure_message TEXT
-  )`,
-  `CREATE INDEX IF NOT EXISTS runs_conversation_id_idx ON runs (conversation_id, created_at)`,
-  `CREATE TABLE IF NOT EXISTS messages (
-    id TEXT PRIMARY KEY NOT NULL,
-    conversation_id TEXT NOT NULL,
-    run_id TEXT,
-    role TEXT NOT NULL,
-    content TEXT NOT NULL,
-    metadata TEXT,
-    created_at TEXT NOT NULL
-  )`,
-  `CREATE INDEX IF NOT EXISTS messages_conversation_id_idx ON messages (conversation_id, created_at)`,
-  `CREATE INDEX IF NOT EXISTS messages_run_id_idx ON messages (run_id)`,
-  `CREATE TABLE IF NOT EXISTS run_events (
-    id TEXT PRIMARY KEY NOT NULL,
-    run_id TEXT NOT NULL,
-    type TEXT NOT NULL,
-    timestamp TEXT NOT NULL,
-    payload TEXT NOT NULL
-  )`,
-  `CREATE INDEX IF NOT EXISTS run_events_run_id_idx ON run_events (run_id, timestamp)`,
-  `CREATE TABLE IF NOT EXISTS approval_requests (
-    id TEXT PRIMARY KEY NOT NULL,
-    run_id TEXT NOT NULL,
-    action_call_id TEXT NOT NULL,
-    reason TEXT NOT NULL,
-    requested_at TEXT NOT NULL
-  )`,
-  `CREATE INDEX IF NOT EXISTS approval_requests_run_id_idx ON approval_requests (run_id, requested_at)`,
-  `CREATE TABLE IF NOT EXISTS approval_resolutions (
-    approval_request_id TEXT PRIMARY KEY NOT NULL,
-    decision TEXT NOT NULL,
-    decided_at TEXT NOT NULL
-  )`,
-  `CREATE INDEX IF NOT EXISTS approval_resolutions_decided_at_idx ON approval_resolutions (decided_at)`,
-  `CREATE TABLE IF NOT EXISTS settings (
-    id TEXT PRIMARY KEY NOT NULL,
-    payload TEXT NOT NULL,
-    updated_at TEXT NOT NULL
-  )`,
-  `CREATE TABLE IF NOT EXISTS provider_credentials (
-    provider TEXT PRIMARY KEY NOT NULL,
-    encrypted_api_key TEXT NOT NULL,
-    updated_at TEXT NOT NULL
-  )`,
-] as const
-
-export interface SqliteStoreOptions {
-  dataDir?: string
-  databaseFileName?: string
-  databaseUrl?: string
-}
-
-export interface SqliteStorePaths {
-  dataDir: string
-  databaseFilePath: string
-  databaseUrl: string
-}
-
-function toFileDatabaseUrl(databaseFilePath: string): string {
-  return `file:${databaseFilePath}`
-}
-
-export function resolveSqliteStorePaths(options: SqliteStoreOptions = {}): SqliteStorePaths {
-  if (options.databaseUrl) {
-    return {
-      dataDir: options.dataDir ?? path.join(process.cwd(), DEFAULT_DATA_DIR_NAME),
-      databaseFilePath: options.databaseUrl,
-      databaseUrl: options.databaseUrl,
-    }
-  }
-
-  const dataDir = options.dataDir ?? path.join(process.cwd(), DEFAULT_DATA_DIR_NAME)
-  const databaseFileName = options.databaseFileName ?? DEFAULT_DATABASE_FILE_NAME
-  const databaseFilePath = path.join(dataDir, databaseFileName)
-
-  return {
-    dataDir,
-    databaseFilePath,
-    databaseUrl: toFileDatabaseUrl(databaseFilePath),
-  }
-}
-
-function parseJson<T>(value: string): T {
-  return JSON.parse(value) as T
-}
-
-function serializeJson(value: unknown): string {
-  return JSON.stringify(value)
-}
-
-function quoteSqliteString(value: string): string {
-  return `'${value.replaceAll("'", "''")}'`
-}
-
-function serializeRunEvent(event: ReturnType<typeof runEventSchema.parse>) {
-  return {
-    id: event.id,
-    runId: event.runId,
-    type: event.type,
-    timestamp: event.timestamp,
-    payload: serializeJson(event.payload),
-  }
-}
-
-function deserializeRunEvent(row: { id: string; runId: string; type: string; timestamp: string; payload: string }) {
-  return runEventSchema.parse({
-    id: row.id,
-    runId: row.runId,
-    type: row.type,
-    timestamp: row.timestamp,
-    payload: parseJson(row.payload),
-  })
-}
-
-function normalizeNullableRunRow(row: {
-  id: string
-  conversationId: string
-  status: string
-  createdAt: string
-  startedAt: string | null
-  finishedAt: string | null
-  failureMessage: string | null
-}) {
-  return {
-    id: row.id,
-    conversationId: row.conversationId,
-    status: row.status,
-    createdAt: row.createdAt,
-    startedAt: row.startedAt ?? undefined,
-    finishedAt: row.finishedAt ?? undefined,
-    failureMessage: row.failureMessage ?? undefined,
-  }
-}
-
-function normalizeNullableMessageRow(row: {
-  id: string
-  conversationId: string
-  runId: string | null
-  role: string
-  content: string
-  metadata: string | null
-  createdAt: string
-}) {
-  return {
-    id: row.id,
-    conversationId: row.conversationId,
-    runId: row.runId ?? undefined,
-    role: row.role,
-    content: row.content,
-    metadata: row.metadata ?? undefined,
-    createdAt: row.createdAt,
-  }
-}
-
-function serializeMessageMetadata(message: Message): string | null {
-  if (message.role === 'assistant' && message.toolCalls && message.toolCalls.length > 0) {
-    return serializeJson({
-      toolCalls: message.toolCalls,
-    })
-  }
-
-    if (message.role === 'tool') {
-      return serializeJson({
-        toolCallId: message.toolCallId,
-        toolName: message.toolName,
-    })
-  }
-
-  return null
-}
-
-function deserializeMessage(row: {
-  id: string
-  conversationId: string
-  runId?: string
-  role: string
-  content: string
-  metadata?: string
-  createdAt: string
-}) {
-  const metadata = row.metadata ? parseJson<Record<string, unknown>>(row.metadata) : undefined
-
-  if (row.role === 'assistant') {
-    return messageSchema.parse({
-      id: row.id,
-      conversationId: row.conversationId,
-      runId: row.runId,
-      role: 'assistant',
-      content: row.content,
-      toolCalls: Array.isArray(metadata?.['toolCalls'])
-        ? metadata?.['toolCalls'].map((toolCall) => assistantToolCallSchema.parse(toolCall))
-        : undefined,
-      createdAt: row.createdAt,
-    })
-  }
-
-  if (row.role === 'tool') {
-    return messageSchema.parse({
-      id: row.id,
-      conversationId: row.conversationId,
-      runId: row.runId,
-      role: 'tool',
-      content: row.content,
-      toolCallId: typeof metadata?.['toolCallId'] === 'string' ? metadata['toolCallId'] : '',
-      toolName: typeof metadata?.['toolName'] === 'string' ? metadata['toolName'] : undefined,
-      createdAt: row.createdAt,
-    })
-  }
-
-  return messageSchema.parse({
-    id: row.id,
-    conversationId: row.conversationId,
-    runId: row.runId,
-    role: row.role,
-    content: row.content,
-    createdAt: row.createdAt,
-  })
-}
+export { resolveSqliteStorePaths, type SqliteStoreOptions, type SqliteStorePaths } from './sqlite/paths'
 
 export class SqliteStore implements Store {
   private readonly client: Client
@@ -309,7 +73,6 @@ export class SqliteStore implements Store {
     for (const statement of initializationStatements) {
       await this.client.execute(statement)
     }
-
   }
 
   async saveConversation(conversation: Parameters<typeof conversationSchema.parse>[0]): Promise<void> {
@@ -559,42 +322,22 @@ export class SqliteStore implements Store {
   }
 
   async backupToFile(filePath: string): Promise<void> {
-    await rm(filePath, { force: true })
-    await this.client.execute(`VACUUM INTO ${quoteSqliteString(filePath)}`)
+    await backupDatabaseToFile(this.client, filePath)
   }
 
   async validateDatabaseFile(filePath: string): Promise<void> {
-    const validationClient = createClient({ url: toFileDatabaseUrl(filePath) })
-
-    try {
-      const result = await validationClient.execute(
-        `SELECT name FROM sqlite_master WHERE type = 'table' AND name IN (${REQUIRED_DATABASE_TABLES.map(quoteSqliteString).join(', ')})`,
-      )
-      const tableNames = new Set(result.rows.map((row) => String(row['name'])))
-      const missingTables = REQUIRED_DATABASE_TABLES.filter((tableName) => !tableNames.has(tableName))
-
-      if (missingTables.length > 0) {
-        throw new Error(`Selected file is not a valid Nano Harness database. Missing tables: ${missingTables.join(', ')}`)
-      }
-    } finally {
-      await validationClient.close()
-    }
+    await validateDatabaseFile(filePath)
   }
 
   async sanitizeDatabaseFile(filePath: string): Promise<void> {
-    const sanitizeClient = createClient({ url: toFileDatabaseUrl(filePath) })
-
-    try {
-      await sanitizeClient.execute('DELETE FROM provider_credentials')
-    } finally {
-      await sanitizeClient.close()
-    }
+    await sanitizeDatabaseFile(filePath)
   }
 
   async createStagedImportCopy(sourceFilePath: string): Promise<string> {
-    const stagedFilePath = path.join(this.paths.dataDir, `nano-harness-import-${Date.now()}.db`)
-    await copyFile(sourceFilePath, stagedFilePath)
-    return stagedFilePath
+    return createStagedImportCopy({
+      dataDir: this.paths.dataDir,
+      sourceFilePath,
+    })
   }
 
   async close(): Promise<void> {
