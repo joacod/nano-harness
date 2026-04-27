@@ -1,13 +1,10 @@
 import type {
   ActionCall,
-  ActionDefinition,
-  ActionResult,
   AppSettings,
   ApprovalRequest,
   ApprovalResolution,
   JsonValue,
   Message,
-  ProviderKey,
   Run,
   RunCreateInput,
   RunEvent,
@@ -15,80 +12,15 @@ import type {
 } from '@nano-harness/shared'
 import { getProviderDefinition } from '@nano-harness/shared'
 
+import type { ActionExecutor } from './actions'
+import type { ApprovalCoordinator, PendingApprovalContext } from './approvals'
+import { getLatestPendingApproval } from './approvals'
+import type { EventBus } from './event-bus'
+import { noopEventBus } from './event-bus'
+import type { Policy } from './policy'
+import type { Provider, ProviderActionRequest, ProviderCredentialResolver } from './provider'
+import { assertStatusTransition, isTerminalStatus } from './run-status'
 import type { ConversationSnapshot, Store } from './store'
-
-export interface EventBus {
-  publish(event: RunEvent): Promise<void> | void
-}
-
-export interface ProviderActionRequest {
-  toolCallId: string
-  actionId: string
-  input: Record<string, JsonValue>
-}
-
-export interface ProviderGenerateInput {
-  run: Run
-  messages: Message[]
-  actions: ActionDefinition[]
-  settings: AppSettings
-  providerApiKey: string
-  signal: AbortSignal
-  onDelta?: (delta: string) => Promise<void> | void
-}
-
-export interface ProviderGenerateResult {
-  content?: string
-  actionCalls?: ProviderActionRequest[]
-}
-
-export interface Provider {
-  generate(input: ProviderGenerateInput): Promise<ProviderGenerateResult>
-}
-
-export interface ProviderCredentialResolver {
-  getProviderApiKey(provider: ProviderKey): Promise<string | null>
-}
-
-export interface ActionExecutionInput {
-  run: Run
-  action: ActionDefinition
-  call: ActionCall
-  settings: AppSettings
-  signal: AbortSignal
-}
-
-export interface ActionExecutor {
-  listDefinitions(): Promise<ActionDefinition[]>
-  getDefinition(actionId: string): Promise<ActionDefinition | null>
-  execute(input: ActionExecutionInput): Promise<ActionResult>
-}
-
-export interface PolicyInput {
-  run: Run
-  action: ActionDefinition
-  actionCall: ActionCall
-  settings: AppSettings
-}
-
-export interface PolicyDecision {
-  effect: 'allow' | 'deny' | 'require_approval'
-  reason?: string
-}
-
-export interface Policy {
-  evaluateAction(input: PolicyInput): Promise<PolicyDecision>
-}
-
-export interface ApprovalCoordinator {
-  waitForDecision(input: {
-    request: ApprovalRequest
-    run: Run
-    settings: AppSettings
-    signal: AbortSignal
-  }): Promise<ApprovalResolution>
-  resolveDecision?(input: { approvalRequestId: string; decision: ApprovalResolution['decision'] }): Promise<boolean> | boolean
-}
 
 export interface RunEngineDependencies {
   store: Store
@@ -115,11 +47,6 @@ export interface RunEngine {
   resolveApproval(input: { runId: string; approvalRequestId: string; decision: ApprovalResolution['decision'] }): Promise<void>
 }
 
-type PendingApprovalContext = {
-  request: ApprovalRequest
-  actionCall: ActionCall
-}
-
 type ContinueRunContext = {
   run: Run
   snapshot: ConversationSnapshot
@@ -135,39 +62,12 @@ class RunAbortError extends Error {
   }
 }
 
-const noopEventBus: EventBus = {
-  publish() {},
-}
-
 function defaultNow(): string {
   return new Date().toISOString()
 }
 
 function defaultCreateId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
-}
-
-function assertStatusTransition(current: RunStatus, next: RunStatus): void {
-  if (current === next) {
-    return
-  }
-
-  const transitions: Record<RunStatus, readonly RunStatus[]> = {
-    created: ['started', 'cancelled'],
-    started: ['waiting_approval', 'completed', 'failed', 'cancelled'],
-    waiting_approval: ['started', 'completed', 'failed', 'cancelled'],
-    completed: [],
-    failed: [],
-    cancelled: [],
-  }
-
-  if (!transitions[current].includes(next)) {
-    throw new Error(`Invalid run status transition from ${current} to ${next}`)
-  }
-}
-
-function isTerminalStatus(status: RunStatus): boolean {
-  return status === 'completed' || status === 'failed' || status === 'cancelled'
 }
 
 function deriveConversationTitle(prompt: string): string {
@@ -185,30 +85,6 @@ function stringifyToolOutput(value: JsonValue | undefined): string {
 
 function isAbortError(error: unknown): boolean {
   return error instanceof Error && error.name === 'AbortError'
-}
-
-function getLatestPendingApproval(snapshot: ConversationSnapshot): PendingApprovalContext | null {
-  const resolvedIds = new Set(snapshot.approvalResolutions.map((resolution) => resolution.approvalRequestId))
-  const pendingRequest = [...snapshot.approvalRequests]
-    .reverse()
-    .find((request) => !resolvedIds.has(request.id))
-
-  if (!pendingRequest) {
-    return null
-  }
-
-  const actionRequestedEvent = [...snapshot.events].reverse().find((event) => {
-    return event.type === 'action.requested' && event.payload.actionCall.id === pendingRequest.actionCallId
-  })
-
-  if (!actionRequestedEvent || actionRequestedEvent.type !== 'action.requested') {
-    throw new Error(`Missing action.requested event for approval request ${pendingRequest.id}`)
-  }
-
-  return {
-    request: pendingRequest,
-    actionCall: actionRequestedEvent.payload.actionCall,
-  }
 }
 
 export class CoreRunEngine implements RunEngine {
@@ -847,52 +723,5 @@ export class CoreRunEngine implements RunEngine {
     }
 
     return settings
-  }
-}
-
-export class StaticPolicy implements Policy {
-  async evaluateAction(input: PolicyInput): Promise<PolicyDecision> {
-    if (input.settings.workspace.approvalPolicy === 'always') {
-      return {
-        effect: 'require_approval',
-        reason: `Approval required for ${input.action.title}`,
-      }
-    }
-
-    if (input.action.requiresApproval && input.settings.workspace.approvalPolicy === 'never') {
-      return {
-        effect: 'deny',
-        reason: `${input.action.title} requires approval, but approvals are disabled in settings`,
-      }
-    }
-
-    if (input.action.requiresApproval) {
-      return {
-        effect: 'require_approval',
-        reason: `Approval required for ${input.action.title}`,
-      }
-    }
-
-    return {
-      effect: 'allow',
-    }
-  }
-}
-
-export class InMemoryEventBus implements EventBus {
-  private readonly listeners = new Set<(event: RunEvent) => Promise<void> | void>()
-
-  subscribe(listener: (event: RunEvent) => Promise<void> | void): () => void {
-    this.listeners.add(listener)
-
-    return () => {
-      this.listeners.delete(listener)
-    }
-  }
-
-  async publish(event: RunEvent): Promise<void> {
-    for (const listener of this.listeners) {
-      await listener(event)
-    }
   }
 }
