@@ -57,7 +57,7 @@ export function RunInspectorCard({
     <section className="panel-card inspector-card">
       <p className="eyebrow">Inspector</p>
       <div className="sidebar-header-row">
-        <h2>{run ? 'Run timeline' : 'Select a run'}</h2>
+        <h2>{run ? 'Signal trace' : 'Select a run'}</h2>
         {run ? (
           <div className="status-row">
             <span className={`status-badge status-${run.status}`}>{run.status}</span>

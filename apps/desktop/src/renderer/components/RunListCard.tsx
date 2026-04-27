@@ -20,7 +20,7 @@ export function RunListCard({
       <div className="sidebar-header-row">
         <div>
           <p className="eyebrow">Runs</p>
-          <h2>Conversation history</h2>
+          <h2>Session telemetry</h2>
         </div>
         <span className="runtime-pill">{runs.length} total</span>
       </div>

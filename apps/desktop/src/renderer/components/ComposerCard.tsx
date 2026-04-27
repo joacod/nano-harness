@@ -58,7 +58,7 @@ export function ComposerCard({ conversationId }: { conversationId: string | null
   return (
     <section className="panel-card composer-card">
       <div className="sidebar-header-row">
-        <h2>{conversationId ? 'Continue conversation' : 'First prompt'}</h2>
+        <h2>{conversationId ? 'Continue session' : 'Command input'}</h2>
         {startRunMutation.isPending ? (
           <span className="runtime-pill" aria-live="polite">
             Sending…
@@ -82,7 +82,7 @@ export function ComposerCard({ conversationId }: { conversationId: string | null
               name="prompt"
               value={field.state.value}
               onChange={(event) => field.handleChange(event.target.value)}
-              placeholder="Ask the local harness to summarize a file, explain a bug, or sketch a plan…"
+              placeholder="Enter an instruction for the local harness…"
               rows={5}
             />
           )}
@@ -90,7 +90,7 @@ export function ComposerCard({ conversationId }: { conversationId: string | null
 
         <div className="form-row">
           <button type="submit" className="primary-button" disabled={startRunMutation.isPending}>
-            Send prompt
+            Execute prompt
           </button>
         </div>
       </form>

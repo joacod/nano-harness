@@ -22,17 +22,17 @@ export function RootLayout() {
       <aside className="sidebar">
         <div className="sidebar-section">
           <p className="eyebrow">nano-harness</p>
-          <h1 className="sidebar-title">Desktop chat harness</h1>
+          <h1 className="sidebar-title">Agent control deck</h1>
           <p className="sidebar-copy">
-            Local runtime wiring is live. Use the conversation pane to send prompts and the settings screen to change provider config.
+            Local runtime, provider routing, approvals, and persisted run telemetry are wired through this desktop console.
           </p>
         </div>
 
         <div className="sidebar-section">
           <div className="sidebar-header-row">
-            <h2>Conversations</h2>
+            <h2>Sessions</h2>
             <Link to="/" className="ghost-link">
-              New
+              New session
             </Link>
           </div>
           <nav className="conversation-nav">
@@ -57,7 +57,7 @@ export function RootLayout() {
               ))
             ) : (
               !conversationsQuery.isLoading && !conversationsQuery.isError ? (
-                <p className="muted-copy">No conversations yet. Start with a prompt.</p>
+                <p className="muted-copy">No sessions yet. Open a prompt channel to begin.</p>
               ) : null
             )}
           </nav>
@@ -69,11 +69,11 @@ export function RootLayout() {
               Settings
             </Link>
             <button type="button" className="ghost-button" onClick={toggleTechnicalInfo}>
-              {showTechnicalInfo ? 'Hide technical info' : 'Show technical info'}
+              {showTechnicalInfo ? 'Hide telemetry' : 'Show telemetry'}
             </button>
           </div>
           <p className="runtime-pill" aria-live="polite">
-            {providerStatus?.isReady ? 'Provider ready' : 'Provider needs setup'}
+            {providerStatus?.isReady ? 'Provider online' : 'Provider setup required'}
           </p>
         </div>
 
@@ -130,7 +130,7 @@ export function RootLayout() {
             </div>
 
             <div className="sidebar-section">
-              <h2>Recent Events</h2>
+              <h2>Recent Signals</h2>
               <ul className="event-list">
                 {recentEvents.length > 0 ? (
                   recentEvents.map((event) => {
@@ -147,7 +147,7 @@ export function RootLayout() {
                     )
                   })
                 ) : (
-                  <li>No events yet.</li>
+                  <li>No signals yet.</li>
                 )}
               </ul>
             </div>
