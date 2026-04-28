@@ -1395,20 +1395,39 @@ select.text-input {
 .message-markdown [data-streamdown="table-wrapper"] {
   position: relative;
   border-radius: 2px;
-  border-color: rgba(67, 231, 255, 0.24);
+  border: 1px solid rgba(67, 231, 255, 0.24);
   background:
     linear-gradient(180deg, rgba(2, 18, 18, 0.9), rgba(1, 8, 7, 0.94)),
     radial-gradient(circle at top right, rgba(67, 231, 255, 0.08), transparent 34%);
 }
 
 .message-markdown [data-streamdown="code-block"] {
-  padding-top: 8px;
+  padding: 44px 12px 12px;
 }
 
 .message-markdown [data-streamdown="code-block-header"] {
-  min-height: 28px;
-  padding-right: 92px;
+  position: absolute;
+  top: 8px;
+  right: 90px;
+  z-index: 2;
+  min-height: 0;
+  padding-right: 0;
   color: #9df6ff;
+}
+
+.message-markdown [data-streamdown="code-block-header"] span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 3px 8px;
+  border: 1px solid rgba(67, 231, 255, 0.28);
+  border-radius: 2px;
+  background: rgba(3, 20, 18, 0.84);
+  color: #bdfcff;
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  backdrop-filter: blur(12px);
 }
 
 .message-markdown [data-streamdown="code-block"] > div:has(> [data-streamdown="code-block-actions"]) {
@@ -1430,6 +1449,14 @@ select.text-input {
   padding: 3px;
   backdrop-filter: blur(12px);
   box-shadow: 0 0 14px rgba(67, 231, 255, 0.1);
+}
+
+.message-markdown [data-streamdown="code-block"] pre {
+  margin: 0;
+  border: 0;
+  border-left: 3px solid rgba(67, 231, 255, 0.5);
+  background: rgba(1, 8, 7, 0.42);
+  box-shadow: none;
 }
 
 .message-markdown [data-streamdown="code-block-actions"] button,
