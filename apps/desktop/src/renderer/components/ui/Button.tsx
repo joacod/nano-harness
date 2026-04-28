@@ -3,7 +3,7 @@ import type { ButtonHTMLAttributes, ReactNode } from 'react'
 import { cn } from './classnames'
 
 type ButtonVariant = 'primary' | 'secondary'
-type ButtonSize = 'sm' | 'md' | 'lg'
+type ButtonSize = 'sm' | 'md'
 
 const buttonVariantClassName: Record<ButtonVariant, string> = {
   primary: 'primary-button',

@@ -1,6 +1,5 @@
-import { RunInspectorCard } from '../components/RunInspectorCard'
-import { RunListCard } from '../components/RunListCard'
 import { SessionLayout } from '../components/SessionLayout'
+import { SessionTelemetry } from '../components/SessionTelemetry'
 import { useTechnicalUi } from '../runtime-ui'
 
 export function HomeRoute() {
@@ -12,10 +11,16 @@ export function HomeRoute() {
       showTechnicalInfo={showTechnicalInfo}
       title="Start new session"
       inspectorChildren={(
-        <>
-          <RunListCard runs={[]} events={[]} selectedRunId={null} onSelectRun={() => undefined} />
-          <RunInspectorCard run={null} events={[]} pendingApproval={null} streamingState={null} />
-        </>
+        <SessionTelemetry
+          runs={[]}
+          events={[]}
+          selectedRunId={null}
+          onSelectRun={() => undefined}
+          selectedRun={null}
+          selectedRunEvents={[]}
+          pendingApproval={null}
+          streamingState={null}
+        />
       )}
     />
   )

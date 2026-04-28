@@ -4,9 +4,8 @@ import { useQuery } from '@tanstack/react-query'
 import { useParams } from '@tanstack/react-router'
 
 import { ChatTranscript } from '../components/ChatTranscript'
-import { RunInspectorCard } from '../components/RunInspectorCard'
-import { RunListCard } from '../components/RunListCard'
 import { SessionLayout } from '../components/SessionLayout'
+import { SessionTelemetry } from '../components/SessionTelemetry'
 import { Card, FeedbackText } from '../components/ui'
 import { conversationQueryOptions } from '../queries'
 import { useRuntimeUi, useTechnicalUi } from '../runtime-ui'
@@ -138,20 +137,16 @@ export function ConversationRoute() {
         </>
       )}
       inspectorChildren={(
-        <>
-          <RunListCard
-            runs={snapshotQuery.data?.runs ?? []}
-            events={snapshotQuery.data?.events ?? []}
-            selectedRunId={selectedRunId}
-            onSelectRun={(runId) => setSelectedRunId(runId)}
-          />
-          <RunInspectorCard
-            run={selectedRun}
-            events={selectedRunEvents}
-            pendingApproval={pendingApproval}
-            streamingState={selectedRun ? streamingRuns[selectedRun.id] ?? null : null}
-          />
-        </>
+        <SessionTelemetry
+          runs={snapshotQuery.data?.runs ?? []}
+          events={snapshotQuery.data?.events ?? []}
+          selectedRunId={selectedRunId}
+          onSelectRun={(runId) => setSelectedRunId(runId)}
+          selectedRun={selectedRun}
+          selectedRunEvents={selectedRunEvents}
+          pendingApproval={pendingApproval}
+          streamingState={selectedRun ? streamingRuns[selectedRun.id] ?? null : null}
+        />
       )}
     />
   )
