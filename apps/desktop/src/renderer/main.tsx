@@ -2,6 +2,7 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { App } from './App'
+import { Card, FeedbackText } from './components/ui'
 import 'streamdown/styles.css'
 import './styles/index.css'
 
@@ -35,12 +36,12 @@ class AppErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundary
 
     return (
       <main className="workspace-shell workspace-shell-single">
-        <section className="panel-card diagnostic-card">
+        <Card className="diagnostic-card">
           <p className="eyebrow">Renderer Diagnostic</p>
           <h2>Renderer crashed</h2>
-          <p className="muted-copy">The React tree threw during render. The error is shown below so the screen never fails silently.</p>
+          <FeedbackText>The React tree threw during render. The error is shown below so the screen never fails silently.</FeedbackText>
           <pre className="message-pre error-copy">{this.state.error.stack ?? this.state.error.message}</pre>
-        </section>
+        </Card>
       </main>
     )
   }

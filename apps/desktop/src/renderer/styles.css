@@ -183,19 +183,11 @@ a {
   top: 20px;
   left: 20px;
   z-index: 10;
-  display: inline-flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
   gap: 4px;
   width: 42px;
   height: 42px;
-  border: 1px solid rgba(67, 231, 255, 0.34);
-  border-radius: 2px;
-  background: rgba(3, 20, 18, 0.88);
-  color: #c6fff0;
   backdrop-filter: blur(16px);
-  box-shadow: var(--shadow-glow), inset 0 0 18px rgba(67, 231, 255, 0.06);
 }
 
 .sidebar-toggle-button span {
@@ -205,14 +197,6 @@ a {
   border-radius: 999px;
   background: currentColor;
   box-shadow: 0 0 8px currentColor;
-}
-
-.sidebar-toggle-button:hover,
-.sidebar-toggle-button:focus-visible {
-  border-color: rgba(67, 255, 157, 0.58);
-  color: #ffffff;
-  background: rgba(9, 45, 34, 0.84);
-  box-shadow: 0 0 22px rgba(67, 255, 157, 0.14), inset 0 0 20px rgba(67, 255, 157, 0.06);
 }
 
 .sidebar-title,
@@ -1227,6 +1211,76 @@ select.text-input {
   transform: none;
 }
 
+.button-sm {
+  min-height: 34px;
+  padding: 8px 12px;
+  font-size: 0.72rem;
+}
+
+.button-lg {
+  min-height: 46px;
+  padding: 12px 18px;
+  font-size: 0.84rem;
+}
+
+.button-full-width {
+  width: 100%;
+}
+
+.button-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ghost-button.run-card {
+  align-items: flex-start;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px;
+  min-width: 0;
+  text-transform: none;
+}
+
+.ghost-button.run-card:hover,
+.ghost-button.run-card-active {
+  border-color: rgba(67, 255, 157, 0.58);
+  color: #ffffff;
+  background: rgba(9, 45, 34, 0.72);
+  box-shadow: 0 0 22px rgba(67, 255, 157, 0.14), inset 0 0 20px rgba(67, 255, 157, 0.06);
+  transform: translateY(-1px);
+}
+
+.ghost-button.thinking-summary {
+  justify-content: space-between;
+}
+
+.ghost-button.sidebar-toggle-button {
+  position: fixed;
+  top: 20px;
+  left: 20px;
+  z-index: 10;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  background: rgba(3, 20, 18, 0.88);
+  backdrop-filter: blur(16px);
+  box-shadow: var(--shadow-glow), inset 0 0 18px rgba(67, 231, 255, 0.06);
+}
+
+.ghost-button.sidebar-toggle-button:hover,
+.ghost-button.sidebar-toggle-button:focus-visible {
+  border-color: rgba(67, 255, 157, 0.58);
+  color: #ffffff;
+  background: rgba(9, 45, 34, 0.84);
+  box-shadow: 0 0 22px rgba(67, 255, 157, 0.14), inset 0 0 20px rgba(67, 255, 157, 0.06);
+}
+
 .field-stack {
   display: flex;
   flex-direction: column;
@@ -1587,7 +1641,7 @@ select.text-input {
     padding: 72px 18px 18px;
   }
 
-  .sidebar-toggle-button {
+  .ghost-button.sidebar-toggle-button {
     top: 18px;
     left: 18px;
   }

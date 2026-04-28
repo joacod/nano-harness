@@ -6,7 +6,7 @@ import { conversationsQueryOptions, providerStatusQueryOptions, settingsQueryOpt
 import { useRuntimeUi, useTechnicalUi } from '../runtime-ui'
 import { formatRelativeTimestamp, formatTimestamp } from '../utils/formatting'
 import { describeRunEvent } from '../utils/run-events'
-import { FeedbackText, RuntimePill, Switch } from './ui'
+import { Button, FeedbackText, RuntimePill, Switch } from './ui'
 
 export function RootLayout() {
   const { context, recentEvents } = useRuntimeUi()
@@ -20,8 +20,9 @@ export function RootLayout() {
 
   return (
     <main className={`workspace-shell ${isSidebarCollapsed ? 'workspace-shell-sidebar-collapsed' : ''}`}>
-      <button
+      <Button
         type="button"
+        size="sm"
         className="sidebar-toggle-button"
         aria-expanded={!isSidebarCollapsed}
         aria-label={isSidebarCollapsed ? 'Open sidebar' : 'Close sidebar'}
@@ -30,7 +31,7 @@ export function RootLayout() {
         <span aria-hidden="true" />
         <span aria-hidden="true" />
         <span aria-hidden="true" />
-      </button>
+      </Button>
 
       {!isSidebarCollapsed ? (
         <aside className="sidebar" aria-label="Workspace navigation">

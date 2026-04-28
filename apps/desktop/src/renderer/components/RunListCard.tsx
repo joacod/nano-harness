@@ -1,7 +1,7 @@
 import type { ConversationSnapshot, RunEvent } from '../../../../../packages/shared/src'
 import { formatTimestamp } from '../utils/formatting'
 import { getProviderRequestForRun } from '../utils/run-events'
-import { Card, FeedbackText, RuntimePill, StatusBadge, cn } from './ui'
+import { Button, Card, FeedbackText, RuntimePill, StatusBadge, cn } from './ui'
 
 export function RunListCard({
   runs,
@@ -33,9 +33,11 @@ export function RunListCard({
           const providerRequest = getProviderRequestForRun(events, run.id)
 
           return (
-            <button
+            <Button
               key={run.id}
               type="button"
+              fullWidth
+              aria-pressed={selectedRunId === run.id}
               className={cn('run-card', selectedRunId === run.id && 'run-card-active')}
               onClick={() => onSelectRun(run.id)}
             >
@@ -51,7 +53,7 @@ export function RunListCard({
                   {run.failureMessage}
                 </span>
               ) : null}
-            </button>
+            </Button>
           )
         })}
       </div>

@@ -3,6 +3,7 @@ import { useEffect, useState, type RefObject } from 'react'
 
 import type { ConversationSnapshot, ReasoningDetail } from '../../../../../packages/shared/src'
 import type { StreamingRunState } from '../utils/run-events'
+import { Button, FeedbackText, StatusBadge, cn } from './ui'
 
 type ReasoningDisplay = {
   text: string
@@ -199,15 +200,17 @@ function ThinkingPanel({ display, defaultOpen }: { display: ReasoningDisplay; de
 
   return (
     <section
-      className={`thinking-panel ${isOpen ? 'thinking-panel-open' : ''}`}
+      className={cn('thinking-panel', isOpen && 'thinking-panel-open')}
       onClick={() => {
         if (isOpen) {
           setIsOpen(false)
         }
       }}
     >
-      <button
+      <Button
         type="button"
+        size="sm"
+        fullWidth
         className="thinking-summary"
         aria-expanded={isOpen}
         onClick={(event) => {
@@ -217,7 +220,7 @@ function ThinkingPanel({ display, defaultOpen }: { display: ReasoningDisplay; de
       >
         <span>Thinking</span>
         <span className="thinking-count">{isOpen ? 'hide details' : 'view details'}</span>
-      </button>
+      </Button>
       {isOpen ? (
         <div className="thinking-body">
           {display.summaries.map((summary, index) => (
@@ -243,7 +246,7 @@ export function ChatTranscript({
 
   return (
     <div className="transcript-list">
-      {snapshot.messages.length === 0 ? <p className="muted-copy">No persisted messages yet.</p> : null}
+      {snapshot.messages.length === 0 ? <FeedbackText>No persisted messages yet.</FeedbackText> : null}
 
       {snapshot.messages.map((message) => (
         <article key={message.id} className={`message-bubble message-${message.role}`}>
@@ -277,7 +280,7 @@ export function ChatTranscript({
         <article className="message-bubble message-assistant message-streaming">
           <header className="message-meta message-meta-row">
             <span>assistant streaming</span>
-            <span className="status-badge status-streaming">{getStreamingLabel(streamingState)}</span>
+            <StatusBadge status="streaming">{getStreamingLabel(streamingState)}</StatusBadge>
           </header>
           {streamingState.activity.length > 0 ? (
             <div className="message-activity" aria-live="polite">
@@ -315,9 +318,9 @@ export function ChatTranscript({
       ) : null}
 
       {streamingState?.errorMessage ? (
-        <p className="error-copy" aria-live="polite">
+        <FeedbackText variant="error" live>
           {streamingState.errorMessage}
-        </p>
+        </FeedbackText>
       ) : null}
 
       <div ref={endRef} className="transcript-end" aria-hidden="true" />
