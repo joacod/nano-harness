@@ -27,19 +27,23 @@ export function DataBackupPanel({
           <h3>Backup and restore</h3>
         </div>
       </div>
-      <dl className="summary-list">
+      <dl className="summary-list data-backup-summary">
         <div>
           <dt>Database</dt>
           <dd>{dataPath ?? 'Loading data location…'}</dd>
         </div>
       </dl>
-      <FeedbackText variant="warning">
-        Export includes conversations, run history, approvals, and non-sensitive settings. API keys are not included and must be re-entered after import.
-      </FeedbackText>
-      <FeedbackText variant="warning">
-        Import replaces your current Nano Harness data. A local safety backup is created first, and the app relaunches after import.
-      </FeedbackText>
-      <div className="form-row">
+      <div className="data-backup-notices" aria-label="Backup and restore notes">
+        <div className="data-backup-notice">
+          <strong>Export</strong>
+          <p>Includes conversations, run history, approvals, and non-sensitive settings. API keys are not included.</p>
+        </div>
+        <div className="data-backup-notice data-backup-notice-warning">
+          <strong>Import</strong>
+          <p>Replaces current app data after creating a local safety backup, then relaunches the app.</p>
+        </div>
+      </div>
+      <div className="form-row data-backup-actions">
         <Button
           type="button"
           variant="primary"
