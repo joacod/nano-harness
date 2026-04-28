@@ -1,5 +1,5 @@
-import { Streamdown } from 'streamdown'
-import type { RefObject } from 'react'
+import { Streamdown, type Components } from 'streamdown'
+import { useEffect, useState, type RefObject } from 'react'
 
 import type { ConversationSnapshot, ReasoningDetail } from '../../../../../packages/shared/src'
 import type { StreamingRunState } from '../utils/run-events'
@@ -31,42 +31,202 @@ function getStreamingLabel(streamingState: StreamingRunState) {
   }
 }
 
-function getReasoningDisplay(reasoning?: string, details?: ReasoningDetail[]): ReasoningDisplay | null {
-  const summaries = details?.flatMap((detail) => detail.type === 'reasoning.summary' ? [detail.summary] : []) ?? []
-  const textDetails = details?.flatMap((detail) => detail.type === 'reasoning.text' ? [detail.text] : []) ?? []
-  const encryptedCount = details?.filter((detail) => detail.type === 'reasoning.encrypted' || detail.type === 'reasoning.unknown').length ?? 0
-  const text = `${reasoning ?? ''}${textDetails.join('')}`.trim()
+function dedupeStrings(values: string[]): string[] {
+  const seen = new Set<string>()
 
-  if (!text && summaries.length === 0 && encryptedCount === 0) {
+  return values.filter((value) => {
+    const normalizedValue = value.trim()
+
+    if (!normalizedValue || seen.has(normalizedValue)) {
+      return false
+    }
+
+    seen.add(normalizedValue)
+    return true
+  })
+}
+
+function normalizeReasoningText(text: string): string {
+  const trimmedText = text.trim()
+
+  if (!trimmedText) {
+    return ''
+  }
+
+  const lines = trimmedText.split('\n')
+  const meaningfulLines = lines.map((line) => line.trim()).filter(Boolean)
+  const shortLineCount = meaningfulLines.filter((line) => line.length <= 24 && !/[.!?:;]$/.test(line)).length
+
+  const normalizedText = meaningfulLines.length >= 6 && shortLineCount / meaningfulLines.length > 0.7
+    ? meaningfulLines.join(' ').replace(/\s+([,.;:!?])/g, '$1')
+    : lines
+    .map((line) => line.trimEnd())
+    .join('\n')
+    .replace(/\n{3,}/g, '\n\n')
+
+  const paragraphs = normalizedText.split(/\n{2,}/).map((paragraph) => paragraph.trim()).filter(Boolean)
+  const uniqueParagraphs: string[] = []
+
+  for (const paragraph of paragraphs) {
+    const compactParagraph = getComparableReasoningText(paragraph)
+
+    if (uniqueParagraphs.some((existingParagraph) => {
+      const compactExistingParagraph = getComparableReasoningText(existingParagraph)
+      return isSimilarReasoningText(compactExistingParagraph, compactParagraph)
+    })) {
+      continue
+    }
+
+    uniqueParagraphs.push(paragraph)
+  }
+
+  return uniqueParagraphs.join('\n\n')
+}
+
+function getComparableReasoningText(text: string): string {
+  return text.toLowerCase().replace(/[^a-z0-9]+/g, '')
+}
+
+function getBigrams(text: string): Set<string> {
+  const bigrams = new Set<string>()
+
+  for (let index = 0; index < text.length - 1; index += 1) {
+    bigrams.add(text.slice(index, index + 2))
+  }
+
+  return bigrams
+}
+
+function isSimilarReasoningText(left: string, right: string): boolean {
+  if (!left || !right) {
+    return false
+  }
+
+  if (left === right || left.includes(right) || right.includes(left)) {
+    return true
+  }
+
+  const leftBigrams = getBigrams(left)
+  const rightBigrams = getBigrams(right)
+
+  if (leftBigrams.size === 0 || rightBigrams.size === 0) {
+    return false
+  }
+
+  const intersectionSize = [...leftBigrams].filter((bigram) => rightBigrams.has(bigram)).length
+  const diceCoefficient = (2 * intersectionSize) / (leftBigrams.size + rightBigrams.size)
+
+  return diceCoefficient > 0.82
+}
+
+function normalizeReasoningChunks(values: string[]): string[] {
+  const normalizedValues = dedupeStrings(values).map(normalizeReasoningText).filter(Boolean)
+  const shortChunkCount = normalizedValues.filter((value) => value.length <= 24 && !/[.!?:;]$/.test(value)).length
+
+  if (normalizedValues.length >= 6 && shortChunkCount / normalizedValues.length > 0.7) {
+    return [normalizeReasoningText(normalizedValues.join('\n'))]
+  }
+
+  return normalizedValues
+}
+
+function getReasoningDisplay(reasoning?: string, details?: ReasoningDetail[]): ReasoningDisplay | null {
+  const summaries = normalizeReasoningChunks(details?.flatMap((detail) => detail.type === 'reasoning.summary' ? [detail.summary] : []) ?? [])
+  const textDetails = normalizeReasoningChunks(details?.flatMap((detail) => detail.type === 'reasoning.text' ? [detail.text] : []) ?? [])
+  const encryptedCount = details?.filter((detail) => detail.type === 'reasoning.encrypted' || detail.type === 'reasoning.unknown').length ?? 0
+  const text = normalizeReasoningText(dedupeStrings([reasoning ?? '', ...textDetails, ...summaries]).join('\n\n'))
+
+  if (!text) {
     return null
   }
 
-  return { text, summaries, encryptedCount }
+  return { text, summaries: [], encryptedCount }
+}
+
+function toOpenableUrl(href: string | undefined): string | null {
+  if (!href) {
+    return null
+  }
+
+  try {
+    const url = new URL(href, window.location.href)
+    return url.protocol === 'http:' || url.protocol === 'https:' ? url.toString() : null
+  } catch {
+    return null
+  }
+}
+
+const markdownComponents: Components = {
+  a({ href, children, ...props }) {
+    const openableUrl = toOpenableUrl(href)
+
+    return (
+      <a
+        {...props}
+        href={openableUrl ?? href}
+        className="message-link"
+        rel="noreferrer"
+        target="_blank"
+        onClick={(event) => {
+          if (!openableUrl) {
+            return
+          }
+
+          event.preventDefault()
+
+          if (window.desktop?.openExternalUrl) {
+            void window.desktop.openExternalUrl({ url: openableUrl }).catch(() => {
+              window.open(openableUrl, '_blank', 'noopener,noreferrer')
+            })
+            return
+          }
+
+          window.open(openableUrl, '_blank', 'noopener,noreferrer')
+        }}
+      >
+        {children}
+      </a>
+    )
+  },
 }
 
 function ThinkingPanel({ display, defaultOpen }: { display: ReasoningDisplay; defaultOpen: boolean }) {
+  const [isOpen, setIsOpen] = useState(defaultOpen)
+
+  useEffect(() => {
+    setIsOpen(defaultOpen)
+  }, [defaultOpen])
+
   return (
-    <details className="thinking-panel" open={defaultOpen}>
-      <summary>
+    <section
+      className={`thinking-panel ${isOpen ? 'thinking-panel-open' : ''}`}
+      onClick={() => {
+        if (isOpen) {
+          setIsOpen(false)
+        }
+      }}
+    >
+      <button
+        type="button"
+        className="thinking-summary"
+        aria-expanded={isOpen}
+        onClick={(event) => {
+          event.stopPropagation()
+          setIsOpen((current) => !current)
+        }}
+      >
         <span>Thinking</span>
-        <span className="thinking-count">
-          {display.encryptedCount > 0 && !display.text && display.summaries.length === 0
-            ? 'not displayable'
-            : 'available'}
-        </span>
-      </summary>
-      <div className="thinking-body">
-        {display.summaries.map((summary, index) => (
-          <p key={`${summary}-${index}`}>{summary}</p>
-        ))}
-        {display.text ? <pre>{display.text}</pre> : null}
-        {display.encryptedCount > 0 ? (
-          <p className="muted-copy">
-            {display.encryptedCount} encrypted reasoning block{display.encryptedCount === 1 ? '' : 's'} preserved but not displayable.
-          </p>
-        ) : null}
-      </div>
-    </details>
+        <span className="thinking-count">{isOpen ? 'hide details' : 'view details'}</span>
+      </button>
+      {isOpen ? (
+        <div className="thinking-body">
+          {display.summaries.map((summary, index) => (
+            <p key={`${summary}-${index}`}>{summary}</p>
+          ))}
+          {display.text ? <pre>{display.text}</pre> : null}
+        </div>
+      ) : null}
+    </section>
   )
 }
 
@@ -106,7 +266,7 @@ export function ChatTranscript({
             return reasoningDisplay ? <ThinkingPanel display={reasoningDisplay} defaultOpen={false} /> : null
           })() : null}
           {message.role === 'assistant' ? (
-            <Streamdown>{message.content}</Streamdown>
+            <Streamdown className="message-markdown" components={markdownComponents}>{message.content}</Streamdown>
           ) : (
             <pre className="message-pre">{message.content}</pre>
           )}
@@ -129,18 +289,21 @@ export function ChatTranscript({
               ))}
             </div>
           ) : null}
-          {streamingState.reasoning.text || streamingState.reasoning.summaries.length > 0 || streamingState.reasoning.encryptedCount > 0 ? (
+          {streamingState.reasoning.text || streamingState.reasoning.summaries.length > 0 ? (
             <ThinkingPanel
               display={{
-                text: streamingState.reasoning.text,
-                summaries: streamingState.reasoning.summaries,
+                text: normalizeReasoningText(dedupeStrings([
+                  streamingState.reasoning.text,
+                  ...normalizeReasoningChunks(streamingState.reasoning.summaries),
+                ]).join('\n\n')),
+                summaries: [],
                 encryptedCount: streamingState.reasoning.encryptedCount,
               }}
-              defaultOpen
+              defaultOpen={!streamingState.content}
             />
           ) : null}
           {streamingState.content ? (
-            <Streamdown isAnimating mode="streaming">
+            <Streamdown className="message-markdown" components={markdownComponents} isAnimating mode="streaming">
               {streamingState.content}
             </Streamdown>
           ) : (

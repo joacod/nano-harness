@@ -16,7 +16,7 @@ export function RunListCard({
   const sortedRuns = [...runs].reverse()
 
   return (
-    <section className="panel-card inspector-card">
+    <section className="panel-card inspector-card run-list-card">
       <div className="sidebar-header-row">
         <div>
           <p className="eyebrow">Runs</p>

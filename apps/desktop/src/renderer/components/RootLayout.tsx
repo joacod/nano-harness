@@ -9,7 +9,7 @@ import { describeRunEvent } from '../utils/run-events'
 
 export function RootLayout() {
   const { context, recentEvents } = useRuntimeUi()
-  const { showTechnicalInfo, toggleTechnicalInfo } = useTechnicalUi()
+  const { isSidebarCollapsed, showTechnicalInfo, toggleSidebarCollapsed, toggleTechnicalInfo } = useTechnicalUi()
   const conversationsQuery = useQuery(conversationsQueryOptions)
   const settingsQuery = useQuery(settingsQueryOptions)
   const providerStatusQuery = useQuery(providerStatusQueryOptions)
@@ -18,14 +18,29 @@ export function RootLayout() {
   const providerStatus = providerStatusQuery.data
 
   return (
-    <main className="workspace-shell">
-      <aside className="sidebar">
-        <div className="sidebar-section sidebar-brand-section">
-          <p className="eyebrow">nano-harness</p>
-          <h1 className="sidebar-title">Agent deck</h1>
+    <main className={`workspace-shell ${isSidebarCollapsed ? 'workspace-shell-sidebar-collapsed' : ''}`}>
+      <button
+        type="button"
+        className="sidebar-toggle-button"
+        aria-expanded={!isSidebarCollapsed}
+        aria-label={isSidebarCollapsed ? 'Open sidebar' : 'Close sidebar'}
+        onClick={toggleSidebarCollapsed}
+      >
+        <span aria-hidden="true" />
+        <span aria-hidden="true" />
+        <span aria-hidden="true" />
+      </button>
+
+      {!isSidebarCollapsed ? (
+        <aside className="sidebar" aria-label="Workspace navigation">
+          <div className="sidebar-section sidebar-brand-section">
+          <div className="sidebar-collapsible-content">
+            <p className="eyebrow">nano-harness</p>
+            <h1 className="sidebar-title">Agent deck</h1>
+          </div>
         </div>
 
-        <div className="sidebar-section">
+        <div className="sidebar-section sidebar-collapsible-content">
           <div className="sidebar-header-row">
             <h2>Sessions</h2>
             <Link to="/" className="ghost-link">
@@ -60,7 +75,7 @@ export function RootLayout() {
           </nav>
         </div>
 
-        <div className="sidebar-section sidebar-footer">
+        <div className="sidebar-section sidebar-footer sidebar-collapsible-content">
           <div className="sidebar-footer-actions">
             <Link to="/settings" className="ghost-link" activeProps={{ className: 'ghost-link ghost-link-active' }}>
               Settings
@@ -85,8 +100,8 @@ export function RootLayout() {
 
         {showTechnicalInfo ? (
           <>
-            <div className="sidebar-section">
-              <div className="sidebar-header-row">
+            <div className="sidebar-section sidebar-collapsible-content">
+              <div className="sidebar-header-row sidebar-header-row-stacked">
                 <h2>Configuration</h2>
                 {providerStatus ? (
                   <span className={`runtime-pill ${providerStatus.isReady ? 'runtime-pill-ready' : 'runtime-pill-warning'}`}>
@@ -135,7 +150,7 @@ export function RootLayout() {
               ) : null}
             </div>
 
-            <div className="sidebar-section">
+            <div className="sidebar-section sidebar-collapsible-content">
               <h2>Recent Signals</h2>
               <ul className="event-list">
                 {recentEvents.length > 0 ? (
@@ -159,7 +174,8 @@ export function RootLayout() {
             </div>
           </>
         ) : null}
-      </aside>
+        </aside>
+      ) : null}
 
       <section className="content-panel">
         <Outlet />

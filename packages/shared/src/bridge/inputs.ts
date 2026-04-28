@@ -35,3 +35,9 @@ export const getConversationInputSchema = z.object({
 })
 
 export type GetConversationInput = z.infer<typeof getConversationInputSchema>
+
+export const openExternalUrlInputSchema = z.object({
+  url: z.url(),
+})
+
+export type OpenExternalUrlInput = z.infer<typeof openExternalUrlInputSchema>
