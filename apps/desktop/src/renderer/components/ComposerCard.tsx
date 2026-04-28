@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 
 import { createConversationId, providerStatusQueryOptions } from '../queries'
+import { Button, Card, FeedbackText, RuntimePill, TextArea } from './ui'
 
 export function ComposerCard({ conversationId }: { conversationId: string | null }) {
   const navigate = useNavigate()
@@ -56,13 +57,13 @@ export function ComposerCard({ conversationId }: { conversationId: string | null
   })
 
   return (
-    <section className="panel-card composer-card">
+    <Card className="composer-card">
       <div className="sidebar-header-row">
-        <h2>{conversationId ? 'Continue session' : 'Command input'}</h2>
+        <h2>Command input</h2>
         {startRunMutation.isPending ? (
-          <span className="runtime-pill" aria-live="polite">
+          <RuntimePill aria-live="polite">
             Sending…
-          </span>
+          </RuntimePill>
         ) : null}
       </div>
 
@@ -74,42 +75,57 @@ export function ComposerCard({ conversationId }: { conversationId: string | null
           void form.handleSubmit()
         }}
       >
-        <form.Field
-          name="prompt"
-          children={(field) => (
-            <textarea
-              className="text-input composer-input"
-              name="prompt"
-              value={field.state.value}
-              onChange={(event) => field.handleChange(event.target.value)}
-              placeholder="Enter an instruction for the local harness…"
-              rows={5}
-            />
-          )}
-        />
+        <div className="composer-input-row">
+          <form.Field
+            name="prompt"
+            children={(field) => (
+              <TextArea
+                className="composer-input"
+                name="prompt"
+                value={field.state.value}
+                onChange={(event) => field.handleChange(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key !== 'Enter' || event.shiftKey || event.nativeEvent.isComposing) {
+                    return
+                  }
 
-        <div className="form-row">
-          <button type="submit" className="primary-button" disabled={startRunMutation.isPending}>
-            Execute prompt
-          </button>
+                  event.preventDefault()
+                  void form.handleSubmit()
+                }}
+                placeholder="Enter an instruction for the local harness…"
+                rows={3}
+              />
+            )}
+          />
+          <Button
+            type="submit"
+            variant="primary"
+            className="composer-send-button"
+            disabled={startRunMutation.isPending}
+            aria-label="Send prompt"
+          >
+            <svg viewBox="0 0 24 24" role="img" aria-hidden="true" focusable="false">
+              <path d="M4 4l17 8-17 8 3-7 8-1-8-1-3-7z" />
+            </svg>
+          </Button>
         </div>
       </form>
 
       {providerStatusQuery.data && !providerStatusQuery.data.isReady ? (
-        <p className="warning-copy" aria-live="polite">
+        <FeedbackText variant="warning" live>
           Provider setup is incomplete. Update settings before expecting a successful hosted-provider response.
-        </p>
+        </FeedbackText>
       ) : null}
       {submitError ? (
-        <p className="error-copy" aria-live="polite">
+        <FeedbackText variant="error" live>
           {submitError}
-        </p>
+        </FeedbackText>
       ) : null}
       {startRunMutation.error instanceof Error ? (
-        <p className="error-copy" aria-live="polite">
+        <FeedbackText variant="error" live>
           {startRunMutation.error.message}
-        </p>
+        </FeedbackText>
       ) : null}
-    </section>
+    </Card>
   )
 }

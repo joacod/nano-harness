@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import type { ApprovalRequest, ConversationSnapshot, RunEvent } from '../../../../../packages/shared/src'
 import { formatTimestamp } from '../utils/formatting'
 import { describeRunEvent, getEventFamily, getRecoverableRunAction, type StreamingRunState } from '../utils/run-events'
+import { Button, Card, FeedbackText, StatusBadge } from './ui'
 
 export function RunInspectorCard({
   run,
@@ -54,14 +55,14 @@ export function RunInspectorCard({
   })
 
   return (
-    <section className="panel-card inspector-card">
+    <Card className="inspector-card">
       <p className="eyebrow">Inspector</p>
       <div className="sidebar-header-row">
         <h2>{run ? 'Signal trace' : 'Select a run'}</h2>
         {run ? (
           <div className="status-row">
-            <span className={`status-badge status-${run.status}`}>{run.status}</span>
-            {streamingState?.isStreaming ? <span className="status-badge status-streaming">streaming</span> : null}
+            <StatusBadge status={run.status}>{run.status}</StatusBadge>
+            {streamingState?.isStreaming ? <StatusBadge status="streaming">streaming</StatusBadge> : null}
           </div>
         ) : null}
       </div>
@@ -69,29 +70,27 @@ export function RunInspectorCard({
       {run && (recoverableAction || run.status === 'started' || run.status === 'waiting_approval') ? (
         <div className="run-controls">
           {recoverableAction ? (
-            <button
+            <Button
               type="button"
-              className="ghost-button"
               disabled={runControlMutation.isPending}
               onClick={() => runControlMutation.mutate('resume')}
             >
               {runControlMutation.isPending ? 'Working…' : 'Resume run'}
-            </button>
+            </Button>
           ) : null}
           {run.status === 'created' || run.status === 'started' || run.status === 'waiting_approval' ? (
-            <button
+            <Button
               type="button"
-              className="ghost-button"
               disabled={runControlMutation.isPending}
               onClick={() => runControlMutation.mutate('cancel')}
             >
               Cancel run
-            </button>
+            </Button>
           ) : null}
         </div>
       ) : null}
 
-      {!run ? <p className="muted-copy">Choose a run to inspect its persisted and live event sequence.</p> : null}
+      {!run ? <FeedbackText>Choose a run to inspect its persisted and live event sequence.</FeedbackText> : null}
 
       {run ? (
         <>
@@ -111,19 +110,19 @@ export function RunInspectorCard({
           </div>
 
           {run.failureMessage ? (
-            <p className="error-copy" aria-live="polite">
+            <FeedbackText variant="error" live>
               {run.failureMessage}
-            </p>
+            </FeedbackText>
           ) : null}
           {!run.failureMessage && streamingState?.errorMessage ? (
-            <p className="error-copy" aria-live="polite">
+            <FeedbackText variant="error" live>
               {streamingState.errorMessage}
-            </p>
+            </FeedbackText>
           ) : null}
           {runControlMutation.error instanceof Error ? (
-            <p className="error-copy" aria-live="polite">
+            <FeedbackText variant="error" live>
               {runControlMutation.error.message}
-            </p>
+            </FeedbackText>
           ) : null}
 
           {pendingApproval ? (
@@ -133,37 +132,36 @@ export function RunInspectorCard({
                   <p className="eyebrow">Approval</p>
                   <h3>Action requires confirmation</h3>
                 </div>
-                <span className="status-badge status-waiting_approval">pending</span>
+                <StatusBadge status="waiting_approval">pending</StatusBadge>
               </div>
-              <p className="muted-copy">{pendingApproval.reason}</p>
+              <FeedbackText>{pendingApproval.reason}</FeedbackText>
               <small className="muted-copy">Requested at {formatTimestamp(pendingApproval.requestedAt)}</small>
               <div className="approval-actions">
-                <button
+                <Button
                   type="button"
-                  className="ghost-button"
                   disabled={approvalMutation.isPending}
                   onClick={() => approvalMutation.mutate('rejected')}
                 >
                   Reject
-                </button>
-                <button
+                </Button>
+                <Button
                   type="button"
-                  className="primary-button"
+                  variant="primary"
                   disabled={approvalMutation.isPending}
                   onClick={() => approvalMutation.mutate('granted')}
                 >
                   {approvalMutation.isPending ? 'Submitting…' : 'Grant approval'}
-                </button>
+                </Button>
               </div>
               {approvalMutation.error instanceof Error ? (
-                <p className="error-copy" aria-live="polite">
+                <FeedbackText variant="error" live>
                   {approvalMutation.error.message}
-                </p>
+                </FeedbackText>
               ) : null}
             </section>
           ) : null}
 
-          {events.length === 0 ? <p className="muted-copy">No events captured for this run yet.</p> : null}
+          {events.length === 0 ? <FeedbackText>No events captured for this run yet.</FeedbackText> : null}
 
           <ol className="timeline-list">
             {events.map((event) => {
@@ -178,7 +176,7 @@ export function RunInspectorCard({
                       <small>{formatTimestamp(event.timestamp)}</small>
                     </div>
                     <p className="timeline-type">{event.type}</p>
-                    <p className="muted-copy">{description.detail}</p>
+                    <FeedbackText>{description.detail}</FeedbackText>
                   </div>
                 </li>
               )
@@ -186,6 +184,6 @@ export function RunInspectorCard({
           </ol>
         </>
       ) : null}
-    </section>
+    </Card>
   )
 }

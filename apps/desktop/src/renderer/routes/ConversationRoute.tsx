@@ -4,9 +4,9 @@ import { useQuery } from '@tanstack/react-query'
 import { useParams } from '@tanstack/react-router'
 
 import { ChatTranscript } from '../components/ChatTranscript'
-import { ComposerCard } from '../components/ComposerCard'
-import { RunInspectorCard } from '../components/RunInspectorCard'
-import { RunListCard } from '../components/RunListCard'
+import { SessionLayout } from '../components/SessionLayout'
+import { SessionTelemetry } from '../components/SessionTelemetry'
+import { Card, FeedbackText } from '../components/ui'
 import { conversationQueryOptions } from '../queries'
 import { useRuntimeUi, useTechnicalUi } from '../runtime-ui'
 import { getPendingApproval, mergeRunEvents } from '../utils/run-events'
@@ -101,62 +101,53 @@ export function ConversationRoute() {
 
   if (snapshotQuery.isError) {
     return (
-      <section className="panel-card panel-card-hero">
+      <Card hero>
         <p className="eyebrow">Session</p>
         <h2>Failed to load session</h2>
-        <p className="error-copy" aria-live="polite">
+        <FeedbackText variant="error" live>
           {snapshotQuery.error instanceof Error ? snapshotQuery.error.message : 'The session snapshot could not be loaded.'}
-        </p>
-      </section>
+        </FeedbackText>
+      </Card>
     )
   }
 
   if (!snapshotQuery.isLoading && !snapshotQuery.data?.conversation) {
     return (
-      <section className="panel-card panel-card-hero">
+      <Card hero>
         <p className="eyebrow">Session</p>
         <h2>Session not found</h2>
-        <p className="muted-copy">This session may have been removed or has not been created yet.</p>
-      </section>
+        <FeedbackText>This session may have been removed or has not been created yet.</FeedbackText>
+      </Card>
     )
   }
 
   return (
-    <div className={`conversation-grid ${showTechnicalInfo ? 'conversation-grid-technical' : 'conversation-grid-simple'}`}>
-      <div className="panel-stack chat-panel-stack">
-        <section className="panel-card panel-card-hero conversation-hero-card">
-          <p className="eyebrow">Session</p>
-          <h2>{snapshotQuery.data?.conversation?.title ?? 'Loading conversation…'}</h2>
-        </section>
-
-        <section ref={transcriptPanelRef} className="panel-card transcript-panel" onScroll={handleTranscriptScroll}>
-          {snapshotQuery.isLoading ? <p className="muted-copy">Loading messages…</p> : null}
+    <SessionLayout
+      conversationId={conversationId}
+      showTechnicalInfo={showTechnicalInfo}
+      title={snapshotQuery.data?.conversation?.title ?? 'Loading conversation…'}
+      transcriptRef={transcriptPanelRef}
+      onTranscriptScroll={handleTranscriptScroll}
+      transcriptChildren={(
+        <>
+          {snapshotQuery.isLoading ? <FeedbackText>Loading messages…</FeedbackText> : null}
           {!snapshotQuery.isLoading && snapshotQuery.data ? (
             <ChatTranscript snapshot={snapshotQuery.data} streamingEntry={streamingEntry ?? null} endRef={transcriptEndRef} />
           ) : null}
-        </section>
-
-        <div className="composer-sticky-shell">
-          <ComposerCard conversationId={conversationId} />
-        </div>
-      </div>
-
-      {showTechnicalInfo ? (
-        <div className="panel-stack inspector-panel-stack">
-          <RunListCard
-            runs={snapshotQuery.data?.runs ?? []}
-            events={snapshotQuery.data?.events ?? []}
-            selectedRunId={selectedRunId}
-            onSelectRun={(runId) => setSelectedRunId(runId)}
-          />
-          <RunInspectorCard
-            run={selectedRun}
-            events={selectedRunEvents}
-            pendingApproval={pendingApproval}
-            streamingState={selectedRun ? streamingRuns[selectedRun.id] ?? null : null}
-          />
-        </div>
-      ) : null}
-    </div>
+        </>
+      )}
+      inspectorChildren={(
+        <SessionTelemetry
+          runs={snapshotQuery.data?.runs ?? []}
+          events={snapshotQuery.data?.events ?? []}
+          selectedRunId={selectedRunId}
+          onSelectRun={(runId) => setSelectedRunId(runId)}
+          selectedRun={selectedRun}
+          selectedRunEvents={selectedRunEvents}
+          pendingApproval={pendingApproval}
+          streamingState={selectedRun ? streamingRuns[selectedRun.id] ?? null : null}
+        />
+      )}
+    />
   )
 }

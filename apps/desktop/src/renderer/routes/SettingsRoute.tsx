@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import type { AppSettings } from '../../../../../packages/shared/src'
 import { SettingsFormCard } from '../components/SettingsFormCard'
+import { Card } from '../components/ui'
 import { contextQueryOptions, providerStatusQueryOptions, settingsQueryOptions } from '../queries'
 
 export function SettingsRoute() {
@@ -38,10 +39,10 @@ export function SettingsRoute() {
 
   if (!settingsQuery.data) {
     return (
-      <section className="panel-card panel-card-hero">
+      <Card hero>
         <p className="eyebrow">Settings</p>
         <h2>Loading provider settings…</h2>
-      </section>
+      </Card>
     )
   }
 

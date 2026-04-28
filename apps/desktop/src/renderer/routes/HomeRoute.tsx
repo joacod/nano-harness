@@ -1,16 +1,27 @@
-import { ComposerCard } from '../components/ComposerCard'
+import { SessionLayout } from '../components/SessionLayout'
+import { SessionTelemetry } from '../components/SessionTelemetry'
+import { useTechnicalUi } from '../runtime-ui'
 
 export function HomeRoute() {
+  const { showTechnicalInfo } = useTechnicalUi()
+
   return (
-    <div className="panel-stack">
-      <section className="panel-card panel-card-hero">
-        <p className="eyebrow">Command</p>
-        <h2>Open a new session</h2>
-        <p className="muted-copy">
-          Send an instruction, persist the exchange locally, and watch the runtime stream responses through the desktop bridge.
-        </p>
-      </section>
-      <ComposerCard conversationId={null} />
-    </div>
+    <SessionLayout
+      conversationId={null}
+      showTechnicalInfo={showTechnicalInfo}
+      title="Start new session"
+      inspectorChildren={(
+        <SessionTelemetry
+          runs={[]}
+          events={[]}
+          selectedRunId={null}
+          onSelectRun={() => undefined}
+          selectedRun={null}
+          selectedRunEvents={[]}
+          pendingApproval={null}
+          streamingState={null}
+        />
+      )}
+    />
   )
 }
