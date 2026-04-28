@@ -6,6 +6,9 @@ import type { AppSettings, ProviderStatus } from '../../../../../packages/shared
 import { providerOptions } from '../../../../../packages/shared/src'
 import { applyProviderDefaults } from '../utils/run-events'
 import { FieldHint, LabeledField, TextField } from './form-fields'
+import { DataBackupPanel } from './settings/DataBackupPanel'
+import { ProviderStatusPanel } from './settings/ProviderStatusPanel'
+import { Button, Card, FeedbackText, Select } from './ui'
 
 export function SettingsFormCard({
   initialSettings,
@@ -87,48 +90,14 @@ export function SettingsFormCard({
   })
 
   return (
-    <section className="panel-card settings-card">
+    <Card className="settings-card">
       <p className="eyebrow">Settings</p>
       <h2>Provider configuration</h2>
-      <p className="muted-copy">
-        Choose a provider and model. API keys are stored separately using this device's secure storage.
-      </p>
+        <FeedbackText>
+          Choose a provider and model. API keys are stored separately using this device's secure storage.
+        </FeedbackText>
 
-      {providerStatus ? (
-        <section className="provider-status-card">
-          <div className="sidebar-header-row">
-            <div>
-              <p className="eyebrow">Provider status</p>
-              <h3>{providerStatus.providerLabel}</h3>
-            </div>
-            <span className={`status-badge ${providerStatus.isReady ? 'status-completed' : 'status-waiting_approval'}`}>
-              {providerStatus.isReady ? 'ready' : 'check setup'}
-            </span>
-          </div>
-          <dl className="summary-list">
-            <div>
-              <dt>Model</dt>
-              <dd>{providerStatus.model}</dd>
-            </div>
-            <div>
-              <dt>API key</dt>
-              <dd>
-                {providerStatus.apiKeyLabel} {providerStatus.apiKeyPresent ? '(configured)' : '(missing)'}
-              </dd>
-            </div>
-          </dl>
-          {providerStatus.issues.map((issue) => (
-            <p key={issue} className="error-copy">
-              {issue}
-            </p>
-          ))}
-          {providerStatus.hints.map((hint) => (
-            <p key={hint} className="muted-copy">
-              {hint}
-            </p>
-          ))}
-        </section>
-      ) : null}
+      {providerStatus ? <ProviderStatusPanel providerStatus={providerStatus} /> : null}
 
       <form
         className="settings-form"
@@ -144,8 +113,7 @@ export function SettingsFormCard({
           <form.Field
             name="provider.provider"
             children={(field) => (
-              <select
-                className="text-input"
+              <Select
                 name="provider"
                 value={field.state.value}
                 onChange={(event) => {
@@ -160,13 +128,12 @@ export function SettingsFormCard({
                     {provider.label}
                   </option>
                 ))}
-              </select>
+              </Select>
             )}
           />
           <div className="preset-row">
-            <button
+            <Button
               type="button"
-              className="ghost-button"
               onClick={() => {
                 const providerKey = form.getFieldValue('provider.provider')
                 const nextSettings = applyProviderDefaults(form.state.values, providerKey)
@@ -174,7 +141,7 @@ export function SettingsFormCard({
               }}
             >
               Use defaults
-            </button>
+            </Button>
           </div>
         </LabeledField>
 
@@ -207,8 +174,7 @@ export function SettingsFormCard({
               const value = field.state.value?.mode === 'effort' ? field.state.value.effort : field.state.value?.mode ?? 'auto'
 
               return (
-                <select
-                  className="text-input"
+                <Select
                   name="provider-reasoning"
                   value={value}
                   onChange={(event) => {
@@ -229,7 +195,7 @@ export function SettingsFormCard({
                   <option value="medium">medium effort</option>
                   <option value="high">high effort</option>
                   <option value="xhigh">xhigh effort</option>
-                </select>
+                </Select>
               )
             }}
           />
@@ -252,8 +218,7 @@ export function SettingsFormCard({
           <form.Field
             name="workspace.approvalPolicy"
             children={(field) => (
-              <select
-                className="text-input"
+              <Select
                 name="approval-policy"
                 value={field.state.value}
                 onChange={(event) => field.handleChange(event.target.value as AppSettings['workspace']['approvalPolicy'])}
@@ -261,27 +226,27 @@ export function SettingsFormCard({
                 <option value="on-request">on-request</option>
                 <option value="always">always</option>
                 <option value="never">never</option>
-              </select>
+              </Select>
             )}
           />
         </LabeledField>
 
         <div className="form-row">
-          <button type="submit" className="primary-button" disabled={isSaving}>
+          <Button type="submit" variant="primary" disabled={isSaving}>
             {isSaving ? 'Saving…' : 'Save settings'}
-          </button>
+          </Button>
         </div>
       </form>
 
       {saveMessage ? (
-        <p className="success-copy" aria-live="polite">
+        <FeedbackText variant="success" live>
           {saveMessage}
-        </p>
+        </FeedbackText>
       ) : null}
       {saveError ? (
-        <p className="error-copy" aria-live="polite">
+        <FeedbackText variant="error" live>
           {saveError}
-        </p>
+        </FeedbackText>
       ) : null}
 
       <form
@@ -316,12 +281,11 @@ export function SettingsFormCard({
         </LabeledField>
 
         <div className="form-row">
-          <button type="submit" className="primary-button" disabled={isSavingApiKey}>
+          <Button type="submit" variant="primary" disabled={isSavingApiKey}>
             {isSavingApiKey ? 'Saving API key…' : 'Save API key'}
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
-            className="ghost-button"
             disabled={isClearingApiKey || !providerStatus?.apiKeyPresent}
             onClick={() => {
               setApiKeyMessage(null)
@@ -331,86 +295,31 @@ export function SettingsFormCard({
             }}
           >
             {isClearingApiKey ? 'Clearing…' : 'Clear API key'}
-          </button>
+          </Button>
         </div>
       </form>
 
       {apiKeyMessage ? (
-        <p className="success-copy" aria-live="polite">
+        <FeedbackText variant="success" live>
           {apiKeyMessage}
-        </p>
+        </FeedbackText>
       ) : null}
       {apiKeyError ? (
-        <p className="error-copy" aria-live="polite">
+        <FeedbackText variant="error" live>
           {apiKeyError}
-        </p>
+        </FeedbackText>
       ) : null}
 
-      <section className="provider-status-card">
-        <div className="sidebar-header-row">
-          <div>
-            <p className="eyebrow">Data</p>
-            <h3>Backup and restore</h3>
-          </div>
-        </div>
-        <dl className="summary-list">
-          <div>
-            <dt>Database</dt>
-            <dd>{dataPath ?? 'Loading data location…'}</dd>
-          </div>
-        </dl>
-        <p className="warning-copy">
-          Export includes conversations, run history, approvals, and non-sensitive settings. API keys are not included and must be re-entered after import.
-        </p>
-        <p className="warning-copy">
-          Import replaces your current Nano Harness data. A local safety backup is created first, and the app relaunches after import.
-        </p>
-        <div className="form-row">
-          <button
-            type="button"
-            className="primary-button"
-            disabled={isExportingData}
-            onClick={() => {
-              if (!window.confirm('Export Nano Harness data without API keys? Keep the backup file private.')) {
-                return
-              }
-
-              void onExportData()
-            }}
-          >
-            {isExportingData ? 'Exporting…' : 'Export data'}
-          </button>
-          <button
-            type="button"
-            className="ghost-button"
-            disabled={isImportingData}
-            onClick={() => {
-              if (!window.confirm('Import replaces current app data and does not restore API keys. Continue?')) {
-                return
-              }
-
-              void onImportData()
-            }}
-          >
-            {isImportingData ? 'Importing…' : 'Import data'}
-          </button>
-        </div>
-        {exportDataResult ? (
-          <p className="success-copy" aria-live="polite">
-            Exported to {exportDataResult}
-          </p>
-        ) : null}
-        {importDataResult ? (
-          <p className="success-copy" aria-live="polite">
-            Safety backup created at {importDataResult}
-          </p>
-        ) : null}
-        {dataError ? (
-          <p className="error-copy" aria-live="polite">
-            {dataError}
-          </p>
-        ) : null}
-      </section>
-    </section>
+      <DataBackupPanel
+        dataPath={dataPath}
+        dataError={dataError}
+        exportDataResult={exportDataResult}
+        importDataResult={importDataResult}
+        isExportingData={isExportingData}
+        isImportingData={isImportingData}
+        onExportData={onExportData}
+        onImportData={onImportData}
+      />
+    </Card>
   )
 }

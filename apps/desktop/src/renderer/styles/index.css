@@ -1,0 +1,7 @@
+@import '../styles.css';
+
+/*
+ * Renderer styles now load through this entrypoint so global CSS can be
+ * split by layer without changing every caller. The existing stylesheet is
+ * kept intact during the primitive-component migration to avoid visual drift.
+ */

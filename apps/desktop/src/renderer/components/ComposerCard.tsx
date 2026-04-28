@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 
 import { createConversationId, providerStatusQueryOptions } from '../queries'
+import { Button, Card, FeedbackText, RuntimePill, TextArea } from './ui'
 
 export function ComposerCard({ conversationId }: { conversationId: string | null }) {
   const navigate = useNavigate()
@@ -56,13 +57,13 @@ export function ComposerCard({ conversationId }: { conversationId: string | null
   })
 
   return (
-    <section className="panel-card composer-card">
+    <Card className="composer-card">
       <div className="sidebar-header-row">
         <h2>{conversationId ? 'Continue session' : 'Command input'}</h2>
         {startRunMutation.isPending ? (
-          <span className="runtime-pill" aria-live="polite">
+          <RuntimePill aria-live="polite">
             Sending…
-          </span>
+          </RuntimePill>
         ) : null}
       </div>
 
@@ -77,8 +78,8 @@ export function ComposerCard({ conversationId }: { conversationId: string | null
         <form.Field
           name="prompt"
           children={(field) => (
-            <textarea
-              className="text-input composer-input"
+            <TextArea
+              className="composer-input"
               name="prompt"
               value={field.state.value}
               onChange={(event) => field.handleChange(event.target.value)}
@@ -89,27 +90,27 @@ export function ComposerCard({ conversationId }: { conversationId: string | null
         />
 
         <div className="form-row">
-          <button type="submit" className="primary-button" disabled={startRunMutation.isPending}>
+          <Button type="submit" variant="primary" disabled={startRunMutation.isPending}>
             Execute prompt
-          </button>
+          </Button>
         </div>
       </form>
 
       {providerStatusQuery.data && !providerStatusQuery.data.isReady ? (
-        <p className="warning-copy" aria-live="polite">
+        <FeedbackText variant="warning" live>
           Provider setup is incomplete. Update settings before expecting a successful hosted-provider response.
-        </p>
+        </FeedbackText>
       ) : null}
       {submitError ? (
-        <p className="error-copy" aria-live="polite">
+        <FeedbackText variant="error" live>
           {submitError}
-        </p>
+        </FeedbackText>
       ) : null}
       {startRunMutation.error instanceof Error ? (
-        <p className="error-copy" aria-live="polite">
+        <FeedbackText variant="error" live>
           {startRunMutation.error.message}
-        </p>
+        </FeedbackText>
       ) : null}
-    </section>
+    </Card>
   )
 }

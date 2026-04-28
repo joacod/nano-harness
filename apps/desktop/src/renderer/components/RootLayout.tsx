@@ -6,6 +6,7 @@ import { conversationsQueryOptions, providerStatusQueryOptions, settingsQueryOpt
 import { useRuntimeUi, useTechnicalUi } from '../runtime-ui'
 import { formatRelativeTimestamp, formatTimestamp } from '../utils/formatting'
 import { describeRunEvent } from '../utils/run-events'
+import { FeedbackText, RuntimePill, Switch } from './ui'
 
 export function RootLayout() {
   const { context, recentEvents } = useRuntimeUi()
@@ -33,12 +34,12 @@ export function RootLayout() {
 
       {!isSidebarCollapsed ? (
         <aside className="sidebar" aria-label="Workspace navigation">
-          <div className="sidebar-section sidebar-brand-section">
+        <div className="sidebar-section sidebar-brand-section">
           <div className="sidebar-collapsible-content">
-            <p className="eyebrow">nano-harness</p>
-            <h1 className="sidebar-title">Agent deck</h1>
+              <p className="eyebrow">nano-harness</p>
+              <h1 className="sidebar-title">Agent deck</h1>
+            </div>
           </div>
-        </div>
 
         <div className="sidebar-section sidebar-collapsible-content">
           <div className="sidebar-header-row">
@@ -48,11 +49,11 @@ export function RootLayout() {
             </Link>
           </div>
           <nav className="conversation-nav">
-            {conversationsQuery.isLoading ? <p className="muted-copy">Loading conversations…</p> : null}
+            {conversationsQuery.isLoading ? <FeedbackText>Loading conversations…</FeedbackText> : null}
             {conversationsQuery.isError ? (
-              <p className="error-copy" aria-live="polite">
+              <FeedbackText variant="error" live>
                 Failed to load conversations.
-              </p>
+              </FeedbackText>
             ) : null}
             {!conversationsQuery.isLoading && !conversationsQuery.isError && conversations.length > 0 ? (
               conversations.map((conversation) => (
@@ -69,7 +70,7 @@ export function RootLayout() {
               ))
             ) : (
               !conversationsQuery.isLoading && !conversationsQuery.isError ? (
-                <p className="muted-copy">No sessions yet. Open a prompt channel to begin.</p>
+                <FeedbackText>No sessions yet. Open a prompt channel to begin.</FeedbackText>
               ) : null
             )}
           </nav>
@@ -80,22 +81,17 @@ export function RootLayout() {
             <Link to="/settings" className="ghost-link" activeProps={{ className: 'ghost-link ghost-link-active' }}>
               Settings
             </Link>
-            <button
+            <Switch
               type="button"
-              className={`switch-button ${showTechnicalInfo ? 'switch-button-active' : ''}`}
-              role="switch"
-              aria-checked={showTechnicalInfo}
+              checked={showTechnicalInfo}
               onClick={toggleTechnicalInfo}
             >
-              <span>Telemetry</span>
-              <span className="switch-track" aria-hidden="true">
-                <span className="switch-thumb" />
-              </span>
-            </button>
+              Telemetry
+            </Switch>
           </div>
-          <p className="runtime-pill" aria-live="polite">
+          <RuntimePill aria-live="polite">
             {providerStatus?.isReady ? 'Provider online' : 'Provider setup required'}
-          </p>
+          </RuntimePill>
         </div>
 
         {showTechnicalInfo ? (
@@ -104,16 +100,16 @@ export function RootLayout() {
               <div className="sidebar-header-row sidebar-header-row-stacked">
                 <h2>Configuration</h2>
                 {providerStatus ? (
-                  <span className={`runtime-pill ${providerStatus.isReady ? 'runtime-pill-ready' : 'runtime-pill-warning'}`}>
+                  <RuntimePill tone={providerStatus.isReady ? 'ready' : 'warning'}>
                     {providerStatus.isReady ? 'ready' : 'action needed'}
-                  </span>
+                  </RuntimePill>
                 ) : null}
               </div>
-              {settingsQuery.isLoading ? <p className="muted-copy">Loading configuration…</p> : null}
+              {settingsQuery.isLoading ? <FeedbackText>Loading configuration…</FeedbackText> : null}
               {settingsQuery.isError ? (
-                <p className="error-copy" aria-live="polite">
+                <FeedbackText variant="error" live>
                   Failed to load provider settings.
-                </p>
+                </FeedbackText>
               ) : null}
               {settings ? (
                 <dl className="summary-list">
@@ -142,9 +138,9 @@ export function RootLayout() {
               {providerStatus && providerStatus.issues.length > 0 ? (
                 <div className="status-note-block">
                   {providerStatus.issues.map((issue) => (
-                    <p key={issue} className="error-copy" aria-live="polite">
+                    <FeedbackText key={issue} variant="error" live>
                       {issue}
-                    </p>
+                    </FeedbackText>
                   ))}
                 </div>
               ) : null}

@@ -7,6 +7,7 @@ import { ChatTranscript } from '../components/ChatTranscript'
 import { ComposerCard } from '../components/ComposerCard'
 import { RunInspectorCard } from '../components/RunInspectorCard'
 import { RunListCard } from '../components/RunListCard'
+import { Card, FeedbackText } from '../components/ui'
 import { conversationQueryOptions } from '../queries'
 import { useRuntimeUi, useTechnicalUi } from '../runtime-ui'
 import { getPendingApproval, mergeRunEvents } from '../utils/run-events'
@@ -101,40 +102,40 @@ export function ConversationRoute() {
 
   if (snapshotQuery.isError) {
     return (
-      <section className="panel-card panel-card-hero">
+      <Card hero>
         <p className="eyebrow">Session</p>
         <h2>Failed to load session</h2>
-        <p className="error-copy" aria-live="polite">
+        <FeedbackText variant="error" live>
           {snapshotQuery.error instanceof Error ? snapshotQuery.error.message : 'The session snapshot could not be loaded.'}
-        </p>
-      </section>
+        </FeedbackText>
+      </Card>
     )
   }
 
   if (!snapshotQuery.isLoading && !snapshotQuery.data?.conversation) {
     return (
-      <section className="panel-card panel-card-hero">
+      <Card hero>
         <p className="eyebrow">Session</p>
         <h2>Session not found</h2>
-        <p className="muted-copy">This session may have been removed or has not been created yet.</p>
-      </section>
+        <FeedbackText>This session may have been removed or has not been created yet.</FeedbackText>
+      </Card>
     )
   }
 
   return (
     <div className={`conversation-grid ${showTechnicalInfo ? 'conversation-grid-technical' : 'conversation-grid-simple'}`}>
       <div className="panel-stack chat-panel-stack">
-        <section className="panel-card panel-card-hero conversation-hero-card">
+        <Card hero className="conversation-hero-card">
           <p className="eyebrow">Session</p>
           <h2>{snapshotQuery.data?.conversation?.title ?? 'Loading conversation…'}</h2>
-        </section>
+        </Card>
 
-        <section ref={transcriptPanelRef} className="panel-card transcript-panel" onScroll={handleTranscriptScroll}>
-          {snapshotQuery.isLoading ? <p className="muted-copy">Loading messages…</p> : null}
+        <Card ref={transcriptPanelRef} className="transcript-panel" onScroll={handleTranscriptScroll}>
+          {snapshotQuery.isLoading ? <FeedbackText>Loading messages…</FeedbackText> : null}
           {!snapshotQuery.isLoading && snapshotQuery.data ? (
             <ChatTranscript snapshot={snapshotQuery.data} streamingEntry={streamingEntry ?? null} endRef={transcriptEndRef} />
           ) : null}
-        </section>
+        </Card>
 
         <div className="composer-sticky-shell">
           <ComposerCard conversationId={conversationId} />

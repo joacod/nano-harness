@@ -1,16 +1,9 @@
 import type { ReactNode } from 'react'
 
-export function LabeledField({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <label className="field-stack">
-      <span className="field-label">{label}</span>
-      {children}
-    </label>
-  )
-}
+import { Field, FieldError, FieldHint, TextInput } from './ui'
 
-export function FieldHint({ children }: { children: ReactNode }) {
-  return <span className="field-hint">{children}</span>
+export function LabeledField({ label, children }: { label: string; children: ReactNode }) {
+  return <Field label={label}>{children}</Field>
 }
 
 export function TextField({
@@ -41,8 +34,7 @@ export function TextField({
 
   return (
     <>
-      <input
-        className="text-input"
+      <TextInput
         name={name}
         type={inputType ?? 'text'}
         autoComplete={autoComplete}
@@ -52,7 +44,9 @@ export function TextField({
         onChange={(event) => field.handleChange(event.target.value)}
         placeholder={placeholder}
       />
-      {typeof firstError === 'string' ? <span className="field-error">{firstError}</span> : null}
+      {typeof firstError === 'string' ? <FieldError>{firstError}</FieldError> : null}
     </>
   )
 }
+
+export { FieldHint }

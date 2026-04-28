@@ -1,6 +1,7 @@
 import type { ConversationSnapshot, RunEvent } from '../../../../../packages/shared/src'
 import { formatTimestamp } from '../utils/formatting'
 import { getProviderRequestForRun } from '../utils/run-events'
+import { Card, FeedbackText, RuntimePill, StatusBadge, cn } from './ui'
 
 export function RunListCard({
   runs,
@@ -16,16 +17,16 @@ export function RunListCard({
   const sortedRuns = [...runs].reverse()
 
   return (
-    <section className="panel-card inspector-card run-list-card">
+    <Card className="inspector-card run-list-card">
       <div className="sidebar-header-row">
         <div>
           <p className="eyebrow">Runs</p>
           <h2>Session telemetry</h2>
         </div>
-        <span className="runtime-pill">{runs.length} total</span>
+        <RuntimePill>{runs.length} total</RuntimePill>
       </div>
 
-      {sortedRuns.length === 0 ? <p className="muted-copy">No runs yet for this conversation.</p> : null}
+      {sortedRuns.length === 0 ? <FeedbackText>No runs yet for this conversation.</FeedbackText> : null}
 
       <div className="run-list">
         {sortedRuns.map((run) => {
@@ -35,12 +36,12 @@ export function RunListCard({
             <button
               key={run.id}
               type="button"
-              className={`run-card ${selectedRunId === run.id ? 'run-card-active' : ''}`}
+              className={cn('run-card', selectedRunId === run.id && 'run-card-active')}
               onClick={() => onSelectRun(run.id)}
             >
               <div className="run-card-header">
                 <strong>{run.status}</strong>
-                <span className={`status-badge status-${run.status}`}>{run.status}</span>
+                <StatusBadge status={run.status}>{run.status}</StatusBadge>
               </div>
               <small>{formatTimestamp(run.createdAt)}</small>
               {providerRequest ? <span className="run-provider-label">{providerRequest.payload.provider}</span> : null}
@@ -54,6 +55,6 @@ export function RunListCard({
           )
         })}
       </div>
-    </section>
+    </Card>
   )
 }
