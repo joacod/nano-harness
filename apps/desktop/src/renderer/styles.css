@@ -706,8 +706,6 @@ a {
   border: 1px solid var(--border);
   background: rgba(4, 18, 13, 0.82);
   overflow-wrap: anywhere;
-  content-visibility: auto;
-  contain-intrinsic-size: auto 180px;
   font-size: 0.9rem;
   line-height: 1.55;
   clip-path: polygon(0 10px, 10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%);

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 
 import { useQuery } from '@tanstack/react-query'
 import { useParams } from '@tanstack/react-router'
@@ -41,14 +41,31 @@ export function ConversationRoute() {
   const streamingContentLength = streamingEntry?.[1].content.length ?? 0
   const messageCount = snapshotQuery.data?.messages.length ?? 0
 
-  useEffect(() => {
+  function scrollTranscriptToBottom() {
+    const panel = transcriptPanelRef.current
+
+    if (!panel) {
+      return
+    }
+
+    panel.scrollTop = panel.scrollHeight
+
+    requestAnimationFrame(() => {
+      panel.scrollTop = panel.scrollHeight
+      requestAnimationFrame(() => {
+        panel.scrollTop = panel.scrollHeight
+      })
+    })
+  }
+
+  useLayoutEffect(() => {
     isTranscriptPinnedRef.current = true
-    transcriptEndRef.current?.scrollIntoView({ block: 'end' })
+    scrollTranscriptToBottom()
   }, [conversationId, streamingRunId])
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (isTranscriptPinnedRef.current) {
-      transcriptEndRef.current?.scrollIntoView({ block: 'end' })
+      scrollTranscriptToBottom()
     }
   }, [messageCount, streamingContentLength])
 

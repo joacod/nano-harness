@@ -67,9 +67,20 @@ function normalizeReasoningText(text: string): string {
     .replace(/\n{3,}/g, '\n\n')
 }
 
+function normalizeReasoningChunks(values: string[]): string[] {
+  const normalizedValues = dedupeStrings(values).map(normalizeReasoningText).filter(Boolean)
+  const shortChunkCount = normalizedValues.filter((value) => value.length <= 24 && !/[.!?:;]$/.test(value)).length
+
+  if (normalizedValues.length >= 6 && shortChunkCount / normalizedValues.length > 0.7) {
+    return [normalizeReasoningText(normalizedValues.join('\n'))]
+  }
+
+  return normalizedValues
+}
+
 function getReasoningDisplay(reasoning?: string, details?: ReasoningDetail[]): ReasoningDisplay | null {
-  const summaries = dedupeStrings(details?.flatMap((detail) => detail.type === 'reasoning.summary' ? [detail.summary] : []) ?? [])
-  const textDetails = dedupeStrings(details?.flatMap((detail) => detail.type === 'reasoning.text' ? [detail.text] : []) ?? [])
+  const summaries = normalizeReasoningChunks(details?.flatMap((detail) => detail.type === 'reasoning.summary' ? [detail.summary] : []) ?? [])
+  const textDetails = normalizeReasoningChunks(details?.flatMap((detail) => detail.type === 'reasoning.text' ? [detail.text] : []) ?? [])
   const encryptedCount = details?.filter((detail) => detail.type === 'reasoning.encrypted' || detail.type === 'reasoning.unknown').length ?? 0
   const text = normalizeReasoningText(dedupeStrings([reasoning ?? '', ...textDetails]).join('\n\n'))
 
@@ -231,7 +242,7 @@ export function ChatTranscript({
             <ThinkingPanel
               display={{
                 text: normalizeReasoningText(streamingState.reasoning.text),
-                summaries: dedupeStrings(streamingState.reasoning.summaries),
+                summaries: normalizeReasoningChunks(streamingState.reasoning.summaries),
                 encryptedCount: streamingState.reasoning.encryptedCount,
               }}
               defaultOpen={false}
