@@ -14,5 +14,6 @@ export const desktopBridgeChannels = {
   resumeRun: 'desktop:resume-run',
   cancelRun: 'desktop:cancel-run',
   resolveApproval: 'desktop:resolve-approval',
+  openExternalUrl: 'desktop:open-external-url',
   runEvent: 'desktop:run-event',
 } as const

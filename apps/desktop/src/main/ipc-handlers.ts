@@ -1,10 +1,11 @@
-import { app, ipcMain } from 'electron'
+import { app, ipcMain, shell } from 'electron'
 
 import {
   appSettingsSchema,
   desktopBridgeChannels,
   desktopContextSchema,
   getConversationInputSchema,
+  openExternalUrlInputSchema,
   providerCredentialInputSchema,
   resolveApprovalInputSchema,
   runCreateInputSchema,
@@ -16,6 +17,17 @@ import { exportData, importData } from './data-transfer'
 import type { DesktopRuntime } from './runtime'
 import { buildProviderStatus } from './runtime'
 import { encryptApiKey } from './secure-credentials'
+
+function parseExternalUrl(payload: unknown): string {
+  const { url } = openExternalUrlInputSchema.parse(payload)
+  const parsedUrl = new URL(url)
+
+  if (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:') {
+    throw new Error('Only http and https links can be opened externally.')
+  }
+
+  return parsedUrl.toString()
+}
 
 export function setupIpcHandlers(runtime: DesktopRuntime): void {
   ipcMain.handle(desktopBridgeChannels.getContext, async () => {
@@ -93,5 +105,9 @@ export function setupIpcHandlers(runtime: DesktopRuntime): void {
   ipcMain.handle(desktopBridgeChannels.resolveApproval, async (_event, payload) => {
     const input = resolveApprovalInputSchema.parse(payload)
     await runtime.runEngine.resolveApproval(input)
+  })
+
+  ipcMain.handle(desktopBridgeChannels.openExternalUrl, async (_event, payload) => {
+    await shell.openExternal(parseExternalUrl(payload))
   })
 }

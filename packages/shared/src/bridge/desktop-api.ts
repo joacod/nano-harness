@@ -3,7 +3,7 @@ import { z } from 'zod'
 import { runEventSchema } from '../events'
 import { runCreateInputSchema } from '../runs'
 import { appSettingsSchema } from '../settings'
-import type { GetConversationInput, ProviderCredentialInput, ResolveApprovalInput, RunIdInput, SaveProviderApiKeyInput } from './inputs'
+import type { GetConversationInput, OpenExternalUrlInput, ProviderCredentialInput, ResolveApprovalInput, RunIdInput, SaveProviderApiKeyInput } from './inputs'
 import type {
   ConversationList,
   ConversationSnapshot,
@@ -31,5 +31,6 @@ export type DesktopApi = {
   resumeRun(input: RunIdInput): Promise<void>
   cancelRun(input: RunIdInput): Promise<void>
   resolveApproval(input: ResolveApprovalInput): Promise<void>
+  openExternalUrl(input: OpenExternalUrlInput): Promise<void>
   onRunEvent(listener: (event: z.infer<typeof runEventSchema>) => void): () => void
 }

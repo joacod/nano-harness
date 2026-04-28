@@ -12,6 +12,7 @@ import {
   providerCredentialInputSchema,
   providerCredentialStatusSchema,
   providerStatusSchema,
+  openExternalUrlInputSchema,
   resolveApprovalInputSchema,
   runCreateInputSchema,
   runEventSchema,
@@ -74,6 +75,9 @@ const desktopApi: DesktopApi = {
   },
   async resolveApproval(input) {
     await ipcRenderer.invoke(desktopBridgeChannels.resolveApproval, resolveApprovalInputSchema.parse(input))
+  },
+  async openExternalUrl(input) {
+    await ipcRenderer.invoke(desktopBridgeChannels.openExternalUrl, openExternalUrlInputSchema.parse(input))
   },
   onRunEvent(listener) {
     const wrappedListener = (_event: Electron.IpcRendererEvent, payload: unknown) => {

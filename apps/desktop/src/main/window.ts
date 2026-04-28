@@ -1,4 +1,4 @@
-import { app, BrowserWindow } from 'electron'
+import { app, BrowserWindow, shell } from 'electron'
 import { join } from 'node:path'
 
 function getAppIconPath(): string {
@@ -18,6 +18,29 @@ export function createWindow(): void {
       contextIsolation: true,
       nodeIntegration: false,
     },
+  })
+
+  window.webContents.setWindowOpenHandler(({ url }) => {
+    const parsedUrl = new URL(url)
+
+    if (parsedUrl.protocol === 'http:' || parsedUrl.protocol === 'https:') {
+      void shell.openExternal(parsedUrl.toString())
+    }
+
+    return { action: 'deny' }
+  })
+
+  window.webContents.on('will-navigate', (event, url) => {
+    if (url === window.webContents.getURL()) {
+      return
+    }
+
+    const parsedUrl = new URL(url)
+
+    if (parsedUrl.protocol === 'http:' || parsedUrl.protocol === 'https:') {
+      event.preventDefault()
+      void shell.openExternal(parsedUrl.toString())
+    }
   })
 
   window.maximize()

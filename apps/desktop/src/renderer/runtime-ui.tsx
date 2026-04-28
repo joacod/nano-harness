@@ -16,7 +16,12 @@ type RuntimeUiState = {
 }
 
 const RuntimeUiContext = createContext<RuntimeUiState | null>(null)
-const TechnicalUiContext = createContext<{ showTechnicalInfo: boolean; toggleTechnicalInfo: () => void } | null>(null)
+const TechnicalUiContext = createContext<{
+  isSidebarCollapsed: boolean
+  showTechnicalInfo: boolean
+  toggleSidebarCollapsed: () => void
+  toggleTechnicalInfo: () => void
+} | null>(null)
 
 export function useRuntimeUi(): RuntimeUiState {
   const value = useContext(RuntimeUiContext)
@@ -45,6 +50,7 @@ export function RuntimeUiProvider() {
   const [liveRunEvents, setLiveRunEvents] = useState<Record<string, RunEvent[]>>({})
   const [streamingRuns, setStreamingRuns] = useState<Record<string, StreamingRunState>>({})
   const [showTechnicalInfo, setShowTechnicalInfo] = useState(false)
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
 
   useEffect(() => {
     const unsubscribe = window.desktop.onRunEvent((event) => {
@@ -75,7 +81,9 @@ export function RuntimeUiProvider() {
   return (
     <TechnicalUiContext.Provider
       value={{
+        isSidebarCollapsed,
         showTechnicalInfo,
+        toggleSidebarCollapsed: () => setIsSidebarCollapsed((current) => !current),
         toggleTechnicalInfo: () => setShowTechnicalInfo((current) => !current),
       }}
     >

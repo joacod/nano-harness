@@ -1,4 +1,4 @@
-import { Streamdown } from 'streamdown'
+import { Streamdown, type Components } from 'streamdown'
 import type { RefObject } from 'react'
 
 import type { ConversationSnapshot, ReasoningDetail } from '../../../../../packages/shared/src'
@@ -32,16 +32,63 @@ function getStreamingLabel(streamingState: StreamingRunState) {
 }
 
 function getReasoningDisplay(reasoning?: string, details?: ReasoningDetail[]): ReasoningDisplay | null {
-  const summaries = details?.flatMap((detail) => detail.type === 'reasoning.summary' ? [detail.summary] : []) ?? []
-  const textDetails = details?.flatMap((detail) => detail.type === 'reasoning.text' ? [detail.text] : []) ?? []
+  const summaries = details?.flatMap((detail) => detail.type === 'reasoning.summary' ? [detail.summary.trim()] : []) ?? []
+  const textDetails = details?.flatMap((detail) => detail.type === 'reasoning.text' ? [detail.text.trim()] : []) ?? []
   const encryptedCount = details?.filter((detail) => detail.type === 'reasoning.encrypted' || detail.type === 'reasoning.unknown').length ?? 0
-  const text = `${reasoning ?? ''}${textDetails.join('')}`.trim()
+  const text = [reasoning?.trim(), ...textDetails].filter(Boolean).join('\n\n')
 
-  if (!text && summaries.length === 0 && encryptedCount === 0) {
+  if (!text && summaries.length === 0) {
     return null
   }
 
   return { text, summaries, encryptedCount }
+}
+
+function toOpenableUrl(href: string | undefined): string | null {
+  if (!href) {
+    return null
+  }
+
+  try {
+    const url = new URL(href, window.location.href)
+    return url.protocol === 'http:' || url.protocol === 'https:' ? url.toString() : null
+  } catch {
+    return null
+  }
+}
+
+const markdownComponents: Components = {
+  a({ href, children, ...props }) {
+    const openableUrl = toOpenableUrl(href)
+
+    return (
+      <a
+        {...props}
+        href={openableUrl ?? href}
+        className="message-link"
+        rel="noreferrer"
+        target="_blank"
+        onClick={(event) => {
+          if (!openableUrl) {
+            return
+          }
+
+          event.preventDefault()
+
+          if (window.desktop?.openExternalUrl) {
+            void window.desktop.openExternalUrl({ url: openableUrl }).catch(() => {
+              window.open(openableUrl, '_blank', 'noopener,noreferrer')
+            })
+            return
+          }
+
+          window.open(openableUrl, '_blank', 'noopener,noreferrer')
+        }}
+      >
+        {children}
+      </a>
+    )
+  },
 }
 
 function ThinkingPanel({ display, defaultOpen }: { display: ReasoningDisplay; defaultOpen: boolean }) {
@@ -49,11 +96,7 @@ function ThinkingPanel({ display, defaultOpen }: { display: ReasoningDisplay; de
     <details className="thinking-panel" open={defaultOpen}>
       <summary>
         <span>Thinking</span>
-        <span className="thinking-count">
-          {display.encryptedCount > 0 && !display.text && display.summaries.length === 0
-            ? 'not displayable'
-            : 'available'}
-        </span>
+        <span className="thinking-count">view details</span>
       </summary>
       <div className="thinking-body">
         {display.summaries.map((summary, index) => (
@@ -106,7 +149,7 @@ export function ChatTranscript({
             return reasoningDisplay ? <ThinkingPanel display={reasoningDisplay} defaultOpen={false} /> : null
           })() : null}
           {message.role === 'assistant' ? (
-            <Streamdown>{message.content}</Streamdown>
+            <Streamdown className="message-markdown" components={markdownComponents}>{message.content}</Streamdown>
           ) : (
             <pre className="message-pre">{message.content}</pre>
           )}
@@ -129,18 +172,18 @@ export function ChatTranscript({
               ))}
             </div>
           ) : null}
-          {streamingState.reasoning.text || streamingState.reasoning.summaries.length > 0 || streamingState.reasoning.encryptedCount > 0 ? (
+          {streamingState.reasoning.text || streamingState.reasoning.summaries.length > 0 ? (
             <ThinkingPanel
               display={{
-                text: streamingState.reasoning.text,
-                summaries: streamingState.reasoning.summaries,
+                text: streamingState.reasoning.text.trim(),
+                summaries: streamingState.reasoning.summaries.map((summary) => summary.trim()).filter(Boolean),
                 encryptedCount: streamingState.reasoning.encryptedCount,
               }}
-              defaultOpen
+              defaultOpen={false}
             />
           ) : null}
           {streamingState.content ? (
-            <Streamdown isAnimating mode="streaming">
+            <Streamdown className="message-markdown" components={markdownComponents} isAnimating mode="streaming">
               {streamingState.content}
             </Streamdown>
           ) : (
