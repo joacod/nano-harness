@@ -1,5 +1,5 @@
 import { Streamdown, type Components } from 'streamdown'
-import type { RefObject } from 'react'
+import { useState, type RefObject } from 'react'
 
 import type { ConversationSnapshot, ReasoningDetail } from '../../../../../packages/shared/src'
 import type { StreamingRunState } from '../utils/run-events'
@@ -31,11 +31,47 @@ function getStreamingLabel(streamingState: StreamingRunState) {
   }
 }
 
+function dedupeStrings(values: string[]): string[] {
+  const seen = new Set<string>()
+
+  return values.filter((value) => {
+    const normalizedValue = value.trim()
+
+    if (!normalizedValue || seen.has(normalizedValue)) {
+      return false
+    }
+
+    seen.add(normalizedValue)
+    return true
+  })
+}
+
+function normalizeReasoningText(text: string): string {
+  const trimmedText = text.trim()
+
+  if (!trimmedText) {
+    return ''
+  }
+
+  const lines = trimmedText.split('\n')
+  const meaningfulLines = lines.map((line) => line.trim()).filter(Boolean)
+  const shortLineCount = meaningfulLines.filter((line) => line.length <= 24 && !/[.!?:;]$/.test(line)).length
+
+  if (meaningfulLines.length >= 6 && shortLineCount / meaningfulLines.length > 0.7) {
+    return meaningfulLines.join(' ').replace(/\s+([,.;:!?])/g, '$1')
+  }
+
+  return lines
+    .map((line) => line.trimEnd())
+    .join('\n')
+    .replace(/\n{3,}/g, '\n\n')
+}
+
 function getReasoningDisplay(reasoning?: string, details?: ReasoningDetail[]): ReasoningDisplay | null {
-  const summaries = details?.flatMap((detail) => detail.type === 'reasoning.summary' ? [detail.summary.trim()] : []) ?? []
-  const textDetails = details?.flatMap((detail) => detail.type === 'reasoning.text' ? [detail.text.trim()] : []) ?? []
+  const summaries = dedupeStrings(details?.flatMap((detail) => detail.type === 'reasoning.summary' ? [detail.summary] : []) ?? [])
+  const textDetails = dedupeStrings(details?.flatMap((detail) => detail.type === 'reasoning.text' ? [detail.text] : []) ?? [])
   const encryptedCount = details?.filter((detail) => detail.type === 'reasoning.encrypted' || detail.type === 'reasoning.unknown').length ?? 0
-  const text = [reasoning?.trim(), ...textDetails].filter(Boolean).join('\n\n')
+  const text = normalizeReasoningText(dedupeStrings([reasoning ?? '', ...textDetails]).join('\n\n'))
 
   if (!text && summaries.length === 0) {
     return null
@@ -92,24 +128,43 @@ const markdownComponents: Components = {
 }
 
 function ThinkingPanel({ display, defaultOpen }: { display: ReasoningDisplay; defaultOpen: boolean }) {
+  const [isOpen, setIsOpen] = useState(defaultOpen)
+
   return (
-    <details className="thinking-panel" open={defaultOpen}>
-      <summary>
+    <section
+      className={`thinking-panel ${isOpen ? 'thinking-panel-open' : ''}`}
+      onClick={() => {
+        if (isOpen) {
+          setIsOpen(false)
+        }
+      }}
+    >
+      <button
+        type="button"
+        className="thinking-summary"
+        aria-expanded={isOpen}
+        onClick={(event) => {
+          event.stopPropagation()
+          setIsOpen((current) => !current)
+        }}
+      >
         <span>Thinking</span>
-        <span className="thinking-count">view details</span>
-      </summary>
-      <div className="thinking-body">
-        {display.summaries.map((summary, index) => (
-          <p key={`${summary}-${index}`}>{summary}</p>
-        ))}
-        {display.text ? <pre>{display.text}</pre> : null}
-        {display.encryptedCount > 0 ? (
-          <p className="muted-copy">
-            {display.encryptedCount} encrypted reasoning block{display.encryptedCount === 1 ? '' : 's'} preserved but not displayable.
-          </p>
-        ) : null}
-      </div>
-    </details>
+        <span className="thinking-count">{isOpen ? 'hide details' : 'view details'}</span>
+      </button>
+      {isOpen ? (
+        <div className="thinking-body">
+          {display.summaries.map((summary, index) => (
+            <p key={`${summary}-${index}`}>{summary}</p>
+          ))}
+          {display.text ? <pre>{display.text}</pre> : null}
+          {display.encryptedCount > 0 ? (
+            <p className="muted-copy">
+              {display.encryptedCount} encrypted reasoning block{display.encryptedCount === 1 ? '' : 's'} preserved but not displayable.
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+    </section>
   )
 }
 
@@ -175,8 +230,8 @@ export function ChatTranscript({
           {streamingState.reasoning.text || streamingState.reasoning.summaries.length > 0 ? (
             <ThinkingPanel
               display={{
-                text: streamingState.reasoning.text.trim(),
-                summaries: streamingState.reasoning.summaries.map((summary) => summary.trim()).filter(Boolean),
+                text: normalizeReasoningText(streamingState.reasoning.text),
+                summaries: dedupeStrings(streamingState.reasoning.summaries),
                 encryptedCount: streamingState.reasoning.encryptedCount,
               }}
               defaultOpen={false}

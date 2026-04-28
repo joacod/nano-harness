@@ -110,11 +110,6 @@ export function ConversationRoute() {
         <section className="panel-card panel-card-hero conversation-hero-card">
           <p className="eyebrow">Session</p>
           <h2>{snapshotQuery.data?.conversation?.title ?? 'Loading conversation…'}</h2>
-          {showTechnicalInfo ? (
-            <p className="muted-copy">
-              Messages persist locally while the inspector mirrors live and restored event telemetry.
-            </p>
-          ) : null}
         </section>
 
         <section ref={transcriptPanelRef} className="panel-card transcript-panel" onScroll={handleTranscriptScroll}>

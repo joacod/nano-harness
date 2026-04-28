@@ -50,7 +50,7 @@ export function RuntimeUiProvider() {
   const [liveRunEvents, setLiveRunEvents] = useState<Record<string, RunEvent[]>>({})
   const [streamingRuns, setStreamingRuns] = useState<Record<string, StreamingRunState>>({})
   const [showTechnicalInfo, setShowTechnicalInfo] = useState(false)
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true)
 
   useEffect(() => {
     const unsubscribe = window.desktop.onRunEvent((event) => {

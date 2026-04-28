@@ -19,16 +19,33 @@ export function RootLayout() {
 
   return (
     <main className={`workspace-shell ${isSidebarCollapsed ? 'workspace-shell-sidebar-collapsed' : ''}`}>
-      <aside className="sidebar" aria-label="Workspace navigation">
-        <div className="sidebar-section sidebar-brand-section">
+      {isSidebarCollapsed ? (
+        <button
+          type="button"
+          className="sidebar-open-button"
+          aria-expanded={false}
+          aria-label="Open sidebar"
+          onClick={toggleSidebarCollapsed}
+        >
+          <span aria-hidden="true" />
+          <span aria-hidden="true" />
+          <span aria-hidden="true" />
+        </button>
+      ) : null}
+
+      {!isSidebarCollapsed ? (
+        <aside className="sidebar" aria-label="Workspace navigation">
+          <div className="sidebar-section sidebar-brand-section">
           <button
             type="button"
             className="sidebar-collapse-button"
             aria-expanded={!isSidebarCollapsed}
-            aria-label={isSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            aria-label="Close sidebar"
             onClick={toggleSidebarCollapsed}
           >
-            <span aria-hidden="true">{isSidebarCollapsed ? '>' : '<'}</span>
+            <span aria-hidden="true" />
+            <span aria-hidden="true" />
+            <span aria-hidden="true" />
           </button>
           <div className="sidebar-collapsible-content">
             <p className="eyebrow">nano-harness</p>
@@ -170,7 +187,8 @@ export function RootLayout() {
             </div>
           </>
         ) : null}
-      </aside>
+        </aside>
+      ) : null}
 
       <section className="content-panel">
         <Outlet />
