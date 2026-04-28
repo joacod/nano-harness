@@ -22,6 +22,7 @@
   overflow-wrap: anywhere;
   font-size: 0.9rem;
   line-height: 1.55;
+  min-width: 0;
   clip-path: polygon(0 10px, 10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%);
 }
 
@@ -330,7 +331,7 @@
 .message-markdown [data-streamdown="code-block-header"] {
   position: absolute;
   top: 8px;
-  right: 90px;
+  right: 104px;
   z-index: 2;
   min-height: 0;
   padding-right: 0;
@@ -363,6 +364,8 @@
 }
 
 .message-markdown [data-streamdown="code-block-actions"] {
+  display: flex;
+  align-items: center;
   pointer-events: auto;
   gap: 4px;
   border: 1px solid rgba(67, 231, 255, 0.3);
@@ -383,18 +386,32 @@
 
 .message-markdown [data-streamdown="code-block-actions"] button,
 .message-markdown [data-streamdown="table-wrapper"] button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  min-height: 28px;
+  padding: 5px 8px;
+  border: 1px solid rgba(67, 231, 255, 0.28);
   border-radius: 2px;
+  background: rgba(4, 22, 18, 0.9);
   color: #d6fff0;
+  font: inherit;
+  line-height: 1;
+  box-shadow: inset 0 0 14px rgba(67, 255, 157, 0.04);
 }
 
 .message-markdown [data-streamdown="code-block-actions"] button:hover,
-.message-markdown [data-streamdown="table-wrapper"] button:hover {
+.message-markdown [data-streamdown="table-wrapper"] button:hover,
+.message-markdown [data-streamdown="code-block-actions"] button:focus-visible,
+.message-markdown [data-streamdown="table-wrapper"] button:focus-visible {
+  border-color: rgba(67, 255, 157, 0.58);
   background: rgba(67, 255, 157, 0.12);
   color: #ffffff;
 }
 
 .message-markdown [data-streamdown="table-wrapper"] {
-  padding: 48px 10px 10px;
+  padding: 54px 10px 10px;
   overflow: auto;
 }
 
@@ -404,12 +421,32 @@
   right: 8px;
   z-index: 2;
   display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: flex-end;
   gap: 4px;
+  max-width: calc(100% - 16px);
   border: 1px solid rgba(67, 231, 255, 0.3);
   border-radius: 2px;
   background: rgba(3, 20, 18, 0.9);
   padding: 3px;
   backdrop-filter: blur(12px);
+}
+
+.message-markdown [data-streamdown="table-wrapper"] button[aria-label*="fullscreen" i],
+.message-markdown [data-streamdown="table-wrapper"] button[title*="fullscreen" i] {
+  display: none;
+}
+
+.message-markdown [data-streamdown="table-wrapper"] :is([role="menu"], [data-radix-popper-content-wrapper], [data-slot="dropdown-menu-content"]),
+.message-markdown [data-streamdown="code-block-actions"] :is([role="menu"], [data-radix-popper-content-wrapper], [data-slot="dropdown-menu-content"]) {
+  z-index: 6;
+  min-width: max-content;
+  border: 1px solid rgba(67, 231, 255, 0.34);
+  border-radius: 2px;
+  background: rgba(3, 20, 18, 0.98);
+  color: #d6fff0;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.34), 0 0 18px rgba(67, 231, 255, 0.12);
 }
 
 .message-markdown table {

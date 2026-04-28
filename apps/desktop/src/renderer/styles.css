@@ -701,7 +701,8 @@ a {
 .run-list-card .run-list {
   max-height: 324px;
   overflow-y: auto;
-  padding-right: 4px;
+  padding: 2px 4px 4px 2px;
+  scroll-padding-block: 2px;
 }
 
 .inspector-panel-stack > .inspector-card:not(.run-list-card) {
@@ -719,8 +720,6 @@ a {
   text-align: left;
   min-width: 0;
   overflow-wrap: anywhere;
-  content-visibility: auto;
-  contain-intrinsic-size: auto 120px;
 }
 
 .run-card:hover,
@@ -728,7 +727,6 @@ a {
   border-color: rgba(67, 255, 157, 0.5);
   background: rgba(8, 36, 27, 0.92);
   box-shadow: 0 0 24px rgba(67, 255, 157, 0.12), inset 0 0 24px rgba(67, 255, 157, 0.06);
-  transform: translateY(-1px);
 }
 
 .run-provider-label {
@@ -879,8 +877,6 @@ a {
   padding: 16px;
   min-width: 0;
   overflow-wrap: anywhere;
-  content-visibility: auto;
-  contain-intrinsic-size: auto 140px;
 }
 
 .timeline-type {
@@ -1042,9 +1038,12 @@ select.text-input {
 
 .ghost-button.run-card {
   align-items: flex-start;
+  justify-content: flex-start;
   flex-direction: column;
   gap: 8px;
   padding: 14px;
+  min-height: 122px;
+  height: auto;
   min-width: 0;
   text-transform: none;
 }
@@ -1055,7 +1054,6 @@ select.text-input {
   color: #ffffff;
   background: rgba(9, 45, 34, 0.72);
   box-shadow: 0 0 22px rgba(67, 255, 157, 0.14), inset 0 0 20px rgba(67, 255, 157, 0.06);
-  transform: translateY(-1px);
 }
 
 .ghost-button.thinking-summary {

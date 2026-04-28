@@ -52,6 +52,10 @@ export function MarkdownMessage({ content, streaming = false }: { content: strin
     <Streamdown
       className="message-markdown"
       components={markdownComponents}
+      controls={{
+        code: { copy: true, download: true },
+        table: { copy: true, download: true, fullscreen: false },
+      }}
       isAnimating={streaming || undefined}
       mode={streaming ? 'streaming' : undefined}
     >
