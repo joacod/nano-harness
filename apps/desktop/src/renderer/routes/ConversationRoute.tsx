@@ -4,9 +4,9 @@ import { useQuery } from '@tanstack/react-query'
 import { useParams } from '@tanstack/react-router'
 
 import { ChatTranscript } from '../components/ChatTranscript'
-import { ComposerCard } from '../components/ComposerCard'
 import { RunInspectorCard } from '../components/RunInspectorCard'
 import { RunListCard } from '../components/RunListCard'
+import { SessionLayout } from '../components/SessionLayout'
 import { Card, FeedbackText } from '../components/ui'
 import { conversationQueryOptions } from '../queries'
 import { useRuntimeUi, useTechnicalUi } from '../runtime-ui'
@@ -123,27 +123,22 @@ export function ConversationRoute() {
   }
 
   return (
-    <div className={`conversation-grid ${showTechnicalInfo ? 'conversation-grid-technical' : 'conversation-grid-simple'}`}>
-      <div className="panel-stack chat-panel-stack">
-        <Card hero className="conversation-hero-card">
-          <p className="eyebrow">Session</p>
-          <h2>{snapshotQuery.data?.conversation?.title ?? 'Loading conversation…'}</h2>
-        </Card>
-
-        <Card ref={transcriptPanelRef} className="transcript-panel" onScroll={handleTranscriptScroll}>
+    <SessionLayout
+      conversationId={conversationId}
+      showTechnicalInfo={showTechnicalInfo}
+      title={snapshotQuery.data?.conversation?.title ?? 'Loading conversation…'}
+      transcriptRef={transcriptPanelRef}
+      onTranscriptScroll={handleTranscriptScroll}
+      transcriptChildren={(
+        <>
           {snapshotQuery.isLoading ? <FeedbackText>Loading messages…</FeedbackText> : null}
           {!snapshotQuery.isLoading && snapshotQuery.data ? (
             <ChatTranscript snapshot={snapshotQuery.data} streamingEntry={streamingEntry ?? null} endRef={transcriptEndRef} />
           ) : null}
-        </Card>
-
-        <div className="composer-sticky-shell">
-          <ComposerCard conversationId={conversationId} />
-        </div>
-      </div>
-
-      {showTechnicalInfo ? (
-        <div className="panel-stack inspector-panel-stack">
+        </>
+      )}
+      inspectorChildren={(
+        <>
           <RunListCard
             runs={snapshotQuery.data?.runs ?? []}
             events={snapshotQuery.data?.events ?? []}
@@ -156,8 +151,8 @@ export function ConversationRoute() {
             pendingApproval={pendingApproval}
             streamingState={selectedRun ? streamingRuns[selectedRun.id] ?? null : null}
           />
-        </div>
-      ) : null}
-    </div>
+        </>
+      )}
+    />
   )
 }

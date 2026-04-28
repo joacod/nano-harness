@@ -59,7 +59,7 @@ export function ComposerCard({ conversationId }: { conversationId: string | null
   return (
     <Card className="composer-card">
       <div className="sidebar-header-row">
-        <h2>{conversationId ? 'Continue session' : 'Command input'}</h2>
+        <h2>Command input</h2>
         {startRunMutation.isPending ? (
           <RuntimePill aria-live="polite">
             Sending…
@@ -75,23 +75,38 @@ export function ComposerCard({ conversationId }: { conversationId: string | null
           void form.handleSubmit()
         }}
       >
-        <form.Field
-          name="prompt"
-          children={(field) => (
-            <TextArea
-              className="composer-input"
-              name="prompt"
-              value={field.state.value}
-              onChange={(event) => field.handleChange(event.target.value)}
-              placeholder="Enter an instruction for the local harness…"
-              rows={5}
-            />
-          )}
-        />
+        <div className="composer-input-row">
+          <form.Field
+            name="prompt"
+            children={(field) => (
+              <TextArea
+                className="composer-input"
+                name="prompt"
+                value={field.state.value}
+                onChange={(event) => field.handleChange(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key !== 'Enter' || event.shiftKey || event.nativeEvent.isComposing) {
+                    return
+                  }
 
-        <div className="form-row">
-          <Button type="submit" variant="primary" disabled={startRunMutation.isPending}>
-            Execute prompt
+                  event.preventDefault()
+                  void form.handleSubmit()
+                }}
+                placeholder="Enter an instruction for the local harness…"
+                rows={3}
+              />
+            )}
+          />
+          <Button
+            type="submit"
+            variant="primary"
+            className="composer-send-button"
+            disabled={startRunMutation.isPending}
+            aria-label="Send prompt"
+          >
+            <svg viewBox="0 0 24 24" role="img" aria-hidden="true" focusable="false">
+              <path d="M4 4l17 8-17 8 3-7 8-1-8-1-3-7z" />
+            </svg>
           </Button>
         </div>
       </form>

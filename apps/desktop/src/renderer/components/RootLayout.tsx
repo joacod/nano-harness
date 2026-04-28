@@ -53,7 +53,7 @@ export function RootLayout() {
               Telemetry
             </Switch>
           </div>
-          <RuntimePill aria-live="polite">
+          <RuntimePill tone={providerStatus?.isReady ? 'ready' : 'warning'} aria-live="polite">
             {providerStatus?.isReady ? 'Provider online' : 'Provider setup required'}
           </RuntimePill>
         </div>

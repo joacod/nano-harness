@@ -374,6 +374,9 @@ a {
 }
 
 .sidebar-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
   margin-top: auto;
 }
 
@@ -565,7 +568,7 @@ a {
 .conversation-grid {
   display: grid;
   gap: 16px;
-  align-items: start;
+  align-items: stretch;
   min-height: 0;
   height: 100%;
   overflow: hidden;
@@ -581,6 +584,7 @@ a {
 
 .conversation-grid > .panel-stack {
   min-height: 0;
+  height: 100%;
   max-height: 100%;
   overflow: hidden;
 }
@@ -588,6 +592,7 @@ a {
 .chat-panel-stack {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
+  height: 100%;
 }
 
 .inspector-panel-stack {
@@ -921,6 +926,17 @@ a {
   gap: 12px;
 }
 
+.composer-form {
+  gap: 8px;
+}
+
+.composer-input-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 10px;
+}
+
 .text-input {
   width: 100%;
   padding: 10px 12px;
@@ -948,10 +964,25 @@ select.text-input {
 }
 
 .composer-input {
-  min-height: 86px;
+  min-height: 62px;
+  max-height: 180px;
   resize: vertical;
   font-size: 0.88rem;
   line-height: 1.45;
+}
+
+.composer-send-button {
+  width: 42px;
+  min-width: 42px;
+  height: 42px;
+  min-height: 42px;
+  padding: 0;
+}
+
+.composer-send-button svg {
+  width: 18px;
+  height: 18px;
+  fill: currentColor;
 }
 
 .primary-button {
