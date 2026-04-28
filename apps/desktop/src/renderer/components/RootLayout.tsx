@@ -19,34 +19,21 @@ export function RootLayout() {
 
   return (
     <main className={`workspace-shell ${isSidebarCollapsed ? 'workspace-shell-sidebar-collapsed' : ''}`}>
-      {isSidebarCollapsed ? (
-        <button
-          type="button"
-          className="sidebar-open-button"
-          aria-expanded={false}
-          aria-label="Open sidebar"
-          onClick={toggleSidebarCollapsed}
-        >
-          <span aria-hidden="true" />
-          <span aria-hidden="true" />
-          <span aria-hidden="true" />
-        </button>
-      ) : null}
+      <button
+        type="button"
+        className="sidebar-toggle-button"
+        aria-expanded={!isSidebarCollapsed}
+        aria-label={isSidebarCollapsed ? 'Open sidebar' : 'Close sidebar'}
+        onClick={toggleSidebarCollapsed}
+      >
+        <span aria-hidden="true" />
+        <span aria-hidden="true" />
+        <span aria-hidden="true" />
+      </button>
 
       {!isSidebarCollapsed ? (
         <aside className="sidebar" aria-label="Workspace navigation">
           <div className="sidebar-section sidebar-brand-section">
-          <button
-            type="button"
-            className="sidebar-collapse-button"
-            aria-expanded={!isSidebarCollapsed}
-            aria-label="Close sidebar"
-            onClick={toggleSidebarCollapsed}
-          >
-            <span aria-hidden="true" />
-            <span aria-hidden="true" />
-            <span aria-hidden="true" />
-          </button>
           <div className="sidebar-collapsible-content">
             <p className="eyebrow">nano-harness</p>
             <h1 className="sidebar-title">Agent deck</h1>
