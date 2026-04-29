@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "types": ["node", "vitest/globals"],
+    "lib": ["ES2022", "DOM", "DOM.Iterable"]
+  },
+  "include": [
+    "vitest.config.ts",
+    "packages/*/test/**/*.ts",
+    "apps/desktop/test/**/*.ts"
+  ]
+}
