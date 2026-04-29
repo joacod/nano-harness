@@ -28,15 +28,27 @@ vi.mock('electron', () => ({
 import { DesktopApprovalCoordinator } from '../../src/main/approval-coordinator'
 import { buildProviderStatus, setupEventForwarding } from '../../src/main/runtime'
 
+type ProviderStatusRuntime = {
+  store: {
+    getProviderCredentialStatus(provider: 'openrouter'): Promise<{ apiKeyPresent: boolean }>
+  }
+}
+
+type EventForwardingRuntime = {
+  eventBus: {
+    subscribe(listener: (event: RunEvent) => void): () => void
+  }
+}
+
 describe('desktop runtime helpers', () => {
   it('returns null provider status when settings are missing', async () => {
     const runtime = {
       store: {
-        getProviderCredentialStatus: vi.fn(),
+        getProviderCredentialStatus: vi.fn(async () => ({ apiKeyPresent: false })),
       },
-    }
+    } satisfies ProviderStatusRuntime
 
-    await expect(buildProviderStatus(runtime as never, null)).resolves.toBeNull()
+    await expect(buildProviderStatus(runtime, null)).resolves.toBeNull()
   })
 
   it('reports readiness issues when the api key is missing', async () => {
@@ -44,9 +56,9 @@ describe('desktop runtime helpers', () => {
       store: {
         getProviderCredentialStatus: vi.fn(async () => ({ apiKeyPresent: false })),
       },
-    }
+    } satisfies ProviderStatusRuntime
 
-    const result = await buildProviderStatus(runtime as never, {
+    const result = await buildProviderStatus(runtime, {
       provider: {
         provider: 'openrouter',
         model: 'x-ai/grok-4.1-fast',
@@ -70,9 +82,9 @@ describe('desktop runtime helpers', () => {
       store: {
         getProviderCredentialStatus: vi.fn(async () => ({ apiKeyPresent: true })),
       },
-    }
+    } satisfies ProviderStatusRuntime
 
-    const result = await buildProviderStatus(runtime as never, {
+    const result = await buildProviderStatus(runtime, {
       provider: {
         provider: 'openrouter',
         model: 'grok-4.1-fast',
@@ -107,9 +119,9 @@ describe('desktop runtime helpers', () => {
           return () => {}
         },
       },
-    }
+    } satisfies EventForwardingRuntime
 
-    setupEventForwarding(runtime as never)
+    setupEventForwarding(runtime)
 
     const event: RunEvent = {
       id: 'event-1',

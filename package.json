@@ -17,7 +17,8 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "typecheck": "tsc -p apps/desktop/e2e/tsconfig.json --noEmit && tsc -p tsconfig.tests.json --noEmit && pnpm -r run typecheck",
-    "lint": "pnpm -r run lint"
+    "lint:tests": "eslint \"packages/*/test/**/*.ts\" \"apps/desktop/test/**/*.ts\" \"apps/desktop/e2e/**/*.ts\"",
+    "lint": "pnpm -r run lint && pnpm lint:tests"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import type { DesktopApi, RunEvent } from '@nano-harness/shared'
+
 const exposeInMainWorld = vi.fn()
 const invoke = vi.fn()
 const on = vi.fn()
@@ -82,8 +84,8 @@ describe('desktop preload bridge', () => {
     const desktop = await loadDesktopApi()
     const listener = vi.fn()
 
-    let wrappedListener: ((event: unknown, payload: unknown) => void) | undefined
-    on.mockImplementation((_channel: string, callback: (event: unknown, payload: unknown) => void) => {
+    let wrappedListener: ((event: unknown, payload: RunEvent) => void) | undefined
+    on.mockImplementation((_channel: string, callback: (event: unknown, payload: RunEvent) => void) => {
       wrappedListener = callback
     })
 
@@ -117,5 +119,5 @@ describe('desktop preload bridge', () => {
 
 async function loadDesktopApi() {
   await import('../../src/preload/index')
-  return exposeInMainWorld.mock.calls[0][1]
+  return exposeInMainWorld.mock.calls[0][1] as DesktopApi
 }

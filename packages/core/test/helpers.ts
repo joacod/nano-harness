@@ -104,7 +104,15 @@ export class FakeStore implements Store {
 
     return {
       conversation: this.conversations.get(conversationId) ?? null,
-      runs: runIds.map((runId) => this.runs.get(runId) as Run),
+      runs: runIds.map((runId) => {
+        const run = this.runs.get(runId)
+
+        if (!run) {
+          throw new Error(`Missing run ${runId}`)
+        }
+
+        return run
+      }),
       messages: this.messages.filter((message) => message.conversationId === conversationId),
       events: this.events.filter((event) => runIds.includes(event.runId)),
       approvalRequests: this.approvalRequests.filter((request) => runIds.includes(request.runId)),

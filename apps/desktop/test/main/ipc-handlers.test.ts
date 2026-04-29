@@ -1,11 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import type { AppSettings, ConversationSnapshot } from '@nano-harness/shared'
+
 const { handlers, handle, openExternal, exportData, importData, buildProviderStatus, encryptApiKey } = vi.hoisted(() => {
-  const handlers = new Map<string, (...args: unknown[]) => Promise<unknown>>()
+  const handlers = new Map<string, (_event: unknown, payload?: unknown) => Promise<unknown>>()
 
   return {
     handlers,
-    handle: vi.fn((channel: string, callback: (...args: unknown[]) => Promise<unknown>) => {
+    handle: vi.fn((channel: string, callback: (_event: unknown, payload?: unknown) => Promise<unknown>) => {
       handlers.set(channel, callback)
     }),
     openExternal: vi.fn(async () => {}),
@@ -63,7 +65,7 @@ describe('setupIpcHandlers', () => {
   })
 
   it('registers the expected desktop bridge handlers', () => {
-    setupIpcHandlers(createRuntime() as never)
+    setupIpcHandlers(createRuntime())
 
     expect(handle).toHaveBeenCalledTimes(Object.keys(desktopBridgeChannels).length - 1)
     expect(handlers.has(desktopBridgeChannels.saveSettings)).toBe(true)
@@ -73,7 +75,7 @@ describe('setupIpcHandlers', () => {
 
   it('validates and saves settings', async () => {
     const runtime = createRuntime()
-    setupIpcHandlers(runtime as never)
+    setupIpcHandlers(runtime)
 
     const result = await invokeHandler(desktopBridgeChannels.saveSettings, {
       provider: { provider: 'openrouter', model: 'x-ai/grok-4.1-fast' },
@@ -92,7 +94,7 @@ describe('setupIpcHandlers', () => {
 
   it('delegates getConversation, startRun, cancelRun, and resolveApproval', async () => {
     const runtime = createRuntime()
-    setupIpcHandlers(runtime as never)
+    setupIpcHandlers(runtime)
 
     await expect(invokeHandler(desktopBridgeChannels.getConversation, { conversationId: 'conversation-1' })).resolves.toEqual({
       conversation: null,
@@ -125,7 +127,7 @@ describe('setupIpcHandlers', () => {
 
   it('encrypts trimmed provider api keys before saving', async () => {
     const runtime = createRuntime()
-    setupIpcHandlers(runtime as never)
+    setupIpcHandlers(runtime)
 
     await invokeHandler(desktopBridgeChannels.saveProviderApiKey, {
       provider: 'openrouter',
@@ -137,7 +139,7 @@ describe('setupIpcHandlers', () => {
   })
 
   it('opens only http and https external urls', async () => {
-    setupIpcHandlers(createRuntime() as never)
+    setupIpcHandlers(createRuntime())
 
     await invokeHandler(desktopBridgeChannels.openExternalUrl, {
       url: 'https://example.com/docs',
@@ -153,7 +155,7 @@ describe('setupIpcHandlers', () => {
 
   it('rejects invalid IPC payloads before delegating', async () => {
     const runtime = createRuntime()
-    setupIpcHandlers(runtime as never)
+    setupIpcHandlers(runtime)
 
     await expect(
       invokeHandler(desktopBridgeChannels.startRun, {
@@ -167,26 +169,35 @@ describe('setupIpcHandlers', () => {
 })
 
 function createRuntime() {
+  const settings: AppSettings = {
+    provider: { provider: 'openrouter', model: 'x-ai/grok-4.1-fast' },
+    workspace: { rootPath: '/workspace', approvalPolicy: 'on-request' },
+  }
+  const snapshot: ConversationSnapshot = {
+    conversation: null,
+    runs: [],
+    messages: [],
+    events: [],
+    approvalRequests: [],
+    approvalResolutions: [],
+  }
+
   return {
     store: {
-      paths: { databaseFilePath: '/tmp/nano-harness.db' },
+      paths: { dataDir: '/tmp', databaseFilePath: '/tmp/nano-harness.db' },
       listConversations: vi.fn(async () => []),
+      listRuns: vi.fn(async () => []),
       getProviderCredentialStatus: vi.fn(async () => ({ apiKeyPresent: true })),
       saveProviderCredential: vi.fn(async () => {}),
       clearProviderCredential: vi.fn(async () => {}),
-      getSettings: vi.fn(async () => ({
-        provider: { provider: 'openrouter', model: 'x-ai/grok-4.1-fast' },
-        workspace: { rootPath: '/workspace', approvalPolicy: 'on-request' },
-      })),
+      getSettings: vi.fn(async () => settings),
       saveSettings: vi.fn(async () => {}),
-      getConversation: vi.fn(async () => ({
-        conversation: null,
-        runs: [],
-        messages: [],
-        events: [],
-        approvalRequests: [],
-        approvalResolutions: [],
-      })),
+      getConversation: vi.fn(async () => snapshot),
+      backupToFile: vi.fn(async () => {}),
+      sanitizeDatabaseFile: vi.fn(async () => {}),
+      validateDatabaseFile: vi.fn(async () => {}),
+      createStagedImportCopy: vi.fn(async () => '/tmp/staged.db'),
+      close: vi.fn(async () => {}),
     },
     runEngine: {
       startRun: vi.fn(async () => ({ runId: 'run-123', cancel: async () => {} })),

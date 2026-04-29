@@ -12,5 +12,21 @@ export default tseslint.config(
     rules: {
       'no-undef': 'off'
     }
+  },
+  {
+    files: ['packages/*/test/**/*.ts', 'apps/desktop/test/**/*.ts', 'apps/desktop/e2e/**/*.ts'],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: "TSAsExpression > TSNeverKeyword",
+          message: 'Do not use `as never` in tests. Narrow the type or introduce a smaller interface instead.',
+        },
+        {
+          selector: "TSAsExpression > TSAnyKeyword",
+          message: 'Do not use `as any` in tests. Prefer precise helper types.',
+        },
+      ],
+    },
   }
 )

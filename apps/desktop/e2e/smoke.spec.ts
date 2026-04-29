@@ -1,5 +1,15 @@
 import { expect, test } from '@playwright/test'
 
+import type {
+  AppSettings,
+  ApprovalRequest,
+  ApprovalResolution,
+  Conversation,
+  Message,
+  ProviderStatus,
+  Run,
+} from '@nano-harness/shared'
+
 type MockEvent = {
   id: string
   runId: string
@@ -9,40 +19,22 @@ type MockEvent = {
 }
 
 type MockSnapshot = {
-  conversation: {
-    id: string
-    title: string
-    createdAt: string
-    updatedAt: string
-  } | null
-  runs: Array<Record<string, unknown>>
-  messages: Array<Record<string, unknown>>
+  conversation: Conversation | null
+  runs: Run[]
+  messages: Message[]
   events: MockEvent[]
-  approvalRequests: Array<Record<string, unknown>>
-  approvalResolutions: Array<Record<string, unknown>>
+  approvalRequests: ApprovalRequest[]
+  approvalResolutions: ApprovalResolution[]
 }
 
 type MockSetup = {
-  conversations: Array<{
-    id: string
-    title: string
-    createdAt: string
-    updatedAt: string
-  }>
+  conversations: Conversation[]
   snapshots: Record<string, MockSnapshot>
 }
 
 type DesktopMockState = {
-  settings: {
-    provider: {
-      provider: string
-      model: string
-    }
-    workspace: {
-      rootPath: string
-      approvalPolicy: string
-    }
-  }
+  settings: AppSettings
+  providerStatus: ProviderStatus
   calls: {
     startRun: Array<{ conversationId: string; prompt: string }>
     resolveApproval: Array<{ runId: string; approvalRequestId: string; decision: 'granted' | 'rejected' }>
@@ -86,7 +78,12 @@ test('starts a run and renders streamed output from live run events', async ({ p
 
   const mockState = await getMockState(page)
   expect(mockState.lastRunId).not.toBeNull()
-  const runId = mockState.lastRunId as string
+
+  if (!mockState.lastRunId) {
+    throw new Error('Expected startRun to produce a run id')
+  }
+
+  const runId = mockState.lastRunId
 
   await emitRunEvent(page, {
     id: 'event-provider-requested',
@@ -218,38 +215,14 @@ test('shows an approval request and lets the user grant it', async ({ page }) =>
 })
 
 async function installDesktopMock(page: import('@playwright/test').Page, setup: MockSetup) {
-  await page.addInitScript((initialSetup: MockSetup) => {
-    const state: {
+  await page.addInitScript((setupJson: string) => {
+    const initialSetup = JSON.parse(setupJson) as MockSetup
+    const state: DesktopMockState & {
       context: {
         platform: string
         version: string
         dataPath: string
       }
-      settings: {
-        provider: {
-          provider: string
-          model: string
-        }
-        workspace: {
-          rootPath: string
-          approvalPolicy: string
-        }
-      }
-      providerStatus: {
-        providerId: string
-        providerLabel: string
-        model: string
-        baseUrl: string
-        apiKeyLabel: string
-        apiKeyPresent: boolean
-        isReady: boolean
-        issues: string[]
-        hints: string[]
-      }
-      conversations: MockSetup['conversations']
-      snapshots: Record<string, MockSnapshot>
-      calls: DesktopMockState['calls']
-      lastRunId: string | null
       runCounter: number
     } = {
       context: {
@@ -318,6 +291,8 @@ async function installDesktopMock(page: import('@playwright/test').Page, setup: 
       emitEvent,
       getState() {
         return structuredClone({
+          settings: state.settings,
+          providerStatus: state.providerStatus,
           calls: state.calls,
           lastRunId: state.lastRunId,
           conversations: state.conversations,
@@ -399,11 +374,11 @@ async function installDesktopMock(page: import('@playwright/test').Page, setup: 
               content: input.prompt,
               createdAt: now,
             },
-          ],
+          ] as Message[],
           events: [],
           approvalRequests: [],
           approvalResolutions: [],
-        }
+        } satisfies MockSnapshot
         state.snapshots[input.conversationId] = snapshot
         ensureConversationListEntry(snapshot)
 
@@ -467,7 +442,7 @@ async function installDesktopMock(page: import('@playwright/test').Page, setup: 
         }
       },
     }
-  }, setup)
+  }, JSON.stringify(setup))
 }
 
 async function getMockState(page: import('@playwright/test').Page) {
@@ -506,6 +481,8 @@ declare global {
     __desktopMock: {
       emitEvent(event: MockEvent): void
       getState(): {
+        settings: DesktopMockState['settings']
+        providerStatus: DesktopMockState['providerStatus']
         calls: DesktopMockState['calls']
         lastRunId: DesktopMockState['lastRunId']
         conversations: DesktopMockState['conversations']

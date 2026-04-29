@@ -151,7 +151,7 @@ describe('BuiltInActionExecutor', () => {
     }
 
     expect(typeof result.output.body).toBe('string')
-    expect((result.output.body as string).length).toBe(12000)
+    expect(result.output.body).toHaveLength(12000)
   })
 
   it('returns failed fetch results with status details', async () => {

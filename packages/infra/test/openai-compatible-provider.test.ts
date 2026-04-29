@@ -4,6 +4,8 @@ import type { ActionDefinition, AppSettings, Message, Run } from '@nano-harness/
 
 import { OpenAICompatibleProvider } from '../src'
 
+type FetchLike = typeof fetch
+
 const run: Run = {
   id: 'run-1',
   conversationId: 'conversation-1',
@@ -85,12 +87,12 @@ describe('OpenAICompatibleProvider', () => {
     let capturedUrl: RequestInfo | URL | undefined
     let capturedInit: RequestInit | undefined
 
-    const fetchMock = vi.fn(async (url: RequestInfo | URL, init?: RequestInit) => {
+    const fetchMock = vi.fn<FetchLike>(async (url, init) => {
       capturedUrl = url
       capturedInit = init
       return createSseResponse(['data: [DONE]\n\n'])
     })
-    const provider = new OpenAICompatibleProvider({ fetch: fetchMock as typeof fetch })
+    const provider = new OpenAICompatibleProvider({ fetch: fetchMock })
 
     await provider.generate({
       run,
@@ -150,14 +152,14 @@ describe('OpenAICompatibleProvider', () => {
     const onDelta = vi.fn()
     const onReasoningDelta = vi.fn()
     const provider = new OpenAICompatibleProvider({
-      fetch: vi.fn(async () =>
+      fetch: vi.fn<FetchLike>(async () =>
         createSseResponse([
           toDataLine({ choices: [{ delta: { content: 'Hello ' } }] }),
           toDataLine({ choices: [{ delta: { reasoning: 'step 1', reasoning_details: [{ type: 'reasoning.summary', summary: 'Thinking' }] } }] }),
           toDataLine({ choices: [{ delta: { content: 'world' } }] }),
           'data: [DONE]\n\n',
         ]),
-      ) as typeof fetch,
+      ),
     })
 
     const result = await provider.generate({
@@ -186,7 +188,7 @@ describe('OpenAICompatibleProvider', () => {
 
   it('reassembles chunked tool call arguments from SSE events', async () => {
     const provider = new OpenAICompatibleProvider({
-      fetch: vi.fn(async () =>
+      fetch: vi.fn<FetchLike>(async () =>
         createSseResponse([
           toDataLine({
             choices: [
@@ -224,7 +226,7 @@ describe('OpenAICompatibleProvider', () => {
           }),
           'data: [DONE]\n\n',
         ]),
-      ) as typeof fetch,
+      ),
     })
 
     const result = await provider.generate({
@@ -247,12 +249,12 @@ describe('OpenAICompatibleProvider', () => {
 
   it('surfaces HTTP error messages from error responses', async () => {
     const provider = new OpenAICompatibleProvider({
-      fetch: vi.fn(async () =>
+      fetch: vi.fn<FetchLike>(async () =>
         new Response(JSON.stringify({ error: { message: 'Rate limit exceeded' } }), {
           status: 429,
           headers: { 'content-type': 'application/json' },
         }),
-      ) as typeof fetch,
+      ),
     })
 
     await expect(
@@ -269,7 +271,7 @@ describe('OpenAICompatibleProvider', () => {
 
   it('surfaces provider chunk errors from the stream', async () => {
     const provider = new OpenAICompatibleProvider({
-      fetch: vi.fn(async () => createSseResponse([toDataLine({ error: { message: 'Provider stream failed' } })])) as typeof fetch,
+      fetch: vi.fn<FetchLike>(async () => createSseResponse([toDataLine({ error: { message: 'Provider stream failed' } })])),
     })
 
     await expect(
@@ -286,7 +288,7 @@ describe('OpenAICompatibleProvider', () => {
 
   it('handles trailing SSE data even without a final done event', async () => {
     const provider = new OpenAICompatibleProvider({
-      fetch: vi.fn(async () => createSseResponse([toDataLine({ choices: [{ delta: { content: 'Tail' } }] }).trimEnd()])) as typeof fetch,
+      fetch: vi.fn<FetchLike>(async () => createSseResponse([toDataLine({ choices: [{ delta: { content: 'Tail' } }] }).trimEnd()])),
     })
 
     const result = await provider.generate({
