@@ -12,12 +12,20 @@
     "dist:win": "pnpm --filter @nano-harness/desktop dist:win",
     "pack:linux": "pnpm --filter @nano-harness/desktop pack:linux",
     "dist:linux": "pnpm --filter @nano-harness/desktop dist:linux",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
     "typecheck": "pnpm -r run typecheck",
     "lint": "pnpm -r run lint"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
+    "@testing-library/react": "16.3.0",
+    "@testing-library/user-event": "14.6.1",
+    "@vitest/coverage-v8": "4.0.8",
+    "jsdom": "27.0.1",
     "typescript": "6.0.3",
-    "typescript-eslint": "8.59.0"
+    "typescript-eslint": "8.59.0",
+    "vitest": "4.0.8"
   }
 }
