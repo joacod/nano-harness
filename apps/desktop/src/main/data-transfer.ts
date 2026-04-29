@@ -2,9 +2,24 @@ import { app, dialog } from 'electron'
 import { copyFile, rm } from 'node:fs/promises'
 import { join } from 'node:path'
 
-import type { DesktopRuntime } from './runtime'
+import type { RunStatus } from '../../../../packages/shared/src'
 
 const ACTIVE_RUN_STATUSES = ['created', 'started', 'waiting_approval'] as const
+
+type DataTransferRuntime = {
+  store: {
+    paths: {
+      dataDir: string
+      databaseFilePath: string
+    }
+    listRuns(statuses?: RunStatus[]): Promise<Array<{ id: string }>>
+    backupToFile(filePath: string): Promise<void>
+    sanitizeDatabaseFile(filePath: string): Promise<void>
+    validateDatabaseFile(filePath: string): Promise<void>
+    createStagedImportCopy(sourceFilePath: string): Promise<string>
+    close(): Promise<void>
+  }
+}
 
 function getBackupFileName(date = new Date()): string {
   return `nano-harness-backup-${date.toISOString().slice(0, 10)}.db`
@@ -14,7 +29,7 @@ function getTimestampedBackupFileName(date = new Date()): string {
   return `nano-harness-safety-backup-${date.toISOString().replaceAll(':', '-').replaceAll('.', '-')}.db`
 }
 
-export async function exportData(runtime: DesktopRuntime) {
+export async function exportData(runtime: DataTransferRuntime) {
   const result = await dialog.showSaveDialog({
     title: 'Export Nano Harness data',
     defaultPath: getBackupFileName(),
@@ -31,7 +46,7 @@ export async function exportData(runtime: DesktopRuntime) {
   return { exportedFilePath: result.filePath }
 }
 
-export async function importData(runtime: DesktopRuntime) {
+export async function importData(runtime: DataTransferRuntime) {
   const activeRuns = await runtime.store.listRuns([...ACTIVE_RUN_STATUSES])
 
   if (activeRuns.length > 0) {

@@ -18,6 +18,34 @@ import type { DesktopRuntime } from './runtime'
 import { buildProviderStatus } from './runtime'
 import { encryptApiKey } from './secure-credentials'
 
+type IpcRuntime = {
+  store: {
+    paths: {
+      dataDir: string
+      databaseFilePath: string
+    }
+    listConversations: DesktopRuntime['store']['listConversations']
+    listRuns: DesktopRuntime['store']['listRuns']
+    getProviderCredentialStatus: DesktopRuntime['store']['getProviderCredentialStatus']
+    saveProviderCredential: DesktopRuntime['store']['saveProviderCredential']
+    clearProviderCredential: DesktopRuntime['store']['clearProviderCredential']
+    getSettings: DesktopRuntime['store']['getSettings']
+    saveSettings: DesktopRuntime['store']['saveSettings']
+    getConversation: DesktopRuntime['store']['getConversation']
+    backupToFile: DesktopRuntime['store']['backupToFile']
+    sanitizeDatabaseFile: DesktopRuntime['store']['sanitizeDatabaseFile']
+    validateDatabaseFile: DesktopRuntime['store']['validateDatabaseFile']
+    createStagedImportCopy: DesktopRuntime['store']['createStagedImportCopy']
+    close: DesktopRuntime['store']['close']
+  }
+  runEngine: {
+    startRun: DesktopRuntime['runEngine']['startRun']
+    resumeRun: DesktopRuntime['runEngine']['resumeRun']
+    cancelRun: DesktopRuntime['runEngine']['cancelRun']
+    resolveApproval: DesktopRuntime['runEngine']['resolveApproval']
+  }
+}
+
 function parseExternalUrl(payload: unknown): string {
   const { url } = openExternalUrlInputSchema.parse(payload)
   const parsedUrl = new URL(url)
@@ -29,7 +57,7 @@ function parseExternalUrl(payload: unknown): string {
   return parsedUrl.toString()
 }
 
-export function setupIpcHandlers(runtime: DesktopRuntime): void {
+export function setupIpcHandlers(runtime: IpcRuntime): void {
   ipcMain.handle(desktopBridgeChannels.getContext, async () => {
     return desktopContextSchema.parse({
       platform: process.platform,

@@ -12,12 +12,24 @@
     "dist:win": "pnpm --filter @nano-harness/desktop dist:win",
     "pack:linux": "pnpm --filter @nano-harness/desktop pack:linux",
     "dist:linux": "pnpm --filter @nano-harness/desktop dist:linux",
-    "typecheck": "pnpm -r run typecheck",
-    "lint": "pnpm -r run lint"
+    "test": "vitest run",
+    "test:e2e": "playwright test",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "typecheck": "tsc -p apps/desktop/e2e/tsconfig.json --noEmit && tsc -p tsconfig.tests.json --noEmit && pnpm -r run typecheck",
+    "lint:tests": "eslint \"packages/*/test/**/*.ts\" \"apps/desktop/test/**/*.ts\" \"apps/desktop/e2e/**/*.ts\"",
+    "lint": "pnpm -r run lint && pnpm lint:tests"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
+    "@playwright/test": "1.59.1",
+    "@testing-library/react": "16.3.2",
+    "@testing-library/user-event": "14.6.1",
+    "@types/node": "25.6.0",
+    "@vitest/coverage-v8": "4.1.5",
+    "jsdom": "29.1.0",
     "typescript": "6.0.3",
-    "typescript-eslint": "8.59.0"
+    "typescript-eslint": "8.59.1",
+    "vitest": "4.1.5"
   }
 }

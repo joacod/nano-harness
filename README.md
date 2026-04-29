@@ -38,11 +38,24 @@ Build everything:
 pnpm build
 ```
 
-Run checks:
+## Testing
 
 ```bash
-pnpm typecheck
-pnpm lint
+pnpm test         # vitest unit + integration tests
+pnpm test:e2e     # playwright smoke tests
+pnpm typecheck    # workspace typecheck
+pnpm lint         # lint check
+```
+
+- `pnpm test` covers shared contracts, core orchestration, infra providers/persistence/actions, desktop main/preload boundaries, and renderer utilities.
+- `pnpm test:e2e` covers renderer boot, starting a run with streamed output, and approval flow interaction using a mocked desktop bridge.
+
+Note: run `pnpm exec playwright install chromium` on first-time setup or after Playwright upgrades.
+
+Recommended verification flow after changes:
+
+```bash
+pnpm test && pnpm test:e2e && pnpm typecheck && pnpm lint && pnpm build
 ```
 
 ## Workspace

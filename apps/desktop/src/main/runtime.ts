@@ -16,6 +16,14 @@ export type DesktopRuntime = {
   approvalCoordinator: DesktopApprovalCoordinator
 }
 
+type ProviderStatusStore = Pick<DesktopRuntime['store'], 'getProviderCredentialStatus'>
+
+type EventForwardingRuntime = {
+  eventBus: {
+    subscribe(listener: (event: Parameters<InMemoryEventBus['publish']>[0]) => void): () => void
+  }
+}
+
 function buildDefaultSettings(): AppSettings {
   const provider = getProviderDefinition('openrouter')
 
@@ -31,7 +39,7 @@ function buildDefaultSettings(): AppSettings {
   }
 }
 
-export async function buildProviderStatus(runtime: DesktopRuntime, settings: AppSettings | null) {
+export async function buildProviderStatus(runtime: { store: ProviderStatusStore }, settings: AppSettings | null) {
   if (!settings) {
     return null
   }
@@ -117,7 +125,7 @@ export async function recoverInterruptedRuns(runtime: DesktopRuntime): Promise<v
   }
 }
 
-export function setupEventForwarding(runtime: DesktopRuntime): void {
+export function setupEventForwarding(runtime: EventForwardingRuntime): void {
   runtime.eventBus.subscribe((event) => {
     const parsedEvent = runEventSchema.parse(event)
 
