@@ -5,4 +5,6 @@ out/
 apps/desktop/build/
 *.log
 coverage/
+playwright-report/
+test-results/
 *.tsbuildinfo
