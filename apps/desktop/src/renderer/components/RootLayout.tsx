@@ -31,39 +31,40 @@ export function RootLayout() {
 
       {!isSidebarCollapsed ? (
         <aside className="sidebar" aria-label="Workspace navigation">
-        <div className="sidebar-section sidebar-brand-section">
-          <div className="sidebar-collapsible-content">
+          <div className="sidebar-section sidebar-brand-section">
+            <div className="sidebar-collapsible-content">
               <p className="eyebrow">nano-harness</p>
               <h1 className="sidebar-title">Agent deck</h1>
             </div>
           </div>
 
-        <ConversationNav />
+          <ConversationNav />
 
-        <div className="sidebar-section sidebar-footer sidebar-collapsible-content">
-          <div className="sidebar-footer-actions">
+          {showTechnicalInfo ? (
+            <div className="sidebar-telemetry-details">
+              <RuntimeSummary context={context} />
+              <RecentSignals recentEvents={recentEvents} />
+            </div>
+          ) : null}
+
+          <div className="sidebar-section sidebar-footer sidebar-collapsible-content">
             <Link to="/settings" className="ghost-link" activeProps={{ className: 'ghost-link ghost-link-active' }}>
               Settings
             </Link>
-            <Switch
-              type="button"
-              checked={showTechnicalInfo}
-              onClick={toggleTechnicalInfo}
-            >
-              Telemetry
-            </Switch>
+            <div className="sidebar-footer-status-row">
+              <Switch
+                type="button"
+                className="sidebar-compact-switch"
+                checked={showTechnicalInfo}
+                onClick={toggleTechnicalInfo}
+              >
+                Telemetry
+              </Switch>
+              <RuntimePill className="sidebar-provider-pill" tone={providerStatus?.isReady ? 'ready' : 'warning'} aria-live="polite">
+                Provider
+              </RuntimePill>
+            </div>
           </div>
-          <RuntimePill tone={providerStatus?.isReady ? 'ready' : 'warning'} aria-live="polite">
-            {providerStatus?.isReady ? 'Provider online' : 'Provider setup required'}
-          </RuntimePill>
-        </div>
-
-        {showTechnicalInfo ? (
-          <>
-            <RuntimeSummary context={context} />
-            <RecentSignals recentEvents={recentEvents} />
-          </>
-        ) : null}
         </aside>
       ) : null}
 

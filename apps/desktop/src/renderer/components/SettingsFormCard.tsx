@@ -5,7 +5,9 @@ import { ApiKeySettingsForm } from './settings/ApiKeySettingsForm'
 import { DataBackupPanel } from './settings/DataBackupPanel'
 import { ProviderSettingsForm } from './settings/ProviderSettingsForm'
 import { ProviderStatusPanel } from './settings/ProviderStatusPanel'
-import { Card, FeedbackText } from './ui'
+import { Card, FeedbackText, Tabs } from './ui'
+
+type SettingsTab = 'providers' | 'data'
 
 export function SettingsFormCard({
   initialSettings,
@@ -47,44 +49,66 @@ export function SettingsFormCard({
   onImportData: () => Promise<void>
 }) {
   const [selectedProvider, setSelectedProvider] = useState(initialSettings.provider.provider)
+  const [selectedTab, setSelectedTab] = useState<SettingsTab>('providers')
 
   return (
     <Card className="settings-card">
       <p className="eyebrow">Settings</p>
-      <h2>Provider configuration</h2>
-        <FeedbackText>
-          Choose a hosted or local provider and model. API keys are stored separately using this device's secure storage.
-        </FeedbackText>
+      <h2>Configuration</h2>
 
-      {providerStatus ? <ProviderStatusPanel providerStatus={providerStatus} /> : null}
+      <Tabs
+        ariaLabel="Settings sections"
+        value={selectedTab}
+        onValueChange={setSelectedTab}
+        tabs={[
+          {
+            value: 'providers',
+            label: 'Providers',
+            panel: (
+              <div className="settings-tab-stack">
+                <FeedbackText>
+                  Choose a hosted or local provider and model. API keys are stored separately using this device's secure storage.
+                </FeedbackText>
 
-      <ProviderSettingsForm
-        initialSettings={initialSettings}
-        isSaving={isSaving}
-        saveError={saveError}
-        onProviderChange={setSelectedProvider}
-        onSubmit={onSubmit}
-      />
+                {providerStatus ? <ProviderStatusPanel providerStatus={providerStatus} /> : null}
 
-      <ApiKeySettingsForm
-        apiKeyError={apiKeyError}
-        isClearingApiKey={isClearingApiKey}
-        isSavingApiKey={isSavingApiKey}
-        provider={selectedProvider}
-        providerStatus={providerStatus}
-        onClearApiKey={onClearApiKey}
-        onSaveApiKey={onSaveApiKey}
-      />
+                <ProviderSettingsForm
+                  initialSettings={initialSettings}
+                  isSaving={isSaving}
+                  saveError={saveError}
+                  onProviderChange={setSelectedProvider}
+                  onSubmit={onSubmit}
+                />
 
-      <DataBackupPanel
-        dataPath={dataPath}
-        dataError={dataError}
-        exportDataResult={exportDataResult}
-        importDataResult={importDataResult}
-        isExportingData={isExportingData}
-        isImportingData={isImportingData}
-        onExportData={onExportData}
-        onImportData={onImportData}
+                <ApiKeySettingsForm
+                  apiKeyError={apiKeyError}
+                  isClearingApiKey={isClearingApiKey}
+                  isSavingApiKey={isSavingApiKey}
+                  provider={selectedProvider}
+                  providerStatus={providerStatus}
+                  onClearApiKey={onClearApiKey}
+                  onSaveApiKey={onSaveApiKey}
+                />
+              </div>
+            ),
+          },
+          {
+            value: 'data',
+            label: 'Data',
+            panel: (
+              <DataBackupPanel
+                dataPath={dataPath}
+                dataError={dataError}
+                exportDataResult={exportDataResult}
+                importDataResult={importDataResult}
+                isExportingData={isExportingData}
+                isImportingData={isImportingData}
+                onExportData={onExportData}
+                onImportData={onImportData}
+              />
+            ),
+          },
+        ]}
       />
     </Card>
   )
