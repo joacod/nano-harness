@@ -29,18 +29,18 @@ describe('ProviderSettingsForm', () => {
 
     const modelInput = getRequiredElement<HTMLInputElement>(container, 'input[name="model"]')
     const baseUrlInput = getRequiredElement<HTMLInputElement>(container, 'input[name="provider-base-url"]')
-    const reasoningSelect = getRequiredElement<HTMLSelectElement>(container, 'select[name="provider-reasoning"]')
+    const reasoningSelect = getRequiredElement<HTMLButtonElement>(container, '[data-select-trigger="provider-reasoning"]')
     const workspaceInput = getRequiredElement<HTMLInputElement>(container, 'input[name="workspace-root"]')
-    const approvalPolicySelect = getRequiredElement<HTMLSelectElement>(container, 'select[name="approval-policy"]')
+    const approvalPolicySelect = getRequiredElement<HTMLButtonElement>(container, '[data-select-trigger="approval-policy"]')
 
     await user.clear(modelInput)
     await user.type(modelInput, '  tuned/model  ')
     await user.clear(baseUrlInput)
     await user.type(baseUrlInput, '  http://localhost:9999/v1  ')
-    await user.selectOptions(reasoningSelect, 'high')
+    await selectCustomOption(user, reasoningSelect, 'high effort')
     await user.clear(workspaceInput)
     await user.type(workspaceInput, '  /tmp/nano-harness  ')
-    await user.selectOptions(approvalPolicySelect, 'never')
+    await selectCustomOption(user, approvalPolicySelect, 'never')
     await user.click(screen.getByRole('button', { name: 'Save settings' }))
 
     await waitFor(() => {
@@ -100,11 +100,11 @@ describe('ProviderSettingsForm', () => {
       />,
     )
 
-    const providerSelect = getRequiredElement<HTMLSelectElement>(container, 'select[name="provider"]')
+    const providerSelect = getRequiredElement<HTMLButtonElement>(container, '[data-select-trigger="provider"]')
     const modelInput = getRequiredElement<HTMLInputElement>(container, 'input[name="model"]')
     const baseUrlInput = getRequiredElement<HTMLInputElement>(container, 'input[name="provider-base-url"]')
 
-    await user.selectOptions(providerSelect, 'llama-cpp')
+    await selectCustomOption(user, providerSelect, 'llama.cpp')
 
     expect(onProviderChange).toHaveBeenCalledWith('llama-cpp')
     expect(modelInput.value).toBe('local-model')
@@ -140,4 +140,9 @@ function getRequiredElement<T extends Element>(container: HTMLElement, selector:
   }
 
   return element
+}
+
+async function selectCustomOption(user: ReturnType<typeof userEvent.setup>, trigger: HTMLButtonElement, optionName: string) {
+  await user.click(trigger)
+  await user.click(screen.getByRole('option', { name: optionName }))
 }

@@ -256,6 +256,8 @@ a {
 .switch-button,
 .primary-button,
 .run-card,
+.custom-select-trigger,
+.custom-select-option,
 .text-input {
   transition:
     background-color 140ms ease,
@@ -272,6 +274,8 @@ a {
 .switch-button:focus-visible,
 .primary-button:focus-visible,
 .run-card:focus-visible,
+.custom-select-trigger:focus-visible,
+.custom-select-option:focus-visible,
 .text-input:focus-visible {
   outline: 2px solid rgba(67, 255, 157, 0.88);
   outline-offset: 3px;
@@ -949,9 +953,87 @@ a {
   background: rgba(3, 17, 12, 0.94);
 }
 
-select.text-input {
-  background-color: rgba(1, 9, 7, 0.96);
+.custom-select {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+}
+
+.custom-select-trigger {
+  display: flex;
+  width: 100%;
+  min-height: 42px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--input);
+  border-radius: 2px;
   color: var(--foreground);
+  background: linear-gradient(135deg, rgba(1, 9, 7, 0.96), rgba(8, 28, 22, 0.92));
+  box-shadow: inset 0 0 26px rgba(67, 255, 157, 0.04), 0 0 0 1px rgba(67, 255, 157, 0.04);
+}
+
+.custom-select-trigger:hover,
+.custom-select-trigger[aria-expanded='true'] {
+  border-color: rgba(67, 255, 157, 0.58);
+  background: linear-gradient(135deg, rgba(3, 17, 12, 0.98), rgba(9, 43, 31, 0.94));
+}
+
+.custom-select-value {
+  min-width: 0;
+  overflow: hidden;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.custom-select-chevron {
+  width: 8px;
+  height: 8px;
+  flex: 0 0 auto;
+  border-right: 1px solid rgba(198, 255, 240, 0.82);
+  border-bottom: 1px solid rgba(198, 255, 240, 0.82);
+  transform: translateY(-2px) rotate(45deg);
+}
+
+.custom-select-options {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  display: grid;
+  gap: 4px;
+  max-height: 240px;
+  overflow: auto;
+  padding: 6px;
+  border: 1px solid rgba(67, 255, 157, 0.28);
+  border-radius: 4px;
+  background: rgba(1, 9, 7, 0.98);
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.42), 0 0 28px rgba(67, 255, 157, 0.12);
+}
+
+.custom-select-option {
+  width: 100%;
+  min-height: 36px;
+  padding: 8px 10px;
+  border: 1px solid transparent;
+  border-radius: 2px;
+  color: rgba(224, 255, 246, 0.88);
+  background: transparent;
+  text-align: left;
+}
+
+.custom-select-option:hover,
+.custom-select-option-active {
+  border-color: rgba(67, 255, 157, 0.34);
+  color: #ffffff;
+  background: rgba(67, 255, 157, 0.1);
+}
+
+.custom-select-option-active {
+  box-shadow: inset 2px 0 0 rgba(67, 255, 157, 0.8);
 }
 
 .composer-input {
