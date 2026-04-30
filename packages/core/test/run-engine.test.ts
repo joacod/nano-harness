@@ -120,7 +120,7 @@ describe('CoreRunEngine', () => {
       ...testSettings,
       provider: {
         provider: 'openai',
-        model: 'gpt-5.2',
+        model: 'gpt-5.4-mini',
         baseUrl: 'https://chatgpt.com/backend-api/codex',
       },
     }

@@ -71,7 +71,7 @@ function createProviderStatus(oauth: { present: boolean; accountId?: string }): 
   return {
     providerId: 'chatgpt-subscription',
     providerLabel: 'OpenAI',
-    model: 'gpt-5.2',
+    model: 'gpt-5.4-mini',
     baseUrl: 'https://chatgpt.com/backend-api/codex',
     apiKeyLabel: 'Optional for this local provider',
     apiKeyPresent: false,

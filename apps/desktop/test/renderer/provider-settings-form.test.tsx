@@ -128,7 +128,7 @@ describe('ProviderSettingsForm', () => {
     await selectCustomOption(user, providerSelect, 'OpenAI')
 
     expect(onProviderChange).toHaveBeenCalledWith('openai')
-    expect(modelInput.value).toBe('gpt-5.2')
+    expect(modelInput.value).toBe('gpt-5.4-mini')
     expect(baseUrlInput.value).toBe('https://chatgpt.com/backend-api/codex')
     expect(baseUrlInput.readOnly).toBe(true)
     expect(screen.getByText('Managed by the ChatGPT subscription provider.')).toBeTruthy()
@@ -139,7 +139,7 @@ describe('ProviderSettingsForm', () => {
       expect(onSubmit).toHaveBeenCalledWith({
         provider: {
           provider: 'openai',
-          model: 'gpt-5.2',
+          model: 'gpt-5.4-mini',
           baseUrl: 'https://chatgpt.com/backend-api/codex',
           reasoning: { mode: 'auto' },
         },

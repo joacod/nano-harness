@@ -43,7 +43,7 @@ describe('shared contracts', () => {
       label: 'OpenAI',
       adapterId: 'chatgpt-subscription',
       baseUrl: 'https://chatgpt.com/backend-api/codex',
-      defaultModel: 'gpt-5.2',
+      defaultModel: 'gpt-5.4-mini',
       requiresApiKey: false,
       authMethods: ['oauth'],
       defaultAuthMethod: 'oauth',
@@ -56,7 +56,7 @@ describe('shared contracts', () => {
         expect.objectContaining({
           key: 'openai',
           label: 'OpenAI',
-          defaultModel: 'gpt-5.2',
+          defaultModel: 'gpt-5.4-mini',
         }),
       ]),
     )

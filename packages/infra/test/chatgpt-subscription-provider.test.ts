@@ -16,7 +16,7 @@ const run: Run = {
 const settings: AppSettings = {
   provider: {
     provider: 'openai',
-    model: 'gpt-5.2',
+    model: 'gpt-5.4-mini',
     reasoning: {
       mode: 'effort',
       effort: 'medium',
@@ -121,7 +121,7 @@ describe('ChatGptSubscriptionProvider', () => {
 
     const body = JSON.parse(String(capturedInit?.body)) as Record<string, unknown>
     expect(body).toMatchObject({
-      model: 'gpt-5.2',
+      model: 'gpt-5.4-mini',
       instructions: expect.stringContaining('Nano Harness'),
       store: false,
       stream: true,
