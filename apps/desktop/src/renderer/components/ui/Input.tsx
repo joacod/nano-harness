@@ -1,6 +1,7 @@
 import {
   Children,
   isValidElement,
+  useEffect,
   useId,
   useRef,
   useState,
@@ -9,6 +10,7 @@ import {
   type ReactNode,
   type TextareaHTMLAttributes,
 } from 'react'
+import { createPortal } from 'react-dom'
 
 import { cn } from './classnames'
 
@@ -55,19 +57,45 @@ export function Select({ name, value, children, className, onChange }: SelectPro
   const rootRef = useRef<HTMLDivElement>(null)
   const [isOpen, setIsOpen] = useState(false)
   const [opensUp, setOpensUp] = useState(false)
+  const [menuPosition, setMenuPosition] = useState<{ left: number; top?: number; bottom?: number; width: number } | null>(null)
   const options = getSelectOptions(children)
   const selectedOption = options.find((option) => option.value === value) ?? options[0]
   const selectedIndex = Math.max(0, options.findIndex((option) => option.value === selectedOption?.value))
 
+  useEffect(() => {
+    if (!isOpen) {
+      return undefined
+    }
+
+    function closeSelect() {
+      setIsOpen(false)
+    }
+
+    window.addEventListener('resize', closeSelect)
+    window.addEventListener('scroll', closeSelect, true)
+
+    return () => {
+      window.removeEventListener('resize', closeSelect)
+      window.removeEventListener('scroll', closeSelect, true)
+    }
+  }, [isOpen])
+
   function openSelect() {
-    const rect = rootRef.current?.getBoundingClientRect()
+    const root = rootRef.current
+    const rect = root?.getBoundingClientRect()
 
     if (rect) {
       const menuHeight = Math.min(240, options.length * 42 + 12)
       const spaceBelow = window.innerHeight - rect.bottom
       const spaceAbove = rect.top
+      const nextOpensUp = spaceBelow < menuHeight && spaceAbove > spaceBelow
 
-      setOpensUp(spaceBelow < menuHeight && spaceAbove > spaceBelow)
+      setOpensUp(nextOpensUp)
+      setMenuPosition({
+        left: rect.left,
+        width: rect.width,
+        ...(nextOpensUp ? { bottom: window.innerHeight - rect.top + 6 } : { top: rect.bottom + 6 }),
+      })
     }
 
     setIsOpen(true)
@@ -90,7 +118,7 @@ export function Select({ name, value, children, className, onChange }: SelectPro
   return (
     <div
       ref={rootRef}
-      className={cn('custom-select', opensUp && 'custom-select-open-up', className)}
+      className={cn('custom-select', className)}
       onBlur={(event) => {
         if (!rootRef.current?.contains(event.relatedTarget)) {
           setIsOpen(false)
@@ -142,8 +170,13 @@ export function Select({ name, value, children, className, onChange }: SelectPro
         <span className="custom-select-value">{selectedOption?.label ?? 'Select'}</span>
         <span className="custom-select-chevron" aria-hidden="true" />
       </button>
-      {isOpen ? (
-        <div id={`${id}-listbox`} className="custom-select-options" role="listbox">
+      {isOpen && menuPosition ? createPortal(
+        <div
+          id={`${id}-listbox`}
+          className="custom-select-options"
+          role="listbox"
+          style={menuPosition}
+        >
           {options.map((option) => (
             <button
               key={option.value}
@@ -157,7 +190,8 @@ export function Select({ name, value, children, className, onChange }: SelectPro
               {option.label}
             </button>
           ))}
-        </div>
+        </div>,
+        document.body,
       ) : null}
     </div>
   )

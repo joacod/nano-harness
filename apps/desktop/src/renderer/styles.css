@@ -1217,11 +1217,8 @@ a {
 }
 
 .custom-select-options {
-  position: absolute;
-  z-index: 20;
-  top: calc(100% + 6px);
-  left: 0;
-  right: 0;
+  position: fixed;
+  z-index: 100;
   display: grid;
   gap: 4px;
   max-height: 240px;
@@ -1231,11 +1228,6 @@ a {
   border-radius: 4px;
   background: rgba(1, 9, 7, 0.98);
   box-shadow: 0 18px 42px rgba(0, 0, 0, 0.42), 0 0 28px rgba(67, 255, 157, 0.12);
-}
-
-.custom-select-open-up .custom-select-options {
-  top: auto;
-  bottom: calc(100% + 6px);
 }
 
 .custom-select-option {
