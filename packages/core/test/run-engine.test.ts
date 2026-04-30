@@ -59,8 +59,8 @@ describe('CoreRunEngine', () => {
       store,
       provider: new FakeProvider([{ content: 'unused' }]),
       providerCredentialResolver: {
-        async getProviderApiKey() {
-          return null
+        async getProviderAuth() {
+          return { authMethod: 'none' }
         },
       },
       actionExecutor: new FakeActionExecutor([], async (input) => createActionResult({ actionCallId: input.call.id })),
@@ -95,8 +95,8 @@ describe('CoreRunEngine', () => {
       store,
       provider,
       providerCredentialResolver: {
-        async getProviderApiKey() {
-          return null
+        async getProviderAuth() {
+          return { authMethod: 'none' }
         },
       },
       actionExecutor: new FakeActionExecutor([], async (input) => createActionResult({ actionCallId: input.call.id })),
@@ -110,6 +110,7 @@ describe('CoreRunEngine', () => {
     await waitForCondition(() => store.runs.get(handle.runId)?.status === 'completed')
 
     expect(provider.calls).toHaveLength(1)
+    expect(provider.calls[0].providerAuth).toEqual({ authMethod: 'none' })
     expect(store.messages[1]).toMatchObject({ content: 'Local response.' })
   })
 

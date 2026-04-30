@@ -293,7 +293,7 @@ export class OpenAICompatibleProvider implements Provider {
   async generate(input: ProviderGenerateInput): Promise<ProviderGenerateResult> {
     const providerDefinition = getProviderDefinition(input.settings.provider.provider)
     const baseUrl = input.settings.provider.baseUrl?.trim() || providerDefinition.baseUrl
-    const apiKey = input.providerApiKey?.trim() ?? ''
+    const apiKey = input.providerAuth.authMethod === 'api-key' ? input.providerAuth.apiKey.trim() : ''
 
     if (providerDefinition.requiresApiKey && !apiKey) {
       throw new Error(`Missing API key for ${providerDefinition.label}`)

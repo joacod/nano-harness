@@ -60,12 +60,26 @@ describe('SqliteStore', () => {
       await store.saveSettings(settings)
       expect(await store.getSettings()).toEqual(settings)
 
-      expect(await store.getProviderCredentialStatus('openrouter')).toEqual({ apiKeyPresent: false })
-      await store.saveProviderCredential('openrouter', 'encrypted-key')
-      expect(await store.getProviderCredentialStatus('openrouter')).toEqual({ apiKeyPresent: true })
-      expect(await store.getEncryptedProviderCredential('openrouter')).toBe('encrypted-key')
-      await store.clearProviderCredential('openrouter')
-      expect(await store.getEncryptedProviderCredential('openrouter')).toBeNull()
+      expect(await store.getProviderCredentialStatus('openrouter')).toMatchObject({
+        apiKeyPresent: false,
+        oauthPresent: false,
+        authMethods: [],
+      })
+      await store.saveProviderCredentialPayload('openrouter', 'api-key', 'encrypted-key')
+      await store.saveProviderCredentialPayload('openrouter', 'oauth', 'encrypted-oauth')
+      expect(await store.getProviderCredentialStatus('openrouter')).toMatchObject({
+        apiKeyPresent: true,
+        oauthPresent: true,
+        authMethods: expect.arrayContaining([
+          { authMethod: 'api-key', present: true },
+          { authMethod: 'oauth', present: true },
+        ]),
+      })
+      expect(await store.getEncryptedProviderCredentialPayload('openrouter', 'api-key')).toBe('encrypted-key')
+      expect(await store.getEncryptedProviderCredentialPayload('openrouter', 'oauth')).toBe('encrypted-oauth')
+      await store.clearProviderCredential('openrouter', 'api-key')
+      expect(await store.getEncryptedProviderCredentialPayload('openrouter', 'api-key')).toBeNull()
+      expect(await store.getEncryptedProviderCredentialPayload('openrouter', 'oauth')).toBe('encrypted-oauth')
 
       await store.saveConversation({
         id: 'conversation-1',

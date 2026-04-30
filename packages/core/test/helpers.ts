@@ -294,8 +294,8 @@ export class ManualApprovalCoordinator implements ApprovalCoordinator {
 }
 
 export const defaultCredentialResolver: ProviderCredentialResolver = {
-  async getProviderApiKey() {
-    return 'test-api-key'
+  async getProviderAuth() {
+    return { authMethod: 'api-key', apiKey: 'test-api-key' }
   },
 }
 

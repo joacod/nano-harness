@@ -1,20 +1,20 @@
 import { safeStorage } from 'electron'
 import { Buffer } from 'node:buffer'
 
-const SAFE_STORAGE_PREFIX = 'safe-storage:v1:'
+const SAFE_STORAGE_JSON_PREFIX = 'safe-storage-json:v1:'
 
-export function encryptApiKey(apiKey: string): string {
+export function encryptCredentialPayload(payload: unknown): string {
   if (!safeStorage.isEncryptionAvailable()) {
-    throw new Error('Secure API key storage is not available on this system.')
+    throw new Error('Secure credential storage is not available on this system.')
   }
 
-  return `${SAFE_STORAGE_PREFIX}${safeStorage.encryptString(apiKey).toString('base64')}`
+  return `${SAFE_STORAGE_JSON_PREFIX}${safeStorage.encryptString(JSON.stringify(payload)).toString('base64')}`
 }
 
-export function decryptApiKey(encryptedApiKey: string): string {
-  if (!encryptedApiKey.startsWith(SAFE_STORAGE_PREFIX)) {
-    throw new Error('Stored API key uses an unsupported secure storage format.')
+export function decryptCredentialPayload(encryptedPayload: string): unknown {
+  if (!encryptedPayload.startsWith(SAFE_STORAGE_JSON_PREFIX)) {
+    throw new Error('Stored credential uses an unsupported secure storage format.')
   }
 
-  return safeStorage.decryptString(Buffer.from(encryptedApiKey.slice(SAFE_STORAGE_PREFIX.length), 'base64'))
+  return JSON.parse(safeStorage.decryptString(Buffer.from(encryptedPayload.slice(SAFE_STORAGE_JSON_PREFIX.length), 'base64')))
 }

@@ -11,12 +11,14 @@ import {
   conversationSchema,
   messageSchema,
   providerKeySchema,
+  providerAuthMethodSchema,
   runStatusSchema,
+  type ProviderAuthMethod,
   type ProviderKey,
   runEventSchema,
   runSchema,
 } from '@nano-harness/shared'
-import { asc, eq, inArray } from 'drizzle-orm'
+import { and, asc, eq, inArray } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/libsql'
 
 import {
@@ -274,51 +276,82 @@ export class SqliteStore implements Store {
       })
   }
 
-  async getProviderCredentialStatus(provider: ProviderKey): Promise<{ apiKeyPresent: boolean }> {
+  async getProviderCredentialStatus(provider: ProviderKey): Promise<{
+    apiKeyPresent: boolean
+    oauthPresent?: boolean
+    authMethods?: Array<{ authMethod: ProviderAuthMethod; present: boolean }>
+  }> {
     const parsedProvider = providerKeySchema.parse(provider)
-    const [credentialRow] = await this.db
-      .select({ provider: providerCredentialsTable.provider })
+    const credentialRows = await this.db
+      .select({ authMethod: providerCredentialsTable.authMethod })
       .from(providerCredentialsTable)
       .where(eq(providerCredentialsTable.provider, parsedProvider))
+    const authMethods = credentialRows.map((row) => ({
+      authMethod: providerAuthMethodSchema.parse(row.authMethod),
+      present: true,
+    }))
 
     return {
-      apiKeyPresent: Boolean(credentialRow),
+      apiKeyPresent: authMethods.some((credential) => credential.authMethod === 'api-key'),
+      oauthPresent: authMethods.some((credential) => credential.authMethod === 'oauth'),
+      authMethods,
     }
   }
 
-  async saveProviderCredential(provider: ProviderKey, encryptedApiKey: string): Promise<void> {
+  async saveProviderCredentialPayload(
+    provider: ProviderKey,
+    authMethod: ProviderAuthMethod,
+    encryptedPayload: string,
+  ): Promise<void> {
     const parsedProvider = providerKeySchema.parse(provider)
+    const parsedAuthMethod = providerAuthMethodSchema.parse(authMethod)
     const updatedAt = new Date().toISOString()
 
     await this.db
       .insert(providerCredentialsTable)
       .values({
         provider: parsedProvider,
-        encryptedApiKey,
+        authMethod: parsedAuthMethod,
+        encryptedPayload,
         updatedAt,
       })
       .onConflictDoUpdate({
-        target: providerCredentialsTable.provider,
+        target: [providerCredentialsTable.provider, providerCredentialsTable.authMethod],
         set: {
-          encryptedApiKey,
+          encryptedPayload,
           updatedAt,
         },
       })
   }
 
-  async clearProviderCredential(provider: ProviderKey): Promise<void> {
+  async clearProviderCredential(provider: ProviderKey, authMethod: ProviderAuthMethod): Promise<void> {
     const parsedProvider = providerKeySchema.parse(provider)
-    await this.db.delete(providerCredentialsTable).where(eq(providerCredentialsTable.provider, parsedProvider))
+    const parsedAuthMethod = providerAuthMethodSchema.parse(authMethod)
+    await this.db.delete(providerCredentialsTable).where(
+      and(
+        eq(providerCredentialsTable.provider, parsedProvider),
+        eq(providerCredentialsTable.authMethod, parsedAuthMethod),
+      ),
+    )
   }
 
-  async getEncryptedProviderCredential(provider: ProviderKey): Promise<string | null> {
+  async getEncryptedProviderCredentialPayload(
+    provider: ProviderKey,
+    authMethod: ProviderAuthMethod,
+  ): Promise<string | null> {
     const parsedProvider = providerKeySchema.parse(provider)
+    const parsedAuthMethod = providerAuthMethodSchema.parse(authMethod)
     const [credentialRow] = await this.db
-      .select({ encryptedApiKey: providerCredentialsTable.encryptedApiKey })
+      .select({ encryptedPayload: providerCredentialsTable.encryptedPayload })
       .from(providerCredentialsTable)
-      .where(eq(providerCredentialsTable.provider, parsedProvider))
+      .where(
+        and(
+          eq(providerCredentialsTable.provider, parsedProvider),
+          eq(providerCredentialsTable.authMethod, parsedAuthMethod),
+        ),
+      )
 
-    return credentialRow?.encryptedApiKey ?? null
+    return credentialRow?.encryptedPayload ?? null
   }
 
   async backupToFile(filePath: string): Promise<void> {

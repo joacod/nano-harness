@@ -5,9 +5,9 @@ import { join } from 'node:path'
 import type { ProviderCredentialResolver } from '../../../../packages/core/src'
 import { CoreRunEngine, InMemoryEventBus, StaticPolicy } from '../../../../packages/core/src'
 import { BuiltInActionExecutor, OpenAICompatibleProvider, createSqliteStore } from '../../../../packages/infra/src'
-import { desktopBridgeChannels, getProviderDefinition, providerStatusSchema, runEventSchema, type AppSettings } from '../../../../packages/shared/src'
+import { desktopBridgeChannels, getProviderDefinition, providerAuthSchema, providerStatusSchema, runEventSchema, storedProviderCredentialSchema, type AppSettings, type ProviderAuthMethod } from '../../../../packages/shared/src'
 import { DesktopApprovalCoordinator } from './approval-coordinator'
-import { decryptApiKey } from './secure-credentials'
+import { decryptCredentialPayload } from './secure-credentials'
 
 export type DesktopRuntime = {
   store: Awaited<ReturnType<typeof createSqliteStore>>
@@ -46,7 +46,8 @@ export async function buildProviderStatus(runtime: { store: ProviderStatusStore 
   }
 
   const provider = getProviderDefinition(settings.provider.provider)
-  const { apiKeyPresent } = await runtime.store.getProviderCredentialStatus(settings.provider.provider)
+  const credentialStatus = await runtime.store.getProviderCredentialStatus(settings.provider.provider)
+  const { apiKeyPresent } = credentialStatus
   const baseUrl = settings.provider.baseUrl?.trim() || provider.baseUrl
   const issues: string[] = []
   const hints: string[] = []
@@ -70,6 +71,14 @@ export async function buildProviderStatus(runtime: { store: ProviderStatusStore 
     baseUrl,
     apiKeyLabel: provider.requiresApiKey ? 'Stored securely on this device' : 'Optional for this local provider',
     apiKeyPresent,
+    authMethod: provider.defaultAuthMethod,
+    authLabel: provider.defaultAuthMethod === 'api-key' ? 'API key' : provider.defaultAuthMethod,
+    authPresent: credentialStatus.authMethods?.some((credential) => credential.authMethod === provider.defaultAuthMethod && credential.present) ?? false,
+    authMethods: provider.authMethods.map((authMethod) => ({
+      authMethod,
+      label: authMethod === 'api-key' ? 'API key' : authMethod,
+      present: credentialStatus.authMethods?.some((credential) => credential.authMethod === authMethod && credential.present) ?? false,
+    })),
     isReady: issues.length === 0,
     issues,
     hints,
@@ -93,9 +102,31 @@ export async function createRuntime(): Promise<DesktopRuntime> {
   const eventBus = new InMemoryEventBus()
   const approvalCoordinator = new DesktopApprovalCoordinator()
   const providerCredentialResolver: ProviderCredentialResolver = {
-    async getProviderApiKey(provider) {
-      const encryptedApiKey = await store.getEncryptedProviderCredential(provider)
-      return encryptedApiKey ? decryptApiKey(encryptedApiKey) : null
+    async getProviderAuth(input) {
+      const providerDefinition = getProviderDefinition(input.provider)
+      const authMethod = input.authMethod ?? providerDefinition.defaultAuthMethod
+
+      if (!(providerDefinition.authMethods as readonly ProviderAuthMethod[]).includes(authMethod)) {
+        throw new Error(`${providerDefinition.label} does not support ${authMethod} auth.`)
+      }
+
+      if (authMethod === 'none') {
+        return { authMethod: 'none' }
+      }
+
+      const encryptedPayload = await store.getEncryptedProviderCredentialPayload(input.provider, authMethod)
+
+      if (!encryptedPayload) {
+        return providerAuthSchema.parse({ authMethod: 'none' })
+      }
+
+      const credential = storedProviderCredentialSchema.parse(decryptCredentialPayload(encryptedPayload))
+
+      if (credential.authMethod !== authMethod) {
+        throw new Error(`Stored credential does not match ${providerDefinition.label} ${authMethod} auth.`)
+      }
+
+      return providerAuthSchema.parse(credential)
     },
   }
   const runEngine = new CoreRunEngine({

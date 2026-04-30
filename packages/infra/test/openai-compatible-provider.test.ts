@@ -99,7 +99,7 @@ describe('OpenAICompatibleProvider', () => {
       messages,
       actions,
       settings,
-      providerApiKey: 'api-key',
+      providerAuth: { authMethod: 'api-key', apiKey: 'api-key' },
       signal: new AbortController().signal,
     })
 
@@ -170,7 +170,7 @@ describe('OpenAICompatibleProvider', () => {
           baseUrl: 'http://127.0.0.1:8080/v1/',
         },
       },
-      providerApiKey: undefined,
+      providerAuth: { authMethod: 'none' },
       signal: new AbortController().signal,
     })
 
@@ -202,7 +202,7 @@ describe('OpenAICompatibleProvider', () => {
       messages: [messages[0]],
       actions,
       settings,
-      providerApiKey: 'api-key',
+      providerAuth: { authMethod: 'api-key', apiKey: 'api-key' },
       signal: new AbortController().signal,
       onDelta,
       onReasoningDelta,
@@ -269,7 +269,7 @@ describe('OpenAICompatibleProvider', () => {
       messages: [messages[0]],
       actions,
       settings,
-      providerApiKey: 'api-key',
+      providerAuth: { authMethod: 'api-key', apiKey: 'api-key' },
       signal: new AbortController().signal,
     })
 
@@ -298,7 +298,7 @@ describe('OpenAICompatibleProvider', () => {
         messages: [messages[0]],
         actions,
         settings,
-        providerApiKey: 'api-key',
+        providerAuth: { authMethod: 'api-key', apiKey: 'api-key' },
         signal: new AbortController().signal,
       }),
     ).rejects.toThrow('Rate limit exceeded')
@@ -315,7 +315,7 @@ describe('OpenAICompatibleProvider', () => {
         messages: [messages[0]],
         actions,
         settings,
-        providerApiKey: 'api-key',
+        providerAuth: { authMethod: 'api-key', apiKey: 'api-key' },
         signal: new AbortController().signal,
       }),
     ).rejects.toThrow('Provider stream failed')
@@ -331,7 +331,7 @@ describe('OpenAICompatibleProvider', () => {
       messages: [messages[0]],
       actions,
       settings,
-      providerApiKey: 'api-key',
+      providerAuth: { authMethod: 'api-key', apiKey: 'api-key' },
       signal: new AbortController().signal,
     })
 

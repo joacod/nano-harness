@@ -5,18 +5,22 @@ import {
   desktopBridgeChannels,
   desktopContextSchema,
   getConversationInputSchema,
+  getProviderDefinition,
   openExternalUrlInputSchema,
   providerCredentialInputSchema,
   resolveApprovalInputSchema,
   runCreateInputSchema,
   runIdInputSchema,
   saveProviderApiKeyInputSchema,
+  clearProviderAuthInputSchema,
+  startProviderOauthInputSchema,
   startRunResultSchema,
+  type ProviderAuthMethod,
 } from '../../../../packages/shared/src'
 import { exportData, importData } from './data-transfer'
 import type { DesktopRuntime } from './runtime'
 import { buildProviderStatus } from './runtime'
-import { encryptApiKey } from './secure-credentials'
+import { encryptCredentialPayload } from './secure-credentials'
 
 type IpcRuntime = {
   store: {
@@ -27,7 +31,7 @@ type IpcRuntime = {
     listConversations: DesktopRuntime['store']['listConversations']
     listRuns: DesktopRuntime['store']['listRuns']
     getProviderCredentialStatus: DesktopRuntime['store']['getProviderCredentialStatus']
-    saveProviderCredential: DesktopRuntime['store']['saveProviderCredential']
+    saveProviderCredentialPayload: DesktopRuntime['store']['saveProviderCredentialPayload']
     clearProviderCredential: DesktopRuntime['store']['clearProviderCredential']
     getSettings: DesktopRuntime['store']['getSettings']
     saveSettings: DesktopRuntime['store']['saveSettings']
@@ -81,12 +85,41 @@ export function setupIpcHandlers(runtime: IpcRuntime): void {
 
   ipcMain.handle(desktopBridgeChannels.saveProviderApiKey, async (_event, payload) => {
     const input = saveProviderApiKeyInputSchema.parse(payload)
-    await runtime.store.saveProviderCredential(input.provider, encryptApiKey(input.apiKey.trim()))
+    await runtime.store.saveProviderCredentialPayload(
+      input.provider,
+      'api-key',
+      encryptCredentialPayload({ authMethod: 'api-key', apiKey: input.apiKey.trim() }),
+    )
   })
 
   ipcMain.handle(desktopBridgeChannels.clearProviderApiKey, async (_event, payload) => {
     const input = providerCredentialInputSchema.parse(payload)
-    await runtime.store.clearProviderCredential(input.provider)
+    await runtime.store.clearProviderCredential(input.provider, 'api-key')
+  })
+
+  ipcMain.handle(desktopBridgeChannels.startProviderOauth, async (_event, payload) => {
+    const input = startProviderOauthInputSchema.parse(payload)
+    const provider = getProviderDefinition(input.provider)
+
+    if (!(provider.authMethods as readonly ProviderAuthMethod[]).includes('oauth')) {
+      throw new Error(`${provider.label} does not support OAuth sign-in.`)
+    }
+
+    throw new Error('OAuth sign-in is not implemented yet.')
+  })
+
+  ipcMain.handle(desktopBridgeChannels.clearProviderAuth, async (_event, payload) => {
+    const input = clearProviderAuthInputSchema.parse(payload)
+    const provider = getProviderDefinition(input.provider)
+    const authMethod = input.authMethod ?? provider.defaultAuthMethod
+
+    if (!(provider.authMethods as readonly ProviderAuthMethod[]).includes(authMethod)) {
+      throw new Error(`${provider.label} does not support ${authMethod} auth.`)
+    }
+
+    if (authMethod !== 'none') {
+      await runtime.store.clearProviderCredential(input.provider, authMethod)
+    }
   })
 
   ipcMain.handle(desktopBridgeChannels.exportData, async () => {
