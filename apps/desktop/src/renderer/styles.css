@@ -1079,6 +1079,13 @@ a {
   background: rgba(3, 20, 18, 0.3);
 }
 
+.settings-inline-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
 .settings-section-heading {
   display: grid;
   max-width: 720px;
@@ -1109,6 +1116,11 @@ a {
 
 .settings-field-grid-wide {
   grid-template-columns: minmax(280px, 720px);
+}
+
+.settings-provider-grid {
+  grid-template-columns: minmax(240px, 420px) minmax(280px, 480px);
+  align-items: start;
 }
 
 .settings-field {
@@ -1216,6 +1228,11 @@ a {
   border-radius: 4px;
   background: rgba(1, 9, 7, 0.98);
   box-shadow: 0 18px 42px rgba(0, 0, 0, 0.42), 0 0 28px rgba(67, 255, 157, 0.12);
+}
+
+.custom-select-open-up .custom-select-options {
+  top: auto;
+  bottom: calc(100% + 6px);
 }
 
 .custom-select-option {
@@ -1575,7 +1592,8 @@ a {
 
   .settings-field-grid,
   .settings-field-grid-compact,
-  .settings-field-grid-wide {
+  .settings-field-grid-wide,
+  .settings-provider-grid {
     grid-template-columns: 1fr;
   }
 

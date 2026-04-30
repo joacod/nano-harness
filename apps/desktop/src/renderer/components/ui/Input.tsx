@@ -1,4 +1,14 @@
-import { Children, isValidElement, useId, useRef, useState, type InputHTMLAttributes, type ReactElement, type ReactNode, type TextareaHTMLAttributes } from 'react'
+import {
+  Children,
+  isValidElement,
+  useId,
+  useRef,
+  useState,
+  type InputHTMLAttributes,
+  type ReactElement,
+  type ReactNode,
+  type TextareaHTMLAttributes,
+} from 'react'
 
 import { cn } from './classnames'
 
@@ -44,9 +54,24 @@ export function Select({ name, value, children, className, onChange }: SelectPro
   const id = useId()
   const rootRef = useRef<HTMLDivElement>(null)
   const [isOpen, setIsOpen] = useState(false)
+  const [opensUp, setOpensUp] = useState(false)
   const options = getSelectOptions(children)
   const selectedOption = options.find((option) => option.value === value) ?? options[0]
   const selectedIndex = Math.max(0, options.findIndex((option) => option.value === selectedOption?.value))
+
+  function openSelect() {
+    const rect = rootRef.current?.getBoundingClientRect()
+
+    if (rect) {
+      const menuHeight = Math.min(240, options.length * 42 + 12)
+      const spaceBelow = window.innerHeight - rect.bottom
+      const spaceAbove = rect.top
+
+      setOpensUp(spaceBelow < menuHeight && spaceAbove > spaceBelow)
+    }
+
+    setIsOpen(true)
+  }
 
   function selectValue(nextValue: string) {
     onChange({ target: { value: nextValue } })
@@ -65,7 +90,7 @@ export function Select({ name, value, children, className, onChange }: SelectPro
   return (
     <div
       ref={rootRef}
-      className={cn('custom-select', className)}
+      className={cn('custom-select', opensUp && 'custom-select-open-up', className)}
       onBlur={(event) => {
         if (!rootRef.current?.contains(event.relatedTarget)) {
           setIsOpen(false)
@@ -80,12 +105,19 @@ export function Select({ name, value, children, className, onChange }: SelectPro
         aria-haspopup="listbox"
         aria-expanded={isOpen}
         aria-controls={`${id}-listbox`}
-        onClick={() => setIsOpen((current) => !current)}
+        onClick={() => {
+          if (isOpen) {
+            setIsOpen(false)
+            return
+          }
+
+          openSelect()
+        }}
         onKeyDown={(event) => {
           if (event.key === 'ArrowDown') {
             event.preventDefault()
             if (!isOpen) {
-              setIsOpen(true)
+              openSelect()
               return
             }
 
@@ -95,7 +127,7 @@ export function Select({ name, value, children, className, onChange }: SelectPro
           if (event.key === 'ArrowUp') {
             event.preventDefault()
             if (!isOpen) {
-              setIsOpen(true)
+              openSelect()
               return
             }
 

@@ -63,7 +63,7 @@ export function ProviderSettingsForm({
             </p>
           </div>
 
-          <div className="settings-field-grid settings-field-grid-compact">
+          <div className="settings-field-grid settings-provider-grid">
             <div className="settings-field">
               <LabeledField label="Provider">
                 <form.Field
@@ -91,10 +91,9 @@ export function ProviderSettingsForm({
                 />
               </LabeledField>
             </div>
+            {apiKeySection ? <div className="settings-field">{apiKeySection}</div> : null}
           </div>
         </section>
-
-        {apiKeySection}
 
         <section className="settings-section" aria-labelledby="provider-endpoint-heading">
           <div className="settings-section-heading">

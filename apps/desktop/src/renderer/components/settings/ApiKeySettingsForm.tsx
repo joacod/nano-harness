@@ -44,8 +44,8 @@ export function ApiKeySettingsForm({
 
   return (
     <>
-      <section
-        className="settings-section settings-section-subtle settings-form"
+      <div
+        className="settings-inline-panel settings-form"
         aria-labelledby="provider-api-key-heading"
         onKeyDown={(event) => {
           if (event.key !== 'Enter') {
@@ -77,7 +77,7 @@ export function ApiKeySettingsForm({
                   <TextField
                     field={field}
                     name="api-key"
-                    placeholder="Paste API key"
+                    placeholder={providerStatus?.apiKeyPresent ? '********' : 'Paste API key'}
                     autoComplete="off"
                     inputType="password"
                     spellCheck={false}
@@ -113,7 +113,7 @@ export function ApiKeySettingsForm({
             {isClearingApiKey ? 'Clearing…' : 'Clear API key'}
           </Button>
         </div>
-      </section>
+      </div>
 
       {apiKeyMessage ? (
         <FeedbackText variant="success" live>
