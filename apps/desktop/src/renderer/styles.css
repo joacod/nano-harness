@@ -419,58 +419,6 @@ a {
   min-width: 0;
 }
 
-.sidebar-compact-switch {
-  box-sizing: border-box;
-  min-width: 0;
-  height: 34px;
-  min-height: 34px;
-  gap: 4px;
-  padding: 0 5px;
-  font-size: 0.44rem;
-  letter-spacing: 0.04em;
-}
-
-.sidebar-compact-switch > span:first-child {
-  min-width: 0;
-  overflow: visible;
-  text-overflow: clip;
-  white-space: nowrap;
-}
-
-.sidebar-compact-switch .switch-track {
-  width: 20px;
-  min-width: 20px;
-  height: 12px;
-}
-
-.sidebar-compact-switch .switch-thumb {
-  top: 2px;
-  left: 2px;
-  width: 6px;
-  height: 6px;
-}
-
-.sidebar-compact-switch.switch-button-active .switch-thumb {
-  left: 10px;
-}
-
-.sidebar-provider-pill {
-  box-sizing: border-box;
-  justify-content: center;
-  height: 34px;
-  min-height: 34px;
-  min-width: 0;
-  padding: 0 5px;
-  font-size: 0.44rem;
-  letter-spacing: 0.04em;
-  white-space: nowrap;
-}
-
-.sidebar-provider-pill::before {
-  width: 6px;
-  height: 6px;
-}
-
 .switch-button {
   display: flex;
   align-items: center;
@@ -567,6 +515,60 @@ a {
 .runtime-pill-warning::before {
   background: var(--warning);
   box-shadow: 0 0 12px var(--warning);
+}
+
+.sidebar-compact-switch {
+  box-sizing: border-box;
+  min-width: 0;
+  height: 36px;
+  min-height: 36px;
+  gap: 5px;
+  padding: 0 7px;
+  font-size: 0.5rem;
+  letter-spacing: 0.035em;
+  line-height: 1;
+}
+
+.sidebar-compact-switch > span:first-child {
+  min-width: 0;
+  overflow: visible;
+  text-overflow: clip;
+  white-space: nowrap;
+}
+
+.sidebar-compact-switch .switch-track {
+  width: 30px;
+  min-width: 30px;
+  height: 16px;
+}
+
+.sidebar-compact-switch .switch-thumb {
+  top: 2px;
+  left: 2px;
+  width: 10px;
+  height: 10px;
+}
+
+.sidebar-compact-switch.switch-button-active .switch-thumb {
+  left: 16px;
+}
+
+.sidebar-provider-pill {
+  box-sizing: border-box;
+  justify-content: center;
+  height: 36px;
+  min-height: 36px;
+  min-width: 0;
+  padding: 0 7px;
+  font-size: 0.5rem;
+  letter-spacing: 0.035em;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.sidebar-provider-pill::before {
+  width: 6px;
+  height: 6px;
 }
 
 .event-list {
