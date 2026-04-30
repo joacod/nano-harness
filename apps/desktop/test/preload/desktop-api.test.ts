@@ -65,19 +65,41 @@ describe('desktop preload bridge', () => {
     invoke.mockResolvedValue(undefined)
     const desktop = await loadDesktopApi()
 
+    await desktop.saveProviderAuth({ provider: 'openrouter', authMethod: 'api-key', apiKey: 'secret' })
+    await desktop.clearProviderAuth({ provider: 'openrouter', authMethod: 'api-key' })
     await desktop.openExternalUrl({ url: 'https://example.com' })
     await desktop.cancelRun({ runId: 'run-1' })
     await desktop.resolveApproval({ runId: 'run-1', approvalRequestId: 'approval-1', decision: 'granted' })
 
-    expect(invoke).toHaveBeenNthCalledWith(1, desktopBridgeChannels.openExternalUrl, { url: 'https://example.com' })
-    expect(invoke).toHaveBeenNthCalledWith(2, desktopBridgeChannels.cancelRun, { runId: 'run-1' })
-    expect(invoke).toHaveBeenNthCalledWith(3, desktopBridgeChannels.resolveApproval, {
+    expect(invoke).toHaveBeenNthCalledWith(1, desktopBridgeChannels.saveProviderAuth, {
+      provider: 'openrouter',
+      authMethod: 'api-key',
+      apiKey: 'secret',
+    })
+    expect(invoke).toHaveBeenNthCalledWith(2, desktopBridgeChannels.clearProviderAuth, {
+      provider: 'openrouter',
+      authMethod: 'api-key',
+    })
+    expect(invoke).toHaveBeenNthCalledWith(3, desktopBridgeChannels.openExternalUrl, { url: 'https://example.com' })
+    expect(invoke).toHaveBeenNthCalledWith(4, desktopBridgeChannels.cancelRun, { runId: 'run-1' })
+    expect(invoke).toHaveBeenNthCalledWith(5, desktopBridgeChannels.resolveApproval, {
       runId: 'run-1',
       approvalRequestId: 'approval-1',
       decision: 'granted',
     })
 
     await expect(desktop.openExternalUrl({ url: 'notaurl' })).rejects.toThrow()
+  })
+
+  it('parses OAuth result payloads', async () => {
+    invoke.mockResolvedValueOnce({ provider: 'openai', accountId: 'account-1' })
+    const desktop = await loadDesktopApi()
+
+    await expect(desktop.startProviderOauth({ provider: 'openai' })).resolves.toEqual({
+      provider: 'openai',
+      accountId: 'account-1',
+    })
+    expect(invoke).toHaveBeenCalledWith(desktopBridgeChannels.startProviderOauth, { provider: 'openai' })
   })
 
   it('subscribes to parsed run events and unsubscribes correctly', async () => {

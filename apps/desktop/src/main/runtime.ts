@@ -16,7 +16,7 @@ export type DesktopRuntime = {
   approvalCoordinator: DesktopApprovalCoordinator
 }
 
-type ProviderStatusStore = Pick<DesktopRuntime['store'], 'getProviderCredentialStatus'>
+type ProviderStatusStore = Pick<DesktopRuntime['store'], 'getEncryptedProviderCredentialPayload' | 'getProviderCredentialStatus'>
 
 type EventForwardingRuntime = {
   eventBus: {
@@ -51,6 +51,25 @@ export async function buildProviderStatus(runtime: { store: ProviderStatusStore 
   const baseUrl = settings.provider.baseUrl?.trim() || provider.baseUrl
   const issues: string[] = []
   const hints: string[] = []
+  let oauthAccountId: string | undefined
+
+  if ((provider.authMethods as readonly ProviderAuthMethod[]).includes('oauth')) {
+    const encryptedPayload = await runtime.store.getEncryptedProviderCredentialPayload(settings.provider.provider, 'oauth')
+
+    if (encryptedPayload) {
+      try {
+        const credential = storedProviderCredentialSchema.parse(decryptCredentialPayload(encryptedPayload))
+
+        if (credential.authMethod === 'oauth') {
+          oauthAccountId = credential.accountId
+        }
+      } catch {
+        issues.push(`Reconnect ${provider.label}; the stored credential could not be read.`)
+      }
+    } else if (settings.provider.provider === 'openai') {
+      issues.push('Sign in with ChatGPT before starting an OpenAI run.')
+    }
+  }
 
   if (provider.requiresApiKey && !apiKeyPresent) {
     issues.push(`Add your ${provider.label} API key before starting a hosted-provider run.`)
@@ -64,6 +83,10 @@ export async function buildProviderStatus(runtime: { store: ProviderStatusStore 
     hints.push('Start llama-server before running a local model. The API endpoint should expose /v1/chat/completions.')
   }
 
+  if (oauthAccountId) {
+    hints.push(`ChatGPT account: ${oauthAccountId}`)
+  }
+
   return providerStatusSchema.parse({
     providerId: provider.adapterId,
     providerLabel: provider.label,
@@ -72,12 +95,13 @@ export async function buildProviderStatus(runtime: { store: ProviderStatusStore 
     apiKeyLabel: provider.requiresApiKey ? 'Stored securely on this device' : 'Optional for this local provider',
     apiKeyPresent,
     authMethod: provider.defaultAuthMethod,
-    authLabel: provider.defaultAuthMethod === 'api-key' ? 'API key' : provider.defaultAuthMethod,
+    authLabel: provider.defaultAuthMethod === 'oauth' ? 'ChatGPT account' : provider.defaultAuthMethod === 'api-key' ? 'API key' : provider.defaultAuthMethod,
     authPresent: credentialStatus.authMethods?.some((credential) => credential.authMethod === provider.defaultAuthMethod && credential.present) ?? false,
     authMethods: provider.authMethods.map((authMethod) => ({
       authMethod,
-      label: authMethod === 'api-key' ? 'API key' : authMethod,
+      label: authMethod === 'oauth' ? 'ChatGPT account' : authMethod === 'api-key' ? 'API key' : authMethod,
       present: credentialStatus.authMethods?.some((credential) => credential.authMethod === authMethod && credential.present) ?? false,
+      accountId: authMethod === 'oauth' ? oauthAccountId : undefined,
     })),
     isReady: issues.length === 0,
     issues,

@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { AppSettings, ConversationSnapshot } from '@nano-harness/shared'
 
-const { handlers, handle, openExternal, exportData, importData, buildProviderStatus, encryptCredentialPayload } = vi.hoisted(() => {
+const { handlers, handle, openExternal, exportData, importData, buildProviderStatus, encryptCredentialPayload, startOpenAIChatGptOAuth } = vi.hoisted(() => {
   const handlers = new Map<string, (_event: unknown, payload?: unknown) => Promise<unknown>>()
 
   return {
@@ -25,6 +25,13 @@ const { handlers, handle, openExternal, exportData, importData, buildProviderSta
       hints: [],
     })),
     encryptCredentialPayload: vi.fn((payload: unknown) => `encrypted:${JSON.stringify(payload)}`),
+    startOpenAIChatGptOAuth: vi.fn(async () => ({
+      authMethod: 'oauth' as const,
+      accessToken: 'access-token',
+      refreshToken: 'refresh-token',
+      expiresAt: 123456,
+      accountId: 'account-1',
+    })),
   }
 })
 
@@ -41,6 +48,7 @@ vi.mock('electron', () => ({
 }))
 
 vi.mock('../../src/main/data-transfer', () => ({ exportData, importData }))
+vi.mock('../../src/main/openai-chatgpt-auth', () => ({ startOpenAIChatGptOAuth }))
 vi.mock('../../src/main/runtime', async () => {
   const actual = await vi.importActual<typeof import('../../src/main/runtime')>('../../src/main/runtime')
   return {
@@ -62,6 +70,7 @@ describe('setupIpcHandlers', () => {
     importData.mockClear()
     buildProviderStatus.mockClear()
     encryptCredentialPayload.mockClear()
+    startOpenAIChatGptOAuth.mockClear()
   })
 
   it('registers the expected desktop bridge handlers', () => {
@@ -143,6 +152,49 @@ describe('setupIpcHandlers', () => {
     )
   })
 
+  it('starts OpenAI OAuth and stores the encrypted credential', async () => {
+    const runtime = createRuntime()
+    setupIpcHandlers(runtime)
+
+    await expect(invokeHandler(desktopBridgeChannels.startProviderOauth, { provider: 'openai' })).resolves.toEqual({
+      provider: 'openai',
+      accountId: 'account-1',
+    })
+
+    expect(startOpenAIChatGptOAuth).toHaveBeenCalledWith({ openExternal: expect.any(Function) })
+    expect(encryptCredentialPayload).toHaveBeenCalledWith({
+      authMethod: 'oauth',
+      accessToken: 'access-token',
+      refreshToken: 'refresh-token',
+      expiresAt: 123456,
+      accountId: 'account-1',
+    })
+    expect(runtime.store.saveProviderCredentialPayload).toHaveBeenCalledWith(
+      'openai',
+      'oauth',
+      'encrypted:{"authMethod":"oauth","accessToken":"access-token","refreshToken":"refresh-token","expiresAt":123456,"accountId":"account-1"}',
+    )
+  })
+
+  it('rejects OAuth for providers that do not support it', async () => {
+    setupIpcHandlers(createRuntime())
+
+    await expect(invokeHandler(desktopBridgeChannels.startProviderOauth, { provider: 'openrouter' })).rejects.toThrow(
+      'OpenRouter does not support OAuth sign-in.',
+    )
+  })
+
+  it('clears provider auth for the selected auth method', async () => {
+    const runtime = createRuntime()
+    setupIpcHandlers(runtime)
+
+    await invokeHandler(desktopBridgeChannels.clearProviderAuth, { provider: 'openai' })
+    await invokeHandler(desktopBridgeChannels.clearProviderAuth, { provider: 'openrouter', authMethod: 'api-key' })
+
+    expect(runtime.store.clearProviderCredential).toHaveBeenNthCalledWith(1, 'openai', 'oauth')
+    expect(runtime.store.clearProviderCredential).toHaveBeenNthCalledWith(2, 'openrouter', 'api-key')
+  })
+
   it('opens only http and https external urls', async () => {
     setupIpcHandlers(createRuntime())
 
@@ -193,6 +245,7 @@ function createRuntime() {
       listConversations: vi.fn(async () => []),
       listRuns: vi.fn(async () => []),
       getProviderCredentialStatus: vi.fn(async () => ({ apiKeyPresent: true })),
+      getEncryptedProviderCredentialPayload: vi.fn(async () => null),
       saveProviderCredentialPayload: vi.fn(async () => {}),
       clearProviderCredential: vi.fn(async () => {}),
       getSettings: vi.fn(async () => settings),

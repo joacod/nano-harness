@@ -14,10 +14,12 @@ import {
   saveProviderAuthInputSchema,
   clearProviderAuthInputSchema,
   startProviderOauthInputSchema,
+  startProviderOauthResultSchema,
   startRunResultSchema,
   type ProviderAuthMethod,
 } from '../../../../packages/shared/src'
 import { exportData, importData } from './data-transfer'
+import { startOpenAIChatGptOAuth } from './openai-chatgpt-auth'
 import type { DesktopRuntime } from './runtime'
 import { buildProviderStatus } from './runtime'
 import { encryptCredentialPayload } from './secure-credentials'
@@ -31,6 +33,7 @@ type IpcRuntime = {
     listConversations: DesktopRuntime['store']['listConversations']
     listRuns: DesktopRuntime['store']['listRuns']
     getProviderCredentialStatus: DesktopRuntime['store']['getProviderCredentialStatus']
+    getEncryptedProviderCredentialPayload: DesktopRuntime['store']['getEncryptedProviderCredentialPayload']
     saveProviderCredentialPayload: DesktopRuntime['store']['saveProviderCredentialPayload']
     clearProviderCredential: DesktopRuntime['store']['clearProviderCredential']
     getSettings: DesktopRuntime['store']['getSettings']
@@ -100,7 +103,18 @@ export function setupIpcHandlers(runtime: IpcRuntime): void {
       throw new Error(`${provider.label} does not support OAuth sign-in.`)
     }
 
-    throw new Error('OAuth sign-in is not implemented yet.')
+    const credential = await startOpenAIChatGptOAuth({ openExternal: (url) => shell.openExternal(url) })
+
+    await runtime.store.saveProviderCredentialPayload(
+      input.provider,
+      'oauth',
+      encryptCredentialPayload(credential),
+    )
+
+    return startProviderOauthResultSchema.parse({
+      provider: input.provider,
+      accountId: credential.accountId,
+    })
   })
 
   ipcMain.handle(desktopBridgeChannels.clearProviderAuth, async (_event, payload) => {

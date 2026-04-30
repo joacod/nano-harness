@@ -31,6 +31,7 @@ import { buildProviderStatus, setupEventForwarding } from '../../src/main/runtim
 type ProviderStatusRuntime = {
   store: {
     getProviderCredentialStatus(provider: ProviderKey): Promise<{ apiKeyPresent: boolean }>
+    getEncryptedProviderCredentialPayload(provider: ProviderKey, authMethod: 'api-key' | 'none' | 'oauth'): Promise<string | null>
   }
 }
 
@@ -45,6 +46,7 @@ describe('desktop runtime helpers', () => {
     const runtime = {
       store: {
         getProviderCredentialStatus: vi.fn(async () => ({ apiKeyPresent: false })),
+        getEncryptedProviderCredentialPayload: vi.fn(async () => null),
       },
     } satisfies ProviderStatusRuntime
 
@@ -55,6 +57,7 @@ describe('desktop runtime helpers', () => {
     const runtime = {
       store: {
         getProviderCredentialStatus: vi.fn(async () => ({ apiKeyPresent: false })),
+        getEncryptedProviderCredentialPayload: vi.fn(async () => null),
       },
     } satisfies ProviderStatusRuntime
 
@@ -81,6 +84,7 @@ describe('desktop runtime helpers', () => {
     const runtime = {
       store: {
         getProviderCredentialStatus: vi.fn(async () => ({ apiKeyPresent: true })),
+        getEncryptedProviderCredentialPayload: vi.fn(async () => null),
       },
     } satisfies ProviderStatusRuntime
 
@@ -107,6 +111,7 @@ describe('desktop runtime helpers', () => {
     const runtime = {
       store: {
         getProviderCredentialStatus: vi.fn(async () => ({ apiKeyPresent: false })),
+        getEncryptedProviderCredentialPayload: vi.fn(async () => null),
       },
     } satisfies ProviderStatusRuntime
 
