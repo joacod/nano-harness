@@ -11,7 +11,7 @@ export interface ProviderGenerateInput {
   messages: Message[]
   actions: ActionDefinition[]
   settings: AppSettings
-  providerApiKey: string
+  providerApiKey?: string
   signal: AbortSignal
   onDelta?: (delta: string) => Promise<void> | void
   onReasoningDelta?: (delta: ProviderReasoningDelta) => Promise<void> | void

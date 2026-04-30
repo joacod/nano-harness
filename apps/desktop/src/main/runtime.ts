@@ -31,6 +31,7 @@ function buildDefaultSettings(): AppSettings {
     provider: {
       provider: provider.key,
       model: provider.defaultModel,
+      baseUrl: provider.baseUrl,
     },
     workspace: {
       rootPath: join(app.getPath('home'), 'nano-harness'),
@@ -46,10 +47,11 @@ export async function buildProviderStatus(runtime: { store: ProviderStatusStore 
 
   const provider = getProviderDefinition(settings.provider.provider)
   const { apiKeyPresent } = await runtime.store.getProviderCredentialStatus(settings.provider.provider)
+  const baseUrl = settings.provider.baseUrl?.trim() || provider.baseUrl
   const issues: string[] = []
   const hints: string[] = []
 
-  if (!apiKeyPresent) {
+  if (provider.requiresApiKey && !apiKeyPresent) {
     issues.push(`Add your ${provider.label} API key before starting a hosted-provider run.`)
   }
 
@@ -57,12 +59,16 @@ export async function buildProviderStatus(runtime: { store: ProviderStatusStore 
     hints.push('OpenRouter models usually include the provider prefix, for example x-ai/grok-4.1-fast.')
   }
 
+  if (settings.provider.provider === 'llama-cpp') {
+    hints.push('Start llama-server before running a local model. The API endpoint should expose /v1/chat/completions.')
+  }
+
   return providerStatusSchema.parse({
     providerId: provider.adapterId,
     providerLabel: provider.label,
     model: settings.provider.model,
-    baseUrl: provider.baseUrl,
-    apiKeyLabel: 'Stored securely on this device',
+    baseUrl,
+    apiKeyLabel: provider.requiresApiKey ? 'Stored securely on this device' : 'Optional for this local provider',
     apiKeyPresent,
     isReady: issues.length === 0,
     issues,

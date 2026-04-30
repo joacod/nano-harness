@@ -20,9 +20,13 @@ export function ProviderStatusPanel({ providerStatus }: { providerStatus: Provid
           <dd>{providerStatus.model}</dd>
         </div>
         <div>
+          <dt>Base URL</dt>
+          <dd>{providerStatus.baseUrl}</dd>
+        </div>
+        <div>
           <dt>API key</dt>
           <dd>
-            {providerStatus.apiKeyLabel} {providerStatus.apiKeyPresent ? '(configured)' : '(missing)'}
+            {providerStatus.apiKeyLabel} {providerStatus.apiKeyPresent ? '(configured)' : providerStatus.isReady ? '(not required)' : '(missing)'}
           </dd>
         </div>
       </dl>

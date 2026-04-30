@@ -290,6 +290,7 @@ export function applyProviderDefaults(settings: AppSettings, providerKey: AppSet
       ...settings.provider,
       provider: provider.key,
       model: provider.defaultModel,
+      baseUrl: provider.baseUrl,
     },
   }
 }

@@ -80,6 +80,39 @@ describe('CoreRunEngine', () => {
     expect(store.events.map((event) => event.type)).toContain('provider.error')
   })
 
+  it('allows providers that do not require an api key', async () => {
+    const store = new FakeStore()
+    store.settings = {
+      ...testSettings,
+      provider: {
+        provider: 'llama-cpp',
+        model: 'local-model',
+        baseUrl: 'http://127.0.0.1:8080/v1',
+      },
+    }
+    const provider = new FakeProvider([{ content: 'Local response.' }])
+    const engine = new CoreRunEngine({
+      store,
+      provider,
+      providerCredentialResolver: {
+        async getProviderApiKey() {
+          return null
+        },
+      },
+      actionExecutor: new FakeActionExecutor([], async (input) => createActionResult({ actionCallId: input.call.id })),
+      policy: new FakePolicy(() => ({ effect: 'allow' })),
+      now: () => '2026-04-29T10:00:00.000Z',
+      createId: createSequentialId(),
+    })
+
+    const handle = await engine.startRun(createRunInput())
+
+    await waitForCondition(() => store.runs.get(handle.runId)?.status === 'completed')
+
+    expect(provider.calls).toHaveLength(1)
+    expect(store.messages[1]).toMatchObject({ content: 'Local response.' })
+  })
+
   it('executes tool calls, persists tool output, and continues the provider loop', async () => {
     const store = new FakeStore()
     const readFileAction = createActionDefinition({ id: 'read_file', title: 'Read File' })

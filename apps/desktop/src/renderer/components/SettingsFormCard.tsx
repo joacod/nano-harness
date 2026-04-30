@@ -53,7 +53,7 @@ export function SettingsFormCard({
       <p className="eyebrow">Settings</p>
       <h2>Provider configuration</h2>
         <FeedbackText>
-          Choose a provider and model. API keys are stored separately using this device's secure storage.
+          Choose a hosted or local provider and model. API keys are stored separately using this device's secure storage.
         </FeedbackText>
 
       {providerStatus ? <ProviderStatusPanel providerStatus={providerStatus} /> : null}

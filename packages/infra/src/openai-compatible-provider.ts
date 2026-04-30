@@ -292,20 +292,26 @@ export class OpenAICompatibleProvider implements Provider {
 
   async generate(input: ProviderGenerateInput): Promise<ProviderGenerateResult> {
     const providerDefinition = getProviderDefinition(input.settings.provider.provider)
-    const apiKey = input.providerApiKey.trim()
+    const baseUrl = input.settings.provider.baseUrl?.trim() || providerDefinition.baseUrl
+    const apiKey = input.providerApiKey?.trim() ?? ''
 
-    if (!apiKey) {
+    if (providerDefinition.requiresApiKey && !apiKey) {
       throw new Error(`Missing API key for ${providerDefinition.label}`)
     }
 
+    const headers: Record<string, string> = {
+      'content-type': 'application/json',
+    }
+
+    if (apiKey) {
+      headers.authorization = `Bearer ${apiKey}`
+    }
+
     const response = await this.fetchImplementation(
-      `${normalizeBaseUrl(providerDefinition.baseUrl)}/chat/completions`,
+      `${normalizeBaseUrl(baseUrl)}/chat/completions`,
       {
         method: 'POST',
-        headers: {
-          'content-type': 'application/json',
-          authorization: `Bearer ${apiKey}`,
-        },
+        headers,
         body: JSON.stringify({
           model: input.settings.provider.model,
           stream: true,

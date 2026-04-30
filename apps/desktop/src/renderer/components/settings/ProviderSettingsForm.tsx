@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { useForm } from '@tanstack/react-form'
 
 import type { AppSettings } from '../../../../../../packages/shared/src'
-import { providerOptions } from '../../../../../../packages/shared/src'
+import { getProviderDefinition, providerOptions } from '../../../../../../packages/shared/src'
 import { applyProviderDefaults } from '../../utils/run-events'
 import { FieldHint, LabeledField, TextField } from '../form-fields'
 import { Button, FeedbackText, Select } from '../ui'
@@ -29,6 +29,7 @@ export function ProviderSettingsForm({
         provider: {
           provider: value.provider.provider,
           model: value.provider.model.trim(),
+          baseUrl: value.provider.baseUrl?.trim() || getProviderDefinition(value.provider.provider).baseUrl,
           reasoning: value.provider.reasoning,
         },
         workspace: {
@@ -67,6 +68,7 @@ export function ProviderSettingsForm({
                   onProviderChange(nextProvider)
                   const nextSettings = applyProviderDefaults(form.state.values, nextProvider)
                   form.setFieldValue('provider.model', nextSettings.provider.model)
+                  form.setFieldValue('provider.baseUrl', nextSettings.provider.baseUrl)
                 }}
               >
                 {providerOptions.map((provider) => (
@@ -84,6 +86,7 @@ export function ProviderSettingsForm({
                 const providerKey = form.getFieldValue('provider.provider')
                 const nextSettings = applyProviderDefaults(form.state.values, providerKey)
                 form.setFieldValue('provider.model', nextSettings.provider.model)
+                form.setFieldValue('provider.baseUrl', nextSettings.provider.baseUrl)
               }}
             >
               Use defaults
@@ -104,6 +107,25 @@ export function ProviderSettingsForm({
                 name="model"
                 placeholder="Example: x-ai/grok-4.1-fast"
                 autoComplete="off"
+                spellCheck={false}
+              />
+            )}
+          />
+        </LabeledField>
+
+        <LabeledField label="Base URL">
+          <FieldHint>OpenAI-compatible API root. llama.cpp usually runs at http://127.0.0.1:8080/v1.</FieldHint>
+          <form.Field
+            name="provider.baseUrl"
+            validators={{
+              onChange: ({ value }) => (value?.trim() ? undefined : 'Base URL is required.'),
+            }}
+            children={(field) => (
+              <TextField
+                field={field}
+                name="provider-base-url"
+                placeholder="Example: http://127.0.0.1:8080/v1"
+                autoComplete="url"
                 spellCheck={false}
               />
             )}

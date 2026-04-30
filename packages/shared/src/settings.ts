@@ -4,7 +4,7 @@ export const approvalPolicySchema = z.enum(['always', 'on-request', 'never'])
 
 export type ApprovalPolicy = z.infer<typeof approvalPolicySchema>
 
-export const providerKeySchema = z.enum(['openrouter'])
+export const providerKeySchema = z.enum(['openrouter', 'llama-cpp'])
 
 export type ProviderKey = z.infer<typeof providerKeySchema>
 
@@ -30,6 +30,15 @@ export const providerCatalog = {
     adapterId: 'openai-compatible',
     baseUrl: 'https://openrouter.ai/api/v1',
     defaultModel: 'x-ai/grok-4.1-fast',
+    requiresApiKey: true,
+  },
+  'llama-cpp': {
+    key: 'llama-cpp',
+    label: 'llama.cpp',
+    adapterId: 'openai-compatible',
+    baseUrl: 'http://127.0.0.1:8080/v1',
+    defaultModel: 'local-model',
+    requiresApiKey: false,
   },
 } as const satisfies Record<ProviderKey, {
   key: ProviderKey
@@ -37,6 +46,7 @@ export const providerCatalog = {
   adapterId: string
   baseUrl: string
   defaultModel: string
+  requiresApiKey: boolean
 }>
 
 export function getProviderDefinition(provider: ProviderKey) {
@@ -60,6 +70,7 @@ export const providerOptions = Object.values(providerCatalog).map((provider) =>
 const currentProviderSettingsSchema = z.object({
   provider: providerKeySchema,
   model: z.string().min(1),
+  baseUrl: z.string().min(1).optional(),
   reasoning: reasoningSettingsSchema.optional(),
 })
 
