@@ -1,13 +1,14 @@
 import { useState } from 'react'
 
-import type { AppSettings, ProviderStatus } from '../../../../../packages/shared/src'
+import { getProviderDefinition, type AppSettings, type ProviderStatus } from '../../../../../packages/shared/src'
 import { ApiKeySettingsForm } from './settings/ApiKeySettingsForm'
 import { DataBackupPanel } from './settings/DataBackupPanel'
 import { ProviderSettingsForm } from './settings/ProviderSettingsForm'
 import { ProviderStatusPanel } from './settings/ProviderStatusPanel'
+import { WorkspaceSettingsForm } from './settings/WorkspaceSettingsForm'
 import { Card, FeedbackText, Tabs } from './ui'
 
-type SettingsTab = 'providers' | 'data'
+type SettingsTab = 'providers' | 'workspace' | 'data'
 
 export function SettingsFormCard({
   initialSettings,
@@ -50,6 +51,7 @@ export function SettingsFormCard({
 }) {
   const [selectedProvider, setSelectedProvider] = useState(initialSettings.provider.provider)
   const [selectedTab, setSelectedTab] = useState<SettingsTab>('providers')
+  const selectedProviderDefinition = getProviderDefinition(selectedProvider)
 
   return (
     <Card className="settings-card">
@@ -76,19 +78,31 @@ export function SettingsFormCard({
                   initialSettings={initialSettings}
                   isSaving={isSaving}
                   saveError={saveError}
+                  apiKeySection={
+                    selectedProviderDefinition.requiresApiKey ? (
+                      <ApiKeySettingsForm
+                        apiKeyError={apiKeyError}
+                        isClearingApiKey={isClearingApiKey}
+                        isSavingApiKey={isSavingApiKey}
+                        provider={selectedProvider}
+                        providerStatus={providerStatus}
+                        onClearApiKey={onClearApiKey}
+                        onSaveApiKey={onSaveApiKey}
+                      />
+                    ) : null
+                  }
                   onProviderChange={setSelectedProvider}
                   onSubmit={onSubmit}
                 />
-
-                <ApiKeySettingsForm
-                  apiKeyError={apiKeyError}
-                  isClearingApiKey={isClearingApiKey}
-                  isSavingApiKey={isSavingApiKey}
-                  provider={selectedProvider}
-                  providerStatus={providerStatus}
-                  onClearApiKey={onClearApiKey}
-                  onSaveApiKey={onSaveApiKey}
-                />
+              </div>
+            ),
+          },
+          {
+            value: 'workspace',
+            label: 'Workspace',
+            panel: (
+              <div className="settings-tab-stack">
+                <WorkspaceSettingsForm initialSettings={initialSettings} isSaving={isSaving} saveError={saveError} onSubmit={onSubmit} />
               </div>
             ),
           },

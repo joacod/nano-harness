@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { type ReactNode, useState } from 'react'
 
 import { useForm } from '@tanstack/react-form'
 
@@ -12,12 +12,14 @@ export function ProviderSettingsForm({
   initialSettings,
   isSaving,
   saveError,
+  apiKeySection,
   onProviderChange,
   onSubmit,
 }: {
   initialSettings: AppSettings
   isSaving: boolean
   saveError: string | null
+  apiKeySection?: ReactNode
   onProviderChange: (provider: AppSettings['provider']['provider']) => void
   onSubmit: (settings: AppSettings) => Promise<void>
 }) {
@@ -94,6 +96,8 @@ export function ProviderSettingsForm({
           </div>
         </LabeledField>
 
+        {apiKeySection}
+
         <LabeledField label="Model">
           <FieldHint>Choose a model available for your selected provider.</FieldHint>
           <form.Field
@@ -164,36 +168,6 @@ export function ProviderSettingsForm({
                 </Select>
               )
             }}
-          />
-        </LabeledField>
-
-        <LabeledField label="Workspace Root">
-          <FieldHint>Built-in file actions are restricted to this directory tree.</FieldHint>
-          <form.Field
-            name="workspace.rootPath"
-            validators={{
-              onChange: ({ value }) => (value.trim() ? undefined : 'Workspace root is required.'),
-            }}
-            children={(field) => (
-              <TextField field={field} name="workspace-root" placeholder="Example: /Users/name/project" autoComplete="off" spellCheck={false} />
-            )}
-          />
-        </LabeledField>
-
-        <LabeledField label="Approval Policy">
-          <form.Field
-            name="workspace.approvalPolicy"
-            children={(field) => (
-              <Select
-                name="approval-policy"
-                value={field.state.value}
-                onChange={(event) => field.handleChange(event.target.value as AppSettings['workspace']['approvalPolicy'])}
-              >
-                <option value="on-request">on-request</option>
-                <option value="always">always</option>
-                <option value="never">never</option>
-              </Select>
-            )}
           />
         </LabeledField>
 

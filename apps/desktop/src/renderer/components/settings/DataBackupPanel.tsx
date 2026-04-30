@@ -43,7 +43,7 @@ export function DataBackupPanel({
           <p>Replaces current app data after creating a local safety backup, then relaunches the app.</p>
         </div>
       </div>
-      <div className="form-row data-backup-actions">
+      <div className="form-row action-row-left data-backup-actions">
         <Button
           type="button"
           variant="primary"

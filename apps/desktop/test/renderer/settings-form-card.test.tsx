@@ -13,7 +13,7 @@ describe('SettingsFormCard', () => {
     cleanup()
   })
 
-  it('shows provider settings by default and moves data tools into a separate tab', async () => {
+  it('shows provider settings by default and moves workspace and data tools into separate tabs', async () => {
     const user = userEvent.setup()
 
     renderSettingsFormCard()
@@ -21,14 +21,46 @@ describe('SettingsFormCard', () => {
     expect(screen.getByRole('tab', { name: 'Providers' }).getAttribute('aria-selected')).toBe('true')
     expect(screen.getByText('Provider status')).toBeTruthy()
     expect(screen.getAllByText('OpenRouter').length).toBeGreaterThan(0)
+    expect(screen.getByText('API Key')).toBeTruthy()
+    expect(screen.getAllByText('Model').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('Base URL').length).toBeGreaterThan(0)
+    expect(screen.queryByText('Workspace Root')).toBeNull()
+    expect(screen.queryByText('Approval Policy')).toBeNull()
     expect(screen.queryByText('Backup and restore')).toBeNull()
+
+    await user.click(screen.getByRole('tab', { name: 'Workspace' }))
+
+    expect(screen.getByRole('tab', { name: 'Workspace' }).getAttribute('aria-selected')).toBe('true')
+    expect(screen.getByText('Workspace Root')).toBeTruthy()
+    expect(screen.getByText('Approval Policy')).toBeTruthy()
+    expect(screen.queryByText('Provider status')).toBeNull()
+    expect(screen.queryByText('API Key')).toBeNull()
 
     await user.click(screen.getByRole('tab', { name: 'Data' }))
 
     expect(screen.getByRole('tab', { name: 'Data' }).getAttribute('aria-selected')).toBe('true')
     expect(screen.getByText('Backup and restore')).toBeTruthy()
     expect(screen.getByText('/tmp/nano-harness.db')).toBeTruthy()
-    expect(screen.queryByText('Provider status')).toBeNull()
+    expect(screen.queryByText('Workspace Root')).toBeNull()
+  })
+
+  it('hides api key settings for providers that do not require an api key', async () => {
+    const user = userEvent.setup()
+
+    const { container } = renderSettingsFormCard()
+
+    expect(screen.getByText('API Key')).toBeTruthy()
+
+    const providerSelect = container.querySelector<HTMLButtonElement>('[data-select-trigger="provider"]')
+
+    if (!providerSelect) {
+      throw new Error('Missing provider select trigger')
+    }
+
+    await user.click(providerSelect)
+    await user.click(screen.getByRole('option', { name: 'llama.cpp' }))
+
+    expect(screen.queryByText('API Key')).toBeNull()
   })
 })
 

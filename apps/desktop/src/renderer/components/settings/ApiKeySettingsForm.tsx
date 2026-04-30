@@ -46,9 +46,13 @@ export function ApiKeySettingsForm({
 
   return (
     <>
-      <form
+      <div
         className="settings-form"
-        onSubmit={(event) => {
+        onKeyDown={(event) => {
+          if (event.key !== 'Enter') {
+            return
+          }
+
           event.preventDefault()
           event.stopPropagation()
           setApiKeyMessage(null)
@@ -79,8 +83,16 @@ export function ApiKeySettingsForm({
           />
         </LabeledField>
 
-        <div className="form-row">
-          <Button type="submit" variant="primary" disabled={isSavingApiKey}>
+        <div className="form-row action-row-left">
+          <Button
+            type="button"
+            variant="primary"
+            disabled={isSavingApiKey}
+            onClick={() => {
+              setApiKeyMessage(null)
+              void form.handleSubmit()
+            }}
+          >
             {isSavingApiKey ? 'Saving API key…' : 'Save API key'}
           </Button>
           <Button
@@ -96,7 +108,7 @@ export function ApiKeySettingsForm({
             {isClearingApiKey ? 'Clearing…' : 'Clear API key'}
           </Button>
         </div>
-      </form>
+      </div>
 
       {apiKeyMessage ? (
         <FeedbackText variant="success" live>

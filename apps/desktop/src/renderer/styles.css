@@ -264,6 +264,11 @@ a {
   min-width: 0;
 }
 
+.action-row-left {
+  justify-content: flex-start;
+  flex-wrap: wrap;
+}
+
 .sidebar-header-row-stacked {
   align-items: flex-start;
   flex-direction: column;
