@@ -2,12 +2,13 @@ import { app, BrowserWindow } from 'electron'
 import { mkdir } from 'node:fs/promises'
 import { join } from 'node:path'
 
-import type { Provider, ProviderCredentialResolver, ProviderGenerateInput, ProviderGenerateResult } from '../../../../packages/core/src'
+import type { Provider, ProviderGenerateInput, ProviderGenerateResult } from '../../../../packages/core/src'
 import { CoreRunEngine, InMemoryEventBus, StaticPolicy } from '../../../../packages/core/src'
 import { BuiltInActionExecutor, ChatGptSubscriptionProvider, OpenAICompatibleProvider, createSqliteStore } from '../../../../packages/infra/src'
-import { createDefaultProviderSettings, desktopBridgeChannels, getProviderDefinition, providerAuthSchema, providerDefaultModels, providerStatusSchema, runEventSchema, storedProviderCredentialSchema, type AppSettings, type ProviderAdapterId, type ProviderAuthMethod } from '../../../../packages/shared/src'
+import { createDefaultProviderSettings, desktopBridgeChannels, getProviderDefinition, providerDefaultModels, providerStatusSchema, runEventSchema, storedProviderCredentialSchema, type AppSettings, type ProviderAdapterId, type ProviderAuthMethod } from '../../../../packages/shared/src'
 import { DesktopApprovalCoordinator } from './approval-coordinator'
 import { refreshOpenAIChatGptCredential } from './openai-chatgpt-auth'
+import { createProviderCredentialResolver } from './provider-credential-resolver'
 import { decryptCredentialPayload, encryptCredentialPayload } from './secure-credentials'
 
 export type DesktopRuntime = {
@@ -138,45 +139,14 @@ export async function createRuntime(): Promise<DesktopRuntime> {
   })
   const eventBus = new InMemoryEventBus()
   const approvalCoordinator = new DesktopApprovalCoordinator()
-  const providerCredentialResolver: ProviderCredentialResolver = {
-    async getProviderAuth(input) {
-      const providerDefinition = getProviderDefinition(input.provider)
-      const authMethod = input.authMethod ?? providerDefinition.defaultAuthMethod
-
-      if (!(providerDefinition.authMethods as readonly ProviderAuthMethod[]).includes(authMethod)) {
-        throw new Error(`${providerDefinition.label} does not support ${authMethod} auth.`)
-      }
-
-      if (authMethod === 'none') {
-        return { authMethod: 'none' }
-      }
-
-      const encryptedPayload = await store.getEncryptedProviderCredentialPayload(input.provider, authMethod)
-
-      if (!encryptedPayload) {
-        return providerAuthSchema.parse({ authMethod: 'none' })
-      }
-
-      const credential = storedProviderCredentialSchema.parse(decryptCredentialPayload(encryptedPayload))
-
-      if (credential.authMethod !== authMethod) {
-        throw new Error(`Stored credential does not match ${providerDefinition.label} ${authMethod} auth.`)
-      }
-
-      if (input.provider === 'openai' && credential.authMethod === 'oauth' && credential.expiresAt <= Date.now() + 60_000) {
-        const refreshedCredential = await refreshOpenAIChatGptCredential(credential)
-        await store.saveProviderCredentialPayload(
-          input.provider,
-          authMethod,
-          encryptCredentialPayload(refreshedCredential),
-        )
-
-        return providerAuthSchema.parse(refreshedCredential)
-      }
-
-      return providerAuthSchema.parse(credential)
+  const providerCredentialResolver = createProviderCredentialResolver({
+    store,
+    decryptCredentialPayload,
+    encryptCredentialPayload,
+    refreshers: {
+      openai: refreshOpenAIChatGptCredential,
     },
-  }
+  })
   const runEngine = new CoreRunEngine({
     store,
     provider: new DesktopProviderRouter(),
