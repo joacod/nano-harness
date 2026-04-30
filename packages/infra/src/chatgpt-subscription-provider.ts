@@ -48,6 +48,7 @@ type PendingFunctionCall = {
 }
 
 const CHATGPT_CODEX_RESPONSES_URL = 'https://chatgpt.com/backend-api/codex/responses'
+const CHATGPT_CODEX_INSTRUCTIONS = 'You are Nano Harness, a local desktop coding assistant. Help the user complete their request using the available tools when needed.'
 
 function toResponsesToolCalls(toolCalls: AssistantToolCall[]): ResponsesInputItem[] {
   return toolCalls.map((toolCall) => ({
@@ -182,8 +183,8 @@ async function readErrorResponse(response: Response): Promise<string> {
   }
 
   try {
-    const parsed = JSON.parse(body) as { error?: { message?: string } }
-    return parsed.error?.message?.trim() || body
+    const parsed = JSON.parse(body) as { detail?: string; error?: { message?: string } }
+    return parsed.error?.message?.trim() || parsed.detail?.trim() || body
   } catch {
     return body
   }
@@ -215,6 +216,8 @@ export class ChatGptSubscriptionProvider implements Provider {
       headers,
       body: JSON.stringify({
         model: input.settings.provider.model,
+        instructions: CHATGPT_CODEX_INSTRUCTIONS,
+        store: false,
         stream: true,
         input: toResponsesInput(input.messages),
         tools: toResponsesTools(input.actions),

@@ -122,6 +122,8 @@ describe('ChatGptSubscriptionProvider', () => {
     const body = JSON.parse(String(capturedInit?.body)) as Record<string, unknown>
     expect(body).toMatchObject({
       model: 'gpt-5.2',
+      instructions: expect.stringContaining('Nano Harness'),
+      store: false,
       stream: true,
       reasoning: { effort: 'medium' },
       parallel_tool_calls: false,
@@ -255,6 +257,33 @@ describe('ChatGptSubscriptionProvider', () => {
         signal: new AbortController().signal,
       }),
     ).rejects.toThrow('Provider failed')
+  })
+
+  it('surfaces ChatGPT detail errors from HTTP responses', async () => {
+    const provider = new ChatGptSubscriptionProvider({
+      fetch: vi.fn<FetchLike>(async () =>
+        new Response(JSON.stringify({ detail: 'Instructions are required' }), {
+          status: 400,
+          headers: { 'content-type': 'application/json' },
+        }),
+      ),
+    })
+
+    await expect(
+      provider.generate({
+        run,
+        messages: [messages[0]],
+        actions,
+        settings,
+        providerAuth: {
+          authMethod: 'oauth',
+          accessToken: 'access-token',
+          refreshToken: 'refresh-token',
+          expiresAt: Date.now() + 60_000,
+        },
+        signal: new AbortController().signal,
+      }),
+    ).rejects.toThrow('Instructions are required')
   })
 })
 
