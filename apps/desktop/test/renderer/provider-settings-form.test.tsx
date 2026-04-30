@@ -102,7 +102,7 @@ describe('ProviderSettingsForm', () => {
     await selectCustomOption(user, providerSelect, 'llama.cpp')
 
     expect(onProviderChange).toHaveBeenCalledWith('llama-cpp')
-    expect(modelInput.value).toBe('local-model')
+    expect(modelInput.value).toBe('ggml-org/gemma-3-1b-it-GGUF')
     expect(baseUrlInput.value).toBe('http://127.0.0.1:8080/v1')
   })
 })
