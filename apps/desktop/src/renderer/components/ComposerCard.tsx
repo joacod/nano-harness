@@ -51,7 +51,12 @@ export function ComposerCard({ conversationId }: { conversationId: string | null
       }
 
       setSubmitError(null)
-      await startRunMutation.mutateAsync(prompt)
+      try {
+        await startRunMutation.mutateAsync(prompt)
+      } catch {
+        return
+      }
+
       form.reset()
     },
   })
