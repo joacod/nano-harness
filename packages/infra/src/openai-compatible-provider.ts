@@ -1,6 +1,8 @@
 import { getProviderDefinition, reasoningDetailSchema, type ActionDefinition, type AssistantToolCall, type JsonValue, type Message, type ProviderReasoningDelta, type ReasoningDetail } from '@nano-harness/shared'
 import type { Provider, ProviderActionRequest, ProviderGenerateInput, ProviderGenerateResult } from '@nano-harness/core'
 
+import { parseSseData, splitSseEvents } from './sse'
+
 type FetchLike = typeof fetch
 
 type OpenAICompatibleProviderOptions = {
@@ -147,30 +149,6 @@ function toOpenAICompatibleTools(actions: ActionDefinition[]): OpenAICompatibleT
       parameters: action.inputSchema,
     },
   }))
-}
-
-function splitSseEvents(buffer: string): { events: string[]; remainder: string } {
-  const normalized = buffer.replace(/\r\n/g, '\n')
-  const parts = normalized.split('\n\n')
-  const remainder = parts.pop() ?? ''
-
-  return {
-    events: parts,
-    remainder,
-  }
-}
-
-function parseSseData(eventText: string): string | null {
-  const dataLines = eventText
-    .split('\n')
-    .filter((line) => line.startsWith('data:'))
-    .map((line) => line.slice(5).trimStart())
-
-  if (dataLines.length === 0) {
-    return null
-  }
-
-  return dataLines.join('\n')
 }
 
 function getChunkErrorMessage(chunk: OpenAICompatibleStreamChunk): string | null {
