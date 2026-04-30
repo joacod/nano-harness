@@ -17,6 +17,16 @@ describe('shared contracts', () => {
       adapterId: 'openai-compatible',
       baseUrl: 'https://openrouter.ai/api/v1',
       defaultModel: 'x-ai/grok-4.1-fast',
+      requiresApiKey: true,
+    })
+
+    expect(getProviderDefinition('llama-cpp')).toMatchObject({
+      key: 'llama-cpp',
+      label: 'llama.cpp',
+      adapterId: 'openai-compatible',
+      baseUrl: 'http://127.0.0.1:8080/v1',
+      defaultModel: 'local-model',
+      requiresApiKey: false,
     })
   })
 

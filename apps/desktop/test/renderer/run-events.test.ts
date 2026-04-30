@@ -189,6 +189,7 @@ describe('renderer run-events utilities', () => {
       provider: {
         provider: 'openrouter',
         model: 'custom/model',
+        baseUrl: 'http://localhost:9999/v1',
         reasoning: { mode: 'off' },
       },
       workspace: {
@@ -201,6 +202,7 @@ describe('renderer run-events utilities', () => {
       provider: {
         provider: 'openrouter',
         model: 'x-ai/grok-4.1-fast',
+        baseUrl: 'https://openrouter.ai/api/v1',
         reasoning: { mode: 'off' },
       },
       workspace: {

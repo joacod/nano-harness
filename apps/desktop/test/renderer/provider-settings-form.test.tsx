@@ -28,16 +28,19 @@ describe('ProviderSettingsForm', () => {
     )
 
     const modelInput = getRequiredElement<HTMLInputElement>(container, 'input[name="model"]')
-    const reasoningSelect = getRequiredElement<HTMLSelectElement>(container, 'select[name="provider-reasoning"]')
+    const baseUrlInput = getRequiredElement<HTMLInputElement>(container, 'input[name="provider-base-url"]')
+    const reasoningSelect = getRequiredElement<HTMLButtonElement>(container, '[data-select-trigger="provider-reasoning"]')
     const workspaceInput = getRequiredElement<HTMLInputElement>(container, 'input[name="workspace-root"]')
-    const approvalPolicySelect = getRequiredElement<HTMLSelectElement>(container, 'select[name="approval-policy"]')
+    const approvalPolicySelect = getRequiredElement<HTMLButtonElement>(container, '[data-select-trigger="approval-policy"]')
 
     await user.clear(modelInput)
     await user.type(modelInput, '  tuned/model  ')
-    await user.selectOptions(reasoningSelect, 'high')
+    await user.clear(baseUrlInput)
+    await user.type(baseUrlInput, '  http://localhost:9999/v1  ')
+    await selectCustomOption(user, reasoningSelect, 'high effort')
     await user.clear(workspaceInput)
     await user.type(workspaceInput, '  /tmp/nano-harness  ')
-    await user.selectOptions(approvalPolicySelect, 'never')
+    await selectCustomOption(user, approvalPolicySelect, 'never')
     await user.click(screen.getByRole('button', { name: 'Save settings' }))
 
     await waitFor(() => {
@@ -45,6 +48,7 @@ describe('ProviderSettingsForm', () => {
         provider: {
           provider: 'openrouter',
           model: 'tuned/model',
+          baseUrl: 'http://localhost:9999/v1',
           reasoning: { mode: 'effort', effort: 'high' },
         },
         workspace: {
@@ -62,7 +66,7 @@ describe('ProviderSettingsForm', () => {
 
     const { container } = render(
       <ProviderSettingsForm
-        initialSettings={createSettings({ provider: { model: 'custom/model' } })}
+        initialSettings={createSettings({ provider: { model: 'custom/model', baseUrl: 'http://localhost:9999/v1' } })}
         isSaving={false}
         saveError={null}
         onProviderChange={() => undefined}
@@ -71,11 +75,40 @@ describe('ProviderSettingsForm', () => {
     )
 
     const modelInput = getRequiredElement<HTMLInputElement>(container, 'input[name="model"]')
+    const baseUrlInput = getRequiredElement<HTMLInputElement>(container, 'input[name="provider-base-url"]')
     await user.clear(modelInput)
     await user.type(modelInput, 'another/model')
+    await user.clear(baseUrlInput)
+    await user.type(baseUrlInput, 'http://localhost:9999/v1')
     await user.click(screen.getByRole('button', { name: 'Use defaults' }))
 
     expect(modelInput.value).toBe('x-ai/grok-4.1-fast')
+    expect(baseUrlInput.value).toBe('https://openrouter.ai/api/v1')
+  })
+
+  it('switches to llama.cpp defaults', async () => {
+    const user = userEvent.setup()
+    const onProviderChange = vi.fn()
+
+    const { container } = render(
+      <ProviderSettingsForm
+        initialSettings={createSettings()}
+        isSaving={false}
+        saveError={null}
+        onProviderChange={onProviderChange}
+        onSubmit={vi.fn(async () => undefined)}
+      />,
+    )
+
+    const providerSelect = getRequiredElement<HTMLButtonElement>(container, '[data-select-trigger="provider"]')
+    const modelInput = getRequiredElement<HTMLInputElement>(container, 'input[name="model"]')
+    const baseUrlInput = getRequiredElement<HTMLInputElement>(container, 'input[name="provider-base-url"]')
+
+    await selectCustomOption(user, providerSelect, 'llama.cpp')
+
+    expect(onProviderChange).toHaveBeenCalledWith('llama-cpp')
+    expect(modelInput.value).toBe('local-model')
+    expect(baseUrlInput.value).toBe('http://127.0.0.1:8080/v1')
   })
 })
 
@@ -87,6 +120,7 @@ function createSettings(overrides?: {
     provider: {
       provider: 'openrouter',
       model: 'custom/model',
+      baseUrl: 'https://openrouter.ai/api/v1',
       reasoning: { mode: 'auto' },
       ...overrides?.provider,
     },
@@ -106,4 +140,9 @@ function getRequiredElement<T extends Element>(container: HTMLElement, selector:
   }
 
   return element
+}
+
+async function selectCustomOption(user: ReturnType<typeof userEvent.setup>, trigger: HTMLButtonElement, optionName: string) {
+  await user.click(trigger)
+  await user.click(screen.getByRole('option', { name: optionName }))
 }

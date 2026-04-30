@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import type { RunEvent } from '@nano-harness/shared'
+import type { ProviderKey, RunEvent } from '@nano-harness/shared'
 
 const { getAllWindows } = vi.hoisted(() => ({
   getAllWindows: vi.fn<() => Array<{ webContents: { send: (channel: string, payload: RunEvent) => void } }>>(() => []),
@@ -30,7 +30,7 @@ import { buildProviderStatus, setupEventForwarding } from '../../src/main/runtim
 
 type ProviderStatusRuntime = {
   store: {
-    getProviderCredentialStatus(provider: 'openrouter'): Promise<{ apiKeyPresent: boolean }>
+    getProviderCredentialStatus(provider: ProviderKey): Promise<{ apiKeyPresent: boolean }>
   }
 }
 
@@ -100,6 +100,34 @@ describe('desktop runtime helpers', () => {
       isReady: true,
       issues: [],
       hints: ['OpenRouter models usually include the provider prefix, for example x-ai/grok-4.1-fast.'],
+    })
+  })
+
+  it('marks llama.cpp ready without an api key', async () => {
+    const runtime = {
+      store: {
+        getProviderCredentialStatus: vi.fn(async () => ({ apiKeyPresent: false })),
+      },
+    } satisfies ProviderStatusRuntime
+
+    const result = await buildProviderStatus(runtime, {
+      provider: {
+        provider: 'llama-cpp',
+        model: 'local-model',
+        baseUrl: 'http://127.0.0.1:8080/v1',
+      },
+      workspace: {
+        rootPath: '/workspace',
+        approvalPolicy: 'on-request',
+      },
+    })
+
+    expect(result).toMatchObject({
+      apiKeyPresent: false,
+      isReady: true,
+      baseUrl: 'http://127.0.0.1:8080/v1',
+      issues: [],
+      hints: ['Start llama-server before running a local model. The API endpoint should expose /v1/chat/completions.'],
     })
   })
 

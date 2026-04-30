@@ -10,7 +10,7 @@ export function ConversationNav() {
   const conversations = conversationsQuery.data ?? []
 
   return (
-    <div className="sidebar-section sidebar-collapsible-content">
+    <div className="sidebar-section sidebar-session-section sidebar-collapsible-content">
       <div className="sidebar-header-row">
         <h2>Sessions</h2>
         <Link to="/" className="ghost-link">

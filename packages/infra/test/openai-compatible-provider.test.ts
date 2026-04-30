@@ -148,6 +148,41 @@ describe('OpenAICompatibleProvider', () => {
     ])
   })
 
+  it('supports llama.cpp-compatible local requests without an API key', async () => {
+    let capturedUrl: RequestInfo | URL | undefined
+    let capturedInit: RequestInit | undefined
+    const fetchMock = vi.fn<FetchLike>(async (url, init) => {
+      capturedUrl = url
+      capturedInit = init
+      return createSseResponse(['data: [DONE]\n\n'])
+    })
+    const provider = new OpenAICompatibleProvider({ fetch: fetchMock })
+
+    await provider.generate({
+      run,
+      messages: [messages[0]],
+      actions,
+      settings: {
+        ...settings,
+        provider: {
+          provider: 'llama-cpp',
+          model: 'local-model',
+          baseUrl: 'http://127.0.0.1:8080/v1/',
+        },
+      },
+      providerApiKey: undefined,
+      signal: new AbortController().signal,
+    })
+
+    expect(capturedUrl).toBe('http://127.0.0.1:8080/v1/chat/completions')
+    expect(capturedInit?.headers).toEqual(
+      expect.objectContaining({
+        'content-type': 'application/json',
+      }),
+    )
+    expect(capturedInit?.headers).not.toEqual(expect.objectContaining({ authorization: expect.any(String) }))
+  })
+
   it('streams content and reasoning deltas to the caller', async () => {
     const onDelta = vi.fn()
     const onReasoningDelta = vi.fn()
