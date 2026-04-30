@@ -5,8 +5,10 @@ import {
   getProviderDefinition,
   messageSchema,
   openExternalUrlInputSchema,
+  providerOptions,
   resolveApprovalInputSchema,
   runEventSchema,
+  startProviderOauthInputSchema,
 } from '../src'
 
 describe('shared contracts', () => {
@@ -18,6 +20,8 @@ describe('shared contracts', () => {
       baseUrl: 'https://openrouter.ai/api/v1',
       defaultModel: 'x-ai/grok-4.1-fast',
       requiresApiKey: true,
+      authMethods: ['api-key'],
+      defaultAuthMethod: 'api-key',
     })
 
     expect(getProviderDefinition('llama-cpp')).toMatchObject({
@@ -27,7 +31,32 @@ describe('shared contracts', () => {
       baseUrl: 'http://127.0.0.1:8080/v1',
       defaultModel: 'ggml-org/gemma-3-1b-it-GGUF',
       requiresApiKey: false,
+      authMethods: ['none'],
+      defaultAuthMethod: 'none',
     })
+
+    expect(getProviderDefinition('openai')).toMatchObject({
+      key: 'openai',
+      label: 'OpenAI',
+      adapterId: 'chatgpt-subscription',
+      baseUrl: 'https://chatgpt.com/backend-api/codex',
+      defaultModel: 'gpt-5.2',
+      requiresApiKey: false,
+      authMethods: ['oauth'],
+      defaultAuthMethod: 'oauth',
+    })
+  })
+
+  it('includes OpenAI in provider options', () => {
+    expect(providerOptions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          key: 'openai',
+          label: 'OpenAI',
+          defaultModel: 'gpt-5.2',
+        }),
+      ]),
+    )
   })
 
   it('parses assistant and tool messages with tool metadata', () => {
@@ -109,6 +138,11 @@ describe('shared contracts', () => {
     })
 
     expect(() => openExternalUrlInputSchema.parse({ url: 'not a url' })).toThrow()
+  })
+
+  it('validates OAuth bridge payloads', () => {
+    expect(startProviderOauthInputSchema.parse({ provider: 'openai' })).toEqual({ provider: 'openai' })
+    expect(() => startProviderOauthInputSchema.parse({ provider: 'not-a-provider' })).toThrow()
   })
 
   it('rejects invalid app settings payloads', () => {

@@ -3,7 +3,7 @@ import { z } from 'zod'
 import { runEventSchema } from '../events'
 import { runCreateInputSchema } from '../runs'
 import { appSettingsSchema } from '../settings'
-import type { GetConversationInput, OpenExternalUrlInput, ProviderCredentialInput, ResolveApprovalInput, RunIdInput, SaveProviderApiKeyInput } from './inputs'
+import type { ClearProviderAuthInput, GetConversationInput, OpenExternalUrlInput, ProviderCredentialInput, ResolveApprovalInput, RunIdInput, SaveProviderApiKeyInput, StartProviderOauthInput } from './inputs'
 import type {
   ConversationList,
   ConversationSnapshot,
@@ -12,6 +12,7 @@ import type {
   ImportDataResult,
   ProviderCredentialStatus,
   ProviderStatus,
+  StartProviderOauthResult,
   StartRunResult,
 } from './outputs'
 
@@ -22,6 +23,8 @@ export type DesktopApi = {
   getProviderCredentialStatus(input: ProviderCredentialInput): Promise<ProviderCredentialStatus>
   saveProviderApiKey(input: SaveProviderApiKeyInput): Promise<void>
   clearProviderApiKey(input: ProviderCredentialInput): Promise<void>
+  startProviderOauth(input: StartProviderOauthInput): Promise<StartProviderOauthResult>
+  clearProviderAuth(input: ClearProviderAuthInput): Promise<void>
   exportData(): Promise<ExportDataResult>
   importData(): Promise<ImportDataResult>
   getSettings(): Promise<z.infer<typeof appSettingsSchema> | null>

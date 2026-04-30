@@ -5,6 +5,8 @@ export const desktopBridgeChannels = {
   getProviderCredentialStatus: 'desktop:get-provider-credential-status',
   saveProviderApiKey: 'desktop:save-provider-api-key',
   clearProviderApiKey: 'desktop:clear-provider-api-key',
+  startProviderOauth: 'desktop:start-provider-oauth',
+  clearProviderAuth: 'desktop:clear-provider-auth',
   exportData: 'desktop:export-data',
   importData: 'desktop:import-data',
   getSettings: 'desktop:get-settings',

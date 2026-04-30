@@ -31,6 +31,8 @@ export function createDesktopMock(overrides?: Partial<DesktopApi>): DesktopApi {
     getProviderCredentialStatus: async () => ({ apiKeyPresent: false }),
     saveProviderApiKey: async () => undefined,
     clearProviderApiKey: async () => undefined,
+    startProviderOauth: async (input) => ({ provider: input.provider }),
+    clearProviderAuth: async () => undefined,
     exportData: async () => ({ exportedFilePath: null }),
     importData: async () => ({ imported: false }),
     getSettings: async () => null,

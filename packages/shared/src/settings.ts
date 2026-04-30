@@ -4,9 +4,13 @@ export const approvalPolicySchema = z.enum(['always', 'on-request', 'never'])
 
 export type ApprovalPolicy = z.infer<typeof approvalPolicySchema>
 
-export const providerKeySchema = z.enum(['openrouter', 'llama-cpp'])
+export const providerKeySchema = z.enum(['openrouter', 'llama-cpp', 'openai'])
 
 export type ProviderKey = z.infer<typeof providerKeySchema>
+
+export const providerAuthMethodSchema = z.enum(['api-key', 'none', 'oauth'])
+
+export type ProviderAuthMethod = z.infer<typeof providerAuthMethodSchema>
 
 export const reasoningEffortSchema = z.enum(['minimal', 'low', 'medium', 'high', 'xhigh'])
 
@@ -31,6 +35,8 @@ export const providerCatalog = {
     baseUrl: 'https://openrouter.ai/api/v1',
     defaultModel: 'x-ai/grok-4.1-fast',
     requiresApiKey: true,
+    authMethods: ['api-key'],
+    defaultAuthMethod: 'api-key',
   },
   'llama-cpp': {
     key: 'llama-cpp',
@@ -39,6 +45,18 @@ export const providerCatalog = {
     baseUrl: 'http://127.0.0.1:8080/v1',
     defaultModel: 'ggml-org/gemma-3-1b-it-GGUF',
     requiresApiKey: false,
+    authMethods: ['none'],
+    defaultAuthMethod: 'none',
+  },
+  openai: {
+    key: 'openai',
+    label: 'OpenAI',
+    adapterId: 'chatgpt-subscription',
+    baseUrl: 'https://chatgpt.com/backend-api/codex',
+    defaultModel: 'gpt-5.2',
+    requiresApiKey: false,
+    authMethods: ['oauth'],
+    defaultAuthMethod: 'oauth',
   },
 } as const satisfies Record<ProviderKey, {
   key: ProviderKey
@@ -47,6 +65,8 @@ export const providerCatalog = {
   baseUrl: string
   defaultModel: string
   requiresApiKey: boolean
+  authMethods: readonly ProviderAuthMethod[]
+  defaultAuthMethod: ProviderAuthMethod
 }>
 
 export function getProviderDefinition(provider: ProviderKey) {
