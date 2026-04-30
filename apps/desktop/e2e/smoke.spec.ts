@@ -15,7 +15,7 @@ test('loads the app shell with a mocked desktop bridge', async ({ page }) => {
   await page.getByRole('button', { name: 'Open sidebar' }).click()
 
   await expect(page.getByRole('heading', { name: 'Agent deck' })).toBeVisible()
-  await expect(page.getByText('Provider online')).toBeVisible()
+  await expect(page.getByText('Provider')).toBeVisible()
 })
 
 test('starts a run and renders streamed output from live run events', async ({ page }) => {

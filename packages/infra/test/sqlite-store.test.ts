@@ -240,6 +240,33 @@ describe('SqliteStore', () => {
       await store.close()
     }
   })
+
+  it('sanitizes provider credentials from exported or staged database files', async () => {
+    const store = await createTestStore()
+    const backupFilePath = path.join(store.paths.dataDir, 'export.db')
+
+    try {
+      await store.saveProviderCredentialPayload('openrouter', 'api-key', 'encrypted-api-key')
+      await store.saveProviderCredentialPayload('openai', 'oauth', 'encrypted-oauth-token-account-claim')
+      await store.backupToFile(backupFilePath)
+      await store.sanitizeDatabaseFile(backupFilePath)
+
+      const backupClient = createClient({ url: `file:${backupFilePath}` })
+
+      try {
+        const rows = await backupClient.execute('SELECT provider, auth_method, encrypted_payload FROM provider_credentials')
+
+        expect(rows.rows).toEqual([])
+      } finally {
+        await backupClient.close()
+      }
+
+      expect(await store.getEncryptedProviderCredentialPayload('openrouter', 'api-key')).toBe('encrypted-api-key')
+      expect(await store.getEncryptedProviderCredentialPayload('openai', 'oauth')).toBe('encrypted-oauth-token-account-claim')
+    } finally {
+      await store.close()
+    }
+  })
 })
 
 async function createTestStore() {

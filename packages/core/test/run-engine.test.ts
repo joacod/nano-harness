@@ -114,6 +114,49 @@ describe('CoreRunEngine', () => {
     expect(store.messages[1]).toMatchObject({ content: 'Local response.' })
   })
 
+  it('fails an OpenAI run with a clear sign-in message when OAuth auth is missing', async () => {
+    const store = new FakeStore()
+    store.settings = {
+      ...testSettings,
+      provider: {
+        provider: 'openai',
+        model: 'gpt-5.2',
+        baseUrl: 'https://chatgpt.com/backend-api/codex',
+      },
+    }
+    const engine = new CoreRunEngine({
+      store,
+      provider: new FakeProvider([
+        async ({ providerAuth }) => {
+          if (providerAuth.authMethod !== 'oauth') {
+            throw new Error('Sign in with ChatGPT before starting an OpenAI run.')
+          }
+
+          return { content: 'unused' }
+        },
+      ]),
+      providerCredentialResolver: {
+        async getProviderAuth() {
+          return { authMethod: 'none' }
+        },
+      },
+      actionExecutor: new FakeActionExecutor([], async (input) => createActionResult({ actionCallId: input.call.id })),
+      policy: new FakePolicy(() => ({ effect: 'allow' })),
+      now: () => '2026-04-29T10:00:00.000Z',
+      createId: createSequentialId(),
+    })
+
+    const handle = await engine.startRun(createRunInput())
+
+    await waitForCondition(() => store.runs.get(handle.runId)?.status === 'failed')
+
+    expect(store.runs.get(handle.runId)).toMatchObject({
+      status: 'failed',
+      failureMessage: 'Sign in with ChatGPT before starting an OpenAI run.',
+    })
+    expect(store.events.map((event) => event.type)).toContain('provider.error')
+  })
+
   it('executes tool calls, persists tool output, and continues the provider loop', async () => {
     const store = new FakeStore()
     const readFileAction = createActionDefinition({ id: 'read_file', title: 'Read File' })

@@ -2,11 +2,14 @@ import { describe, expect, it } from 'vitest'
 
 import {
   appSettingsSchema,
+  clearProviderAuthInputSchema,
   getProviderDefinition,
   messageSchema,
   openExternalUrlInputSchema,
   providerOptions,
   resolveApprovalInputSchema,
+  saveProviderAuthInputSchema,
+  startProviderOauthResultSchema,
   runEventSchema,
   startProviderOauthInputSchema,
 } from '../src'
@@ -142,7 +145,16 @@ describe('shared contracts', () => {
 
   it('validates OAuth bridge payloads', () => {
     expect(startProviderOauthInputSchema.parse({ provider: 'openai' })).toEqual({ provider: 'openai' })
+    expect(startProviderOauthInputSchema.parse({ provider: 'openai', authMethod: 'oauth' })).toEqual({ provider: 'openai', authMethod: 'oauth' })
+    expect(startProviderOauthResultSchema.parse({ provider: 'openai', accountId: 'account-1' })).toEqual({ provider: 'openai', accountId: 'account-1' })
+    expect(saveProviderAuthInputSchema.parse({ provider: 'openrouter', authMethod: 'api-key', apiKey: 'key' })).toEqual({
+      provider: 'openrouter',
+      authMethod: 'api-key',
+      apiKey: 'key',
+    })
+    expect(clearProviderAuthInputSchema.parse({ provider: 'openai', authMethod: 'oauth' })).toEqual({ provider: 'openai', authMethod: 'oauth' })
     expect(() => startProviderOauthInputSchema.parse({ provider: 'not-a-provider' })).toThrow()
+    expect(() => saveProviderAuthInputSchema.parse({ provider: 'openai', authMethod: 'oauth', apiKey: 'key' })).toThrow()
   })
 
   it('rejects invalid app settings payloads', () => {
