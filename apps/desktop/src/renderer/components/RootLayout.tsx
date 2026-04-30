@@ -1,4 +1,6 @@
-import { Link, Outlet } from '@tanstack/react-router'
+import { useEffect, useRef } from 'react'
+
+import { Outlet, useNavigate, useRouterState } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 
 import { providerStatusQueryOptions } from '../queries'
@@ -9,10 +11,39 @@ import { RuntimeSummary } from './sidebar/RuntimeSummary'
 import { Button, RuntimePill, Switch } from './ui'
 
 export function RootLayout() {
+  const navigate = useNavigate()
+  const currentPath = useRouterState({ select: (state) => state.location.pathname })
+  const lastSessionPathRef = useRef('/')
   const { context, recentEvents } = useRuntimeUi()
   const { isSidebarCollapsed, showTechnicalInfo, toggleSidebarCollapsed, toggleTechnicalInfo } = useTechnicalUi()
   const providerStatusQuery = useQuery(providerStatusQueryOptions)
   const providerStatus = providerStatusQuery.data
+  const isSettingsOpen = currentPath === '/settings'
+
+  useEffect(() => {
+    if (currentPath === '/' || currentPath.startsWith('/conversations/')) {
+      lastSessionPathRef.current = currentPath
+    }
+  }, [currentPath])
+
+  function handleSettingsClick() {
+    if (!isSettingsOpen) {
+      void navigate({ to: '/settings' })
+      return
+    }
+
+    const sessionPath = lastSessionPathRef.current
+
+    if (sessionPath.startsWith('/conversations/')) {
+      void navigate({
+        to: '/conversations/$conversationId',
+        params: { conversationId: decodeURIComponent(sessionPath.slice('/conversations/'.length)) },
+      })
+      return
+    }
+
+    void navigate({ to: '/' })
+  }
 
   return (
     <main className={`workspace-shell ${isSidebarCollapsed ? 'workspace-shell-sidebar-collapsed' : ''}`}>
@@ -48,9 +79,14 @@ export function RootLayout() {
           ) : null}
 
           <div className="sidebar-section sidebar-footer sidebar-collapsible-content">
-            <Link to="/settings" className="ghost-link" activeProps={{ className: 'ghost-link ghost-link-active' }}>
+            <button
+              type="button"
+              className={`ghost-link${isSettingsOpen ? ' ghost-link-active' : ''}`}
+              aria-pressed={isSettingsOpen}
+              onClick={handleSettingsClick}
+            >
               Settings
-            </Link>
+            </button>
             <div className="sidebar-footer-status-row">
               <Switch
                 type="button"

@@ -25,7 +25,7 @@ describe('shared contracts', () => {
       label: 'llama.cpp',
       adapterId: 'openai-compatible',
       baseUrl: 'http://127.0.0.1:8080/v1',
-      defaultModel: 'local-model',
+      defaultModel: 'ggml-org/gemma-3-1b-it-GGUF',
       requiresApiKey: false,
     })
   })

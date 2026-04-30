@@ -30,17 +30,12 @@ describe('ProviderSettingsForm', () => {
     const modelInput = getRequiredElement<HTMLInputElement>(container, 'input[name="model"]')
     const baseUrlInput = getRequiredElement<HTMLInputElement>(container, 'input[name="provider-base-url"]')
     const reasoningSelect = getRequiredElement<HTMLButtonElement>(container, '[data-select-trigger="provider-reasoning"]')
-    const workspaceInput = getRequiredElement<HTMLInputElement>(container, 'input[name="workspace-root"]')
-    const approvalPolicySelect = getRequiredElement<HTMLButtonElement>(container, '[data-select-trigger="approval-policy"]')
 
     await user.clear(modelInput)
     await user.type(modelInput, '  tuned/model  ')
     await user.clear(baseUrlInput)
     await user.type(baseUrlInput, '  http://localhost:9999/v1  ')
     await selectCustomOption(user, reasoningSelect, 'high effort')
-    await user.clear(workspaceInput)
-    await user.type(workspaceInput, '  /tmp/nano-harness  ')
-    await selectCustomOption(user, approvalPolicySelect, 'never')
     await user.click(screen.getByRole('button', { name: 'Save settings' }))
 
     await waitFor(() => {
@@ -52,8 +47,8 @@ describe('ProviderSettingsForm', () => {
           reasoning: { mode: 'effort', effort: 'high' },
         },
         workspace: {
-          rootPath: '/tmp/nano-harness',
-          approvalPolicy: 'never',
+          rootPath: '/Users/test/workspace',
+          approvalPolicy: 'always',
         },
       })
     })
@@ -107,7 +102,7 @@ describe('ProviderSettingsForm', () => {
     await selectCustomOption(user, providerSelect, 'llama.cpp')
 
     expect(onProviderChange).toHaveBeenCalledWith('llama-cpp')
-    expect(modelInput.value).toBe('local-model')
+    expect(modelInput.value).toBe('ggml-org/gemma-3-1b-it-GGUF')
     expect(baseUrlInput.value).toBe('http://127.0.0.1:8080/v1')
   })
 })

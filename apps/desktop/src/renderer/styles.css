@@ -264,6 +264,11 @@ a {
   min-width: 0;
 }
 
+.action-row-left {
+  justify-content: flex-start;
+  flex-wrap: wrap;
+}
+
 .sidebar-header-row-stacked {
   align-items: flex-start;
   flex-direction: column;
@@ -1057,6 +1062,84 @@ a {
   gap: 12px;
 }
 
+.settings-form {
+  gap: 14px;
+}
+
+.settings-section {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid rgba(67, 231, 255, 0.12);
+  background: rgba(1, 9, 7, 0.24);
+}
+
+.settings-section-subtle {
+  border-color: rgba(67, 255, 157, 0.12);
+  background: rgba(3, 20, 18, 0.3);
+}
+
+.settings-mini-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid rgba(67, 231, 255, 0.12);
+  background: rgba(1, 9, 7, 0.24);
+}
+
+.settings-section-heading {
+  display: grid;
+  max-width: 720px;
+  gap: 4px;
+}
+
+.settings-section-heading .eyebrow {
+  margin-bottom: 0;
+}
+
+.settings-section-heading p:not(.eyebrow) {
+  margin: 0;
+  color: var(--muted-foreground);
+  font-size: 0.86rem;
+  line-height: 1.45;
+}
+
+.settings-field-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(240px, 480px));
+  gap: 12px;
+  align-items: end;
+}
+
+.settings-field-grid-compact {
+  grid-template-columns: minmax(240px, 420px) auto;
+}
+
+.settings-field-grid-wide {
+  grid-template-columns: minmax(280px, 720px);
+}
+
+.settings-provider-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: stretch;
+}
+
+.settings-field {
+  min-width: 0;
+}
+
+.settings-field-action {
+  display: flex;
+  align-items: flex-end;
+  min-height: 42px;
+}
+
+.settings-save-row {
+  padding-top: 2px;
+}
+
 .composer-form {
   gap: 8px;
 }
@@ -1134,11 +1217,8 @@ a {
 }
 
 .custom-select-options {
-  position: absolute;
-  z-index: 20;
-  top: calc(100% + 6px);
-  left: 0;
-  right: 0;
+  position: fixed;
+  z-index: 100;
   display: grid;
   gap: 4px;
   max-height: 240px;
@@ -1499,6 +1579,26 @@ a {
   .form-row {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .settings-section {
+    padding: 12px;
+  }
+
+  .settings-mini-section {
+    padding: 12px;
+  }
+
+  .settings-field-grid,
+  .settings-field-grid-compact,
+  .settings-field-grid-wide,
+  .settings-provider-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-field-action {
+    align-items: flex-start;
+    min-height: 0;
   }
 
   .inspector-summary {

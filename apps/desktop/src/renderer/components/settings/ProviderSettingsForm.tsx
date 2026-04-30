@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { type ReactNode, useState } from 'react'
 
 import { useForm } from '@tanstack/react-form'
 
@@ -12,12 +12,14 @@ export function ProviderSettingsForm({
   initialSettings,
   isSaving,
   saveError,
+  apiKeySection,
   onProviderChange,
   onSubmit,
 }: {
   initialSettings: AppSettings
   isSaving: boolean
   saveError: string | null
+  apiKeySection?: ReactNode
   onProviderChange: (provider: AppSettings['provider']['provider']) => void
   onSubmit: (settings: AppSettings) => Promise<void>
 }) {
@@ -54,32 +56,54 @@ export function ProviderSettingsForm({
           void form.handleSubmit()
         }}
       >
-        <LabeledField label="Provider">
-          <FieldHint>Select the hosted provider you want to use.</FieldHint>
-          <form.Field
-            name="provider.provider"
-            children={(field) => (
-              <Select
-                name="provider"
-                value={field.state.value}
-                onChange={(event) => {
-                  const nextProvider = event.target.value as AppSettings['provider']['provider']
-                  field.handleChange(nextProvider)
-                  onProviderChange(nextProvider)
-                  const nextSettings = applyProviderDefaults(form.state.values, nextProvider)
-                  form.setFieldValue('provider.model', nextSettings.provider.model)
-                  form.setFieldValue('provider.baseUrl', nextSettings.provider.baseUrl)
-                }}
-              >
-                {providerOptions.map((provider) => (
-                  <option key={provider.key} value={provider.key}>
-                    {provider.label}
-                  </option>
-                ))}
-              </Select>
-            )}
-          />
-          <div className="preset-row">
+        <div className="settings-field-grid settings-provider-grid">
+          <section className="settings-mini-section" aria-labelledby="provider-account-heading">
+            <div className="settings-section-heading">
+              <p className="eyebrow" id="provider-account-heading">
+                Provider
+              </p>
+            </div>
+
+            <div className="settings-field">
+              <LabeledField label="Provider">
+                <form.Field
+                  name="provider.provider"
+                  children={(field) => (
+                    <Select
+                      name="provider"
+                      value={field.state.value}
+                      onChange={(event) => {
+                        const nextProvider = event.target.value as AppSettings['provider']['provider']
+                        field.handleChange(nextProvider)
+                        onProviderChange(nextProvider)
+                        const nextSettings = applyProviderDefaults(form.state.values, nextProvider)
+                        form.setFieldValue('provider.model', nextSettings.provider.model)
+                        form.setFieldValue('provider.baseUrl', nextSettings.provider.baseUrl)
+                      }}
+                    >
+                      {providerOptions.map((provider) => (
+                        <option key={provider.key} value={provider.key}>
+                          {provider.label}
+                        </option>
+                      ))}
+                    </Select>
+                  )}
+                />
+              </LabeledField>
+            </div>
+          </section>
+          {apiKeySection ? <div className="settings-field">{apiKeySection}</div> : null}
+        </div>
+
+        <section className="settings-section" aria-labelledby="provider-endpoint-heading">
+          <div className="settings-section-heading">
+            <p className="eyebrow" id="provider-endpoint-heading">
+              Endpoint
+            </p>
+            <p>Model and API endpoint.</p>
+          </div>
+
+          <div className="form-row action-row-left">
             <Button
               type="button"
               onClick={() => {
@@ -92,112 +116,100 @@ export function ProviderSettingsForm({
               Use defaults
             </Button>
           </div>
-        </LabeledField>
 
-        <LabeledField label="Model">
-          <FieldHint>Choose a model available for your selected provider.</FieldHint>
-          <form.Field
-            name="provider.model"
-            validators={{
-              onChange: ({ value }) => (value.trim() ? undefined : 'Model is required.'),
-            }}
-            children={(field) => (
-              <TextField
-                field={field}
-                name="model"
-                placeholder="Example: x-ai/grok-4.1-fast"
-                autoComplete="off"
-                spellCheck={false}
-              />
-            )}
-          />
-        </LabeledField>
-
-        <LabeledField label="Base URL">
-          <FieldHint>OpenAI-compatible API root. llama.cpp usually runs at http://127.0.0.1:8080/v1.</FieldHint>
-          <form.Field
-            name="provider.baseUrl"
-            validators={{
-              onChange: ({ value }) => (value?.trim() ? undefined : 'Base URL is required.'),
-            }}
-            children={(field) => (
-              <TextField
-                field={field}
-                name="provider-base-url"
-                placeholder="Example: http://127.0.0.1:8080/v1"
-                autoComplete="url"
-                spellCheck={false}
-              />
-            )}
-          />
-        </LabeledField>
-
-        <LabeledField label="Reasoning">
-          <FieldHint>Show provider-supplied model thinking when the selected provider and model expose it. Effort modes may increase cost and latency.</FieldHint>
-          <form.Field
-            name="provider.reasoning"
-            children={(field) => {
-              const value = field.state.value?.mode === 'effort' ? field.state.value.effort : field.state.value?.mode ?? 'auto'
-
-              return (
-                <Select
-                  name="provider-reasoning"
-                  value={value}
-                  onChange={(event) => {
-                    const nextValue = event.target.value
-
-                    if (nextValue === 'auto' || nextValue === 'off') {
-                      field.handleChange({ mode: nextValue })
-                      return
-                    }
-
-                    field.handleChange({ mode: 'effort', effort: nextValue as 'minimal' | 'low' | 'medium' | 'high' | 'xhigh' })
+          <div className="settings-field-grid">
+            <div className="settings-field">
+              <LabeledField label="Model">
+                <FieldHint>Model ID to use for runs.</FieldHint>
+                <form.Field
+                  name="provider.model"
+                  validators={{
+                    onChange: ({ value }) => (value.trim() ? undefined : 'Model is required.'),
                   }}
-                >
-                  <option value="auto">auto</option>
-                  <option value="off">off</option>
-                  <option value="minimal">minimal effort</option>
-                  <option value="low">low effort</option>
-                  <option value="medium">medium effort</option>
-                  <option value="high">high effort</option>
-                  <option value="xhigh">xhigh effort</option>
-                </Select>
-              )
-            }}
-          />
-        </LabeledField>
+                  children={(field) => (
+                    <TextField
+                      field={field}
+                      name="model"
+                      placeholder="Example: x-ai/grok-4.1-fast"
+                      autoComplete="off"
+                      spellCheck={false}
+                    />
+                  )}
+                />
+              </LabeledField>
+            </div>
 
-        <LabeledField label="Workspace Root">
-          <FieldHint>Built-in file actions are restricted to this directory tree.</FieldHint>
-          <form.Field
-            name="workspace.rootPath"
-            validators={{
-              onChange: ({ value }) => (value.trim() ? undefined : 'Workspace root is required.'),
-            }}
-            children={(field) => (
-              <TextField field={field} name="workspace-root" placeholder="Example: /Users/name/project" autoComplete="off" spellCheck={false} />
-            )}
-          />
-        </LabeledField>
+            <div className="settings-field">
+              <LabeledField label="Base URL">
+                <FieldHint>OpenAI-compatible API root.</FieldHint>
+                <form.Field
+                  name="provider.baseUrl"
+                  validators={{
+                    onChange: ({ value }) => (value?.trim() ? undefined : 'Base URL is required.'),
+                  }}
+                  children={(field) => (
+                    <TextField
+                      field={field}
+                      name="provider-base-url"
+                      placeholder="Example: http://127.0.0.1:8080/v1"
+                      autoComplete="url"
+                      spellCheck={false}
+                    />
+                  )}
+                />
+              </LabeledField>
+            </div>
+          </div>
+        </section>
 
-        <LabeledField label="Approval Policy">
-          <form.Field
-            name="workspace.approvalPolicy"
-            children={(field) => (
-              <Select
-                name="approval-policy"
-                value={field.state.value}
-                onChange={(event) => field.handleChange(event.target.value as AppSettings['workspace']['approvalPolicy'])}
-              >
-                <option value="on-request">on-request</option>
-                <option value="always">always</option>
-                <option value="never">never</option>
-              </Select>
-            )}
-          />
-        </LabeledField>
+        <section className="settings-section" aria-labelledby="provider-generation-heading">
+          <div className="settings-section-heading">
+            <p className="eyebrow" id="provider-generation-heading">
+              Generation
+            </p>
+          </div>
 
-        <div className="form-row">
+          <div className="settings-field-grid settings-field-grid-compact">
+            <div className="settings-field">
+              <LabeledField label="Reasoning">
+                <FieldHint>Model thinking, when supported.</FieldHint>
+                <form.Field
+                  name="provider.reasoning"
+                  children={(field) => {
+                    const value = field.state.value?.mode === 'effort' ? field.state.value.effort : field.state.value?.mode ?? 'auto'
+
+                    return (
+                      <Select
+                        name="provider-reasoning"
+                        value={value}
+                        onChange={(event) => {
+                          const nextValue = event.target.value
+
+                          if (nextValue === 'auto' || nextValue === 'off') {
+                            field.handleChange({ mode: nextValue })
+                            return
+                          }
+
+                          field.handleChange({ mode: 'effort', effort: nextValue as 'minimal' | 'low' | 'medium' | 'high' | 'xhigh' })
+                        }}
+                      >
+                        <option value="auto">auto</option>
+                        <option value="off">off</option>
+                        <option value="minimal">minimal effort</option>
+                        <option value="low">low effort</option>
+                        <option value="medium">medium effort</option>
+                        <option value="high">high effort</option>
+                        <option value="xhigh">xhigh effort</option>
+                      </Select>
+                    )
+                  }}
+                />
+              </LabeledField>
+            </div>
+          </div>
+        </section>
+
+        <div className="form-row action-row-left settings-save-row">
           <Button type="submit" variant="primary" disabled={isSaving}>
             {isSaving ? 'Saving…' : 'Save settings'}
           </Button>
