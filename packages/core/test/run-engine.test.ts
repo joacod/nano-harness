@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
+import { createDefaultProviderSettings } from '@nano-harness/shared'
+
 import { CoreRunEngine } from '../src'
 import {
   createActionDefinition,
@@ -118,11 +120,7 @@ describe('CoreRunEngine', () => {
     const store = new FakeStore()
     store.settings = {
       ...testSettings,
-      provider: {
-        provider: 'openai',
-        model: 'gpt-5.4-mini',
-        baseUrl: 'https://chatgpt.com/backend-api/codex',
-      },
+      provider: createDefaultProviderSettings('openai'),
     }
     const engine = new CoreRunEngine({
       store,

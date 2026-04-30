@@ -4,7 +4,7 @@ import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import type { AppSettings } from '@nano-harness/shared'
+import { providerDefaultModels, type AppSettings } from '@nano-harness/shared'
 
 import { ProviderSettingsForm } from '../../src/renderer/components/settings/ProviderSettingsForm'
 
@@ -77,7 +77,7 @@ describe('ProviderSettingsForm', () => {
     await user.type(baseUrlInput, 'http://localhost:9999/v1')
     await user.click(screen.getByRole('button', { name: 'Use defaults' }))
 
-    expect(modelInput.value).toBe('x-ai/grok-4.1-fast')
+    expect(modelInput.value).toBe(providerDefaultModels.openrouter)
     expect(baseUrlInput.value).toBe('https://openrouter.ai/api/v1')
   })
 
@@ -102,7 +102,7 @@ describe('ProviderSettingsForm', () => {
     await selectCustomOption(user, providerSelect, 'llama.cpp')
 
     expect(onProviderChange).toHaveBeenCalledWith('llama-cpp')
-    expect(modelInput.value).toBe('ggml-org/gemma-3-1b-it-GGUF')
+    expect(modelInput.value).toBe(providerDefaultModels['llama-cpp'])
     expect(baseUrlInput.value).toBe('http://127.0.0.1:8080/v1')
   })
 
@@ -128,7 +128,7 @@ describe('ProviderSettingsForm', () => {
     await selectCustomOption(user, providerSelect, 'OpenAI')
 
     expect(onProviderChange).toHaveBeenCalledWith('openai')
-    expect(modelInput.value).toBe('gpt-5.4-mini')
+    expect(modelInput.value).toBe(providerDefaultModels.openai)
     expect(baseUrlInput.value).toBe('https://chatgpt.com/backend-api/codex')
     expect(baseUrlInput.readOnly).toBe(true)
     expect(screen.getByText('Managed by the ChatGPT subscription provider.')).toBeTruthy()
@@ -139,7 +139,7 @@ describe('ProviderSettingsForm', () => {
       expect(onSubmit).toHaveBeenCalledWith({
         provider: {
           provider: 'openai',
-          model: 'gpt-5.4-mini',
+          model: providerDefaultModels.openai,
           baseUrl: 'https://chatgpt.com/backend-api/codex',
           reasoning: { mode: 'auto' },
         },

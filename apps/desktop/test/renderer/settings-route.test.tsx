@@ -4,7 +4,7 @@ import { cleanup, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import type { AppSettings, ProviderStatus } from '@nano-harness/shared'
+import { createDefaultProviderSettings, providerDefaultModels, type AppSettings, type ProviderStatus } from '@nano-harness/shared'
 
 import { SettingsRoute } from '../../src/renderer/routes/SettingsRoute'
 import { createDesktopMock, renderWithQueryClient } from './test-utils'
@@ -125,7 +125,7 @@ describe('SettingsRoute', () => {
     expect(await screen.findByText('Mock settings form')).toBeTruthy()
     expect(screen.getByText('dataPath:/tmp/nano-harness.db')).toBeTruthy()
     expect(screen.getByText('provider:OpenRouter')).toBeTruthy()
-    expect(latestSettingsFormCardProps?.initialSettings.provider.model).toBe('x-ai/grok-4.1-fast')
+    expect(latestSettingsFormCardProps?.initialSettings.provider.model).toBe(providerDefaultModels.openrouter)
 
     await user.click(screen.getByRole('button', { name: 'Save settings action' }))
     await user.click(screen.getByRole('button', { name: 'Save api key action' }))
@@ -160,8 +160,7 @@ function createSettings(overrides?: {
 }): AppSettings {
   return {
     provider: {
-      provider: 'openrouter',
-      model: 'x-ai/grok-4.1-fast',
+      ...createDefaultProviderSettings('openrouter'),
       reasoning: { mode: 'auto' },
       ...overrides?.provider,
     },
@@ -177,7 +176,7 @@ function createProviderStatus(overrides?: Partial<ProviderStatus>): ProviderStat
   return {
     providerId: 'openrouter',
     providerLabel: 'OpenRouter',
-    model: 'x-ai/grok-4.1-fast',
+    model: providerDefaultModels.openrouter,
     baseUrl: 'https://openrouter.ai/api/v1',
     apiKeyLabel: 'OpenRouter API key',
     apiKeyPresent: true,

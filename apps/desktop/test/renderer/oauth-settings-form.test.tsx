@@ -4,7 +4,7 @@ import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import type { ProviderStatus } from '@nano-harness/shared'
+import { providerDefaultModels, type ProviderStatus } from '@nano-harness/shared'
 
 import { OAuthSettingsForm } from '../../src/renderer/components/settings/OAuthSettingsForm'
 
@@ -71,7 +71,7 @@ function createProviderStatus(oauth: { present: boolean; accountId?: string }): 
   return {
     providerId: 'chatgpt-subscription',
     providerLabel: 'OpenAI',
-    model: 'gpt-5.4-mini',
+    model: providerDefaultModels.openai,
     baseUrl: 'https://chatgpt.com/backend-api/codex',
     apiKeyLabel: 'Optional for this local provider',
     apiKeyPresent: false,

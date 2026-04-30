@@ -4,6 +4,8 @@ import { cleanup, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { providerDefaultModels } from '@nano-harness/shared'
+
 import { ComposerCard } from '../../src/renderer/components/ComposerCard'
 import { createDesktopMock, renderWithQueryClient } from './test-utils'
 
@@ -118,7 +120,7 @@ function createProviderStatus(overrides?: {
   return {
     providerId: 'openrouter',
     providerLabel: 'OpenRouter',
-    model: 'x-ai/grok-4.1-fast',
+    model: providerDefaultModels.openrouter,
     baseUrl: 'https://openrouter.ai/api/v1',
     apiKeyLabel: 'OpenRouter API key',
     apiKeyPresent: true,

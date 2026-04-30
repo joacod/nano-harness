@@ -4,7 +4,7 @@ import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import type { ProviderStatus } from '@nano-harness/shared'
+import { providerDefaultModels, type ProviderStatus } from '@nano-harness/shared'
 
 import { ApiKeySettingsForm } from '../../src/renderer/components/settings/ApiKeySettingsForm'
 
@@ -96,7 +96,7 @@ function createProviderStatus(overrides?: Partial<ProviderStatus>): ProviderStat
   return {
     providerId: 'openrouter',
     providerLabel: 'OpenRouter',
-    model: 'x-ai/grok-4.1-fast',
+    model: providerDefaultModels.openrouter,
     baseUrl: 'https://openrouter.ai/api/v1',
     isReady: true,
     apiKeyPresent: true,

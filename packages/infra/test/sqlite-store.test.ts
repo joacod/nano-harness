@@ -5,7 +5,7 @@ import path from 'node:path'
 import { createClient } from '@libsql/client/node'
 import { afterEach, describe, expect, it } from 'vitest'
 
-import type { AppSettings, Message, RunEvent } from '@nano-harness/shared'
+import { createDefaultProviderSettings, type AppSettings, type Message, type RunEvent } from '@nano-harness/shared'
 
 import { createSqliteStore } from '../src'
 import { requiredDatabaseTables } from '../src/sqlite/initialize'
@@ -44,8 +44,7 @@ describe('SqliteStore', () => {
     try {
       const settings: AppSettings = {
         provider: {
-          provider: 'openrouter',
-          model: 'x-ai/grok-4.1-fast',
+          ...createDefaultProviderSettings('openrouter'),
           reasoning: {
             mode: 'effort',
             effort: 'low',

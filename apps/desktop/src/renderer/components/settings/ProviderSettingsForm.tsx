@@ -3,7 +3,7 @@ import { type ReactNode, useState } from 'react'
 import { useForm } from '@tanstack/react-form'
 
 import type { AppSettings } from '../../../../../../packages/shared/src'
-import { getProviderDefinition, providerOptions } from '../../../../../../packages/shared/src'
+import { getProviderDefinition, providerDefaultModels, providerOptions } from '../../../../../../packages/shared/src'
 import { applyProviderDefaults } from '../../utils/run-events'
 import { FieldHint, LabeledField, TextField } from '../form-fields'
 import { Button, FeedbackText, Select } from '../ui'
@@ -137,7 +137,7 @@ export function ProviderSettingsForm({
                     <TextField
                       field={field}
                       name="model"
-                      placeholder="Example: x-ai/grok-4.1-fast"
+                      placeholder={`Example: ${providerDefaultModels.openrouter}`}
                       autoComplete="off"
                       spellCheck={false}
                     />

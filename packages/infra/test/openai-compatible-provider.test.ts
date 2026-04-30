@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import type { ActionDefinition, AppSettings, Message, Run } from '@nano-harness/shared'
+import { providerDefaultModels, type ActionDefinition, type AppSettings, type Message, type Run } from '@nano-harness/shared'
 
 import { OpenAICompatibleProvider } from '../src'
 
@@ -16,7 +16,7 @@ const run: Run = {
 const settings: AppSettings = {
   provider: {
     provider: 'openrouter',
-    model: 'x-ai/grok-4.1-fast',
+    model: providerDefaultModels.openrouter,
     reasoning: {
       mode: 'effort',
       effort: 'medium',
@@ -116,7 +116,7 @@ describe('OpenAICompatibleProvider', () => {
 
     const body = JSON.parse(String(capturedInit?.body)) as Record<string, unknown>
     expect(body).toMatchObject({
-      model: 'x-ai/grok-4.1-fast',
+      model: providerDefaultModels.openrouter,
       stream: true,
       reasoning: {
         effort: 'medium',

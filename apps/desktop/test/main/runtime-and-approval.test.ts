@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import type { ProviderKey, RunEvent } from '@nano-harness/shared'
+import { createDefaultProviderSettings, providerDefaultModels, type ProviderKey, type RunEvent } from '@nano-harness/shared'
 
 const { getAllWindows } = vi.hoisted(() => ({
   getAllWindows: vi.fn<() => Array<{ webContents: { send: (channel: string, payload: RunEvent) => void } }>>(() => []),
@@ -62,10 +62,7 @@ describe('desktop runtime helpers', () => {
     } satisfies ProviderStatusRuntime
 
     const result = await buildProviderStatus(runtime, {
-      provider: {
-        provider: 'openrouter',
-        model: 'x-ai/grok-4.1-fast',
-      },
+      provider: createDefaultProviderSettings('openrouter'),
       workspace: {
         rootPath: '/workspace',
         approvalPolicy: 'on-request',
@@ -103,7 +100,7 @@ describe('desktop runtime helpers', () => {
       apiKeyPresent: true,
       isReady: true,
       issues: [],
-      hints: ['OpenRouter models usually include the provider prefix, for example x-ai/grok-4.1-fast.'],
+      hints: [`OpenRouter models usually include the provider prefix, for example ${providerDefaultModels.openrouter}.`],
     })
   })
 
@@ -191,7 +188,7 @@ describe('DesktopApprovalCoordinator', () => {
         createdAt: '2026-04-29T10:00:00.000Z',
       },
       settings: {
-        provider: { provider: 'openrouter', model: 'x-ai/grok-4.1-fast' },
+        provider: createDefaultProviderSettings('openrouter'),
         workspace: { rootPath: '/workspace', approvalPolicy: 'on-request' },
       },
       signal: new AbortController().signal,
@@ -229,7 +226,7 @@ describe('DesktopApprovalCoordinator', () => {
         createdAt: '2026-04-29T10:00:00.000Z',
       },
       settings: {
-        provider: { provider: 'openrouter', model: 'x-ai/grok-4.1-fast' },
+        provider: createDefaultProviderSettings('openrouter'),
         workspace: { rootPath: '/workspace', approvalPolicy: 'on-request' },
       },
       signal: controller.signal,

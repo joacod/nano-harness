@@ -1,5 +1,7 @@
 import { expect, test } from '@playwright/test'
 
+import { providerDefaultModels } from '@nano-harness/shared'
+
 import { createEmptyMockSetup, emitRunEvent, getMockState, installDesktopMock } from './desktop-mock'
 
 test.beforeEach(async ({ page }) => {
@@ -44,7 +46,7 @@ test('starts a run and renders streamed output from live run events', async ({ p
     type: 'provider.requested',
     payload: {
       provider: 'OpenRouter',
-      model: 'x-ai/grok-4.1-fast',
+      model: providerDefaultModels.openrouter,
     },
   })
   await emitRunEvent(page, {
@@ -114,7 +116,7 @@ test('shows an approval request and lets the user grant it', async ({ page }) =>
             type: 'provider.requested',
             payload: {
               provider: 'OpenRouter',
-              model: 'x-ai/grok-4.1-fast',
+              model: providerDefaultModels.openrouter,
             },
           },
           {

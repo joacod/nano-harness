@@ -4,7 +4,7 @@ import { cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import type { AppSettings, ProviderStatus } from '@nano-harness/shared'
+import { createDefaultProviderSettings, providerDefaultModels, type AppSettings, type ProviderStatus } from '@nano-harness/shared'
 
 import { SettingsFormCard } from '../../src/renderer/components/SettingsFormCard'
 
@@ -115,9 +115,7 @@ function renderSettingsFormCard() {
 function createSettings(): AppSettings {
   return {
     provider: {
-      provider: 'openrouter',
-      model: 'x-ai/grok-4.1-fast',
-      baseUrl: 'https://openrouter.ai/api/v1',
+      ...createDefaultProviderSettings('openrouter'),
       reasoning: { mode: 'auto' },
     },
     workspace: {
@@ -131,7 +129,7 @@ function createProviderStatus(): ProviderStatus {
   return {
     providerId: 'openrouter',
     providerLabel: 'OpenRouter',
-    model: 'x-ai/grok-4.1-fast',
+    model: providerDefaultModels.openrouter,
     baseUrl: 'https://openrouter.ai/api/v1',
     apiKeyLabel: 'OpenRouter API key',
     apiKeyPresent: true,

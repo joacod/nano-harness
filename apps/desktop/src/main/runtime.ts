@@ -5,7 +5,7 @@ import { join } from 'node:path'
 import type { Provider, ProviderCredentialResolver, ProviderGenerateInput, ProviderGenerateResult } from '../../../../packages/core/src'
 import { CoreRunEngine, InMemoryEventBus, StaticPolicy } from '../../../../packages/core/src'
 import { BuiltInActionExecutor, ChatGptSubscriptionProvider, OpenAICompatibleProvider, createSqliteStore } from '../../../../packages/infra/src'
-import { desktopBridgeChannels, getProviderDefinition, providerAuthSchema, providerStatusSchema, runEventSchema, storedProviderCredentialSchema, type AppSettings, type ProviderAuthMethod } from '../../../../packages/shared/src'
+import { createDefaultProviderSettings, desktopBridgeChannels, getProviderDefinition, providerAuthSchema, providerDefaultModels, providerStatusSchema, runEventSchema, storedProviderCredentialSchema, type AppSettings, type ProviderAuthMethod } from '../../../../packages/shared/src'
 import { DesktopApprovalCoordinator } from './approval-coordinator'
 import { refreshOpenAIChatGptCredential } from './openai-chatgpt-auth'
 import { decryptCredentialPayload, encryptCredentialPayload } from './secure-credentials'
@@ -39,14 +39,8 @@ class DesktopProviderRouter implements Provider {
 }
 
 function buildDefaultSettings(): AppSettings {
-  const provider = getProviderDefinition('openrouter')
-
   return {
-    provider: {
-      provider: provider.key,
-      model: provider.defaultModel,
-      baseUrl: provider.baseUrl,
-    },
+    provider: createDefaultProviderSettings('openrouter'),
     workspace: {
       rootPath: join(app.getPath('home'), 'nano-harness'),
       approvalPolicy: 'on-request',
@@ -90,7 +84,7 @@ export async function buildProviderStatus(runtime: { store: ProviderStatusStore 
   }
 
   if (settings.provider.provider === 'openrouter' && !settings.provider.model.includes('/')) {
-    hints.push('OpenRouter models usually include the provider prefix, for example x-ai/grok-4.1-fast.')
+    hints.push(`OpenRouter models usually include the provider prefix, for example ${providerDefaultModels.openrouter}.`)
   }
 
   if (settings.provider.provider === 'llama-cpp') {

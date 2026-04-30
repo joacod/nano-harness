@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import type { AppSettings, ConversationSnapshot, RunEvent } from '@nano-harness/shared'
+import { providerDefaultModels, type AppSettings, type ConversationSnapshot, type RunEvent } from '@nano-harness/shared'
 
 import {
   applyProviderDefaults,
@@ -36,7 +36,7 @@ describe('renderer run-events utilities', () => {
       state,
       event('provider.requested', {
         provider: 'OpenRouter',
-        model: 'x-ai/grok-4.1-fast',
+        model: providerDefaultModels.openrouter,
       }),
     )
     expect(state['run-1'].phase).toBe('contacting_provider')
@@ -137,7 +137,7 @@ describe('renderer run-events utilities', () => {
 
     const merged = mergeRunEvents(
       [
-        event('provider.requested', { provider: 'OpenRouter', model: 'x-ai/grok-4.1-fast' }, 'event-a', '2026-04-29T10:00:00.000Z'),
+        event('provider.requested', { provider: 'OpenRouter', model: providerDefaultModels.openrouter }, 'event-a', '2026-04-29T10:00:00.000Z'),
         event('provider.delta', { delta: 'old' }, 'shared-id', '2026-04-29T10:00:01.000Z'),
       ],
       [
@@ -163,7 +163,7 @@ describe('renderer run-events utilities', () => {
         },
       ],
       messages: [],
-      events: [event('provider.requested', { provider: 'OpenRouter', model: 'x-ai/grok-4.1-fast' })],
+      events: [event('provider.requested', { provider: 'OpenRouter', model: providerDefaultModels.openrouter })],
       approvalRequests: [
         {
           id: 'approval-1',
@@ -201,7 +201,7 @@ describe('renderer run-events utilities', () => {
     expect(applyProviderDefaults(settings, 'openrouter')).toEqual({
       provider: {
         provider: 'openrouter',
-        model: 'x-ai/grok-4.1-fast',
+        model: providerDefaultModels.openrouter,
         baseUrl: 'https://openrouter.ai/api/v1',
         reasoning: { mode: 'off' },
       },

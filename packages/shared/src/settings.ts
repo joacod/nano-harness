@@ -27,13 +27,19 @@ export const reasoningSettingsSchema = z.discriminatedUnion('mode', [
 
 export type ReasoningSettings = z.infer<typeof reasoningSettingsSchema>
 
+export const providerDefaultModels = {
+  openrouter: 'x-ai/grok-4.1-fast',
+  'llama-cpp': 'ggml-org/gemma-3-1b-it-GGUF',
+  openai: 'gpt-5.4-mini',
+} as const satisfies Record<ProviderKey, string>
+
 export const providerCatalog = {
   openrouter: {
     key: 'openrouter',
     label: 'OpenRouter',
     adapterId: 'openai-compatible',
     baseUrl: 'https://openrouter.ai/api/v1',
-    defaultModel: 'x-ai/grok-4.1-fast',
+    defaultModel: providerDefaultModels.openrouter,
     requiresApiKey: true,
     authMethods: ['api-key'],
     defaultAuthMethod: 'api-key',
@@ -43,7 +49,7 @@ export const providerCatalog = {
     label: 'llama.cpp',
     adapterId: 'openai-compatible',
     baseUrl: 'http://127.0.0.1:8080/v1',
-    defaultModel: 'ggml-org/gemma-3-1b-it-GGUF',
+    defaultModel: providerDefaultModels['llama-cpp'],
     requiresApiKey: false,
     authMethods: ['none'],
     defaultAuthMethod: 'none',
@@ -53,7 +59,7 @@ export const providerCatalog = {
     label: 'OpenAI',
     adapterId: 'chatgpt-subscription',
     baseUrl: 'https://chatgpt.com/backend-api/codex',
-    defaultModel: 'gpt-5.4-mini',
+    defaultModel: providerDefaultModels.openai,
     requiresApiKey: false,
     authMethods: ['oauth'],
     defaultAuthMethod: 'oauth',
@@ -97,6 +103,16 @@ const currentProviderSettingsSchema = z.object({
 export const providerSettingsSchema = currentProviderSettingsSchema
 
 export type ProviderSettings = z.infer<typeof providerSettingsSchema>
+
+export function createDefaultProviderSettings(provider: ProviderKey): ProviderSettings {
+  const definition = getProviderDefinition(provider)
+
+  return {
+    provider: definition.key,
+    model: definition.defaultModel,
+    baseUrl: definition.baseUrl,
+  }
+}
 
 export const workspaceSettingsSchema = z.object({
   rootPath: z.string().min(1),

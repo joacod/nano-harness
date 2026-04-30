@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import type { AppSettings, ConversationSnapshot } from '@nano-harness/shared'
+import { createDefaultProviderSettings, providerDefaultModels, type AppSettings, type ConversationSnapshot } from '@nano-harness/shared'
 
 const { handlers, handle, openExternal, exportData, importData, buildProviderStatus, encryptCredentialPayload, startOpenAIChatGptOAuth } = vi.hoisted(() => {
   const handlers = new Map<string, (_event: unknown, payload?: unknown) => Promise<unknown>>()
@@ -16,7 +16,7 @@ const { handlers, handle, openExternal, exportData, importData, buildProviderSta
     buildProviderStatus: vi.fn(async () => ({
       providerId: 'openai-compatible',
       providerLabel: 'OpenRouter',
-      model: 'x-ai/grok-4.1-fast',
+      model: providerDefaultModels.openrouter,
       baseUrl: 'https://openrouter.ai/api/v1',
       apiKeyLabel: 'Stored securely on this device',
       apiKeyPresent: true,
@@ -87,12 +87,12 @@ describe('setupIpcHandlers', () => {
     setupIpcHandlers(runtime)
 
     const result = await invokeHandler(desktopBridgeChannels.saveSettings, {
-      provider: { provider: 'openrouter', model: 'x-ai/grok-4.1-fast' },
+      provider: createDefaultProviderSettings('openrouter'),
       workspace: { rootPath: '/workspace', approvalPolicy: 'on-request' },
     })
 
     expect(runtime.store.saveSettings).toHaveBeenCalledWith({
-      provider: { provider: 'openrouter', model: 'x-ai/grok-4.1-fast' },
+      provider: createDefaultProviderSettings('openrouter'),
       workspace: { rootPath: '/workspace', approvalPolicy: 'on-request' },
     })
     expect(result).toMatchObject({
@@ -227,7 +227,7 @@ describe('setupIpcHandlers', () => {
 
 function createRuntime() {
   const settings: AppSettings = {
-    provider: { provider: 'openrouter', model: 'x-ai/grok-4.1-fast' },
+    provider: createDefaultProviderSettings('openrouter'),
     workspace: { rootPath: '/workspace', approvalPolicy: 'on-request' },
   }
   const snapshot: ConversationSnapshot = {
