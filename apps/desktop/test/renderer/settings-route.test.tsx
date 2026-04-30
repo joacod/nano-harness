@@ -15,17 +15,22 @@ type MockSettingsFormCardProps = {
   providerStatus: ProviderStatus | null
   isSaving: boolean
   isSavingApiKey: boolean
+  isStartingOauth: boolean
   isClearingApiKey: boolean
+  isClearingOauth: boolean
   isExportingData: boolean
   isImportingData: boolean
   saveError: string | null
   apiKeyError: string | null
+  oauthError: string | null
   exportDataResult: string | null
   importDataResult: string | null
   dataError: string | null
   onSubmit: (settings: AppSettings) => Promise<void>
   onSaveApiKey: (input: { provider: AppSettings['provider']['provider']; apiKey: string }) => Promise<void>
   onClearApiKey: (input: { provider: AppSettings['provider']['provider'] }) => Promise<void>
+  onStartOauth: (input: { provider: AppSettings['provider']['provider'] }) => Promise<{ accountId?: string }>
+  onClearOauth: (input: { provider: AppSettings['provider']['provider'] }) => Promise<void>
   onExportData: () => Promise<void>
   onImportData: () => Promise<void>
 }
@@ -45,6 +50,7 @@ vi.mock('../../src/renderer/components/SettingsFormCard', () => ({
         <p>import:{props.importDataResult ?? 'none'}</p>
         <p>saveError:{props.saveError ?? 'none'}</p>
         <p>apiKeyError:{props.apiKeyError ?? 'none'}</p>
+        <p>oauthError:{props.oauthError ?? 'none'}</p>
         <p>dataError:{props.dataError ?? 'none'}</p>
         <button type="button" onClick={() => void props.onSubmit(createSettings({ provider: { model: 'next/model' } }))}>
           Save settings action
@@ -54,6 +60,12 @@ vi.mock('../../src/renderer/components/SettingsFormCard', () => ({
         </button>
         <button type="button" onClick={() => void props.onClearApiKey({ provider: 'openrouter' })}>
           Clear api key action
+        </button>
+        <button type="button" onClick={() => void props.onStartOauth({ provider: 'openai' })}>
+          Start oauth action
+        </button>
+        <button type="button" onClick={() => void props.onClearOauth({ provider: 'openai' })}>
+          Clear oauth action
         </button>
         <button type="button" onClick={() => void props.onExportData()}>
           Export action
@@ -91,6 +103,7 @@ describe('SettingsRoute', () => {
     const saveSettings = vi.fn(async (settings: AppSettings) => settings)
     const saveProviderAuth = vi.fn(async () => undefined)
     const clearProviderAuth = vi.fn(async () => undefined)
+    const startProviderOauth = vi.fn(async () => ({ provider: 'openai', accountId: 'acct-1' }))
     const exportData = vi.fn(async () => ({ exportedFilePath: '/tmp/export.zip' }))
     const importData = vi.fn(async () => ({ imported: true, backupFilePath: '/tmp/backup.zip' }))
 
@@ -100,6 +113,7 @@ describe('SettingsRoute', () => {
       getProviderStatus: async () => createProviderStatus(),
       saveSettings,
       saveProviderAuth,
+      startProviderOauth,
       clearProviderAuth,
       exportData,
       importData,
@@ -116,6 +130,8 @@ describe('SettingsRoute', () => {
     await user.click(screen.getByRole('button', { name: 'Save settings action' }))
     await user.click(screen.getByRole('button', { name: 'Save api key action' }))
     await user.click(screen.getByRole('button', { name: 'Clear api key action' }))
+    await user.click(screen.getByRole('button', { name: 'Start oauth action' }))
+    await user.click(screen.getByRole('button', { name: 'Clear oauth action' }))
     await user.click(screen.getByRole('button', { name: 'Export action' }))
     await user.click(screen.getByRole('button', { name: 'Import action' }))
 
@@ -123,6 +139,8 @@ describe('SettingsRoute', () => {
       expect(saveSettings).toHaveBeenCalledWith(createSettings({ provider: { model: 'next/model' } }))
       expect(saveProviderAuth).toHaveBeenCalledWith({ provider: 'openrouter', authMethod: 'api-key', apiKey: 'secret-key' })
       expect(clearProviderAuth).toHaveBeenCalledWith({ provider: 'openrouter', authMethod: 'api-key' })
+      expect(startProviderOauth).toHaveBeenCalledWith({ provider: 'openai', authMethod: 'oauth' })
+      expect(clearProviderAuth).toHaveBeenCalledWith({ provider: 'openai', authMethod: 'oauth' })
       expect(exportData).toHaveBeenCalledTimes(1)
       expect(importData).toHaveBeenCalledTimes(1)
     })

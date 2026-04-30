@@ -105,6 +105,51 @@ describe('ProviderSettingsForm', () => {
     expect(modelInput.value).toBe('ggml-org/gemma-3-1b-it-GGUF')
     expect(baseUrlInput.value).toBe('http://127.0.0.1:8080/v1')
   })
+
+  it('switches to OpenAI defaults and keeps the subscription endpoint read-only', async () => {
+    const user = userEvent.setup()
+    const onProviderChange = vi.fn()
+    const onSubmit = vi.fn(async () => undefined)
+
+    const { container } = render(
+      <ProviderSettingsForm
+        initialSettings={createSettings()}
+        isSaving={false}
+        saveError={null}
+        onProviderChange={onProviderChange}
+        onSubmit={onSubmit}
+      />,
+    )
+
+    const providerSelect = getRequiredElement<HTMLButtonElement>(container, '[data-select-trigger="provider"]')
+    const modelInput = getRequiredElement<HTMLInputElement>(container, 'input[name="model"]')
+    const baseUrlInput = getRequiredElement<HTMLInputElement>(container, 'input[name="provider-base-url"]')
+
+    await selectCustomOption(user, providerSelect, 'OpenAI')
+
+    expect(onProviderChange).toHaveBeenCalledWith('openai')
+    expect(modelInput.value).toBe('gpt-5.2')
+    expect(baseUrlInput.value).toBe('https://chatgpt.com/backend-api/codex')
+    expect(baseUrlInput.readOnly).toBe(true)
+    expect(screen.getByText('Managed by the ChatGPT subscription provider.')).toBeTruthy()
+
+    await user.click(screen.getByRole('button', { name: 'Save settings' }))
+
+    await waitFor(() => {
+      expect(onSubmit).toHaveBeenCalledWith({
+        provider: {
+          provider: 'openai',
+          model: 'gpt-5.2',
+          baseUrl: 'https://chatgpt.com/backend-api/codex',
+          reasoning: { mode: 'auto' },
+        },
+        workspace: {
+          rootPath: '/Users/test/workspace',
+          approvalPolicy: 'always',
+        },
+      })
+    })
+  })
 })
 
 function createSettings(overrides?: {

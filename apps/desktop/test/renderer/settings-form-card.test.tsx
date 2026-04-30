@@ -62,6 +62,24 @@ describe('SettingsFormCard', () => {
 
     expect(screen.queryByText('API Key')).toBeNull()
   })
+
+  it('shows ChatGPT sign-in controls for the OpenAI provider', async () => {
+    const user = userEvent.setup()
+
+    const { container } = renderSettingsFormCard()
+    const providerSelect = container.querySelector<HTMLButtonElement>('[data-select-trigger="provider"]')
+
+    if (!providerSelect) {
+      throw new Error('Missing provider select trigger')
+    }
+
+    await user.click(providerSelect)
+    await user.click(screen.getByRole('option', { name: 'OpenAI' }))
+
+    expect(screen.getByText('ChatGPT Sign In')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Sign in with ChatGPT' })).toBeTruthy()
+    expect(screen.queryByText('API Key')).toBeNull()
+  })
 })
 
 function renderSettingsFormCard() {
@@ -72,17 +90,22 @@ function renderSettingsFormCard() {
       providerStatus={createProviderStatus()}
       isSaving={false}
       isSavingApiKey={false}
+      isStartingOauth={false}
       isClearingApiKey={false}
+      isClearingOauth={false}
       isExportingData={false}
       isImportingData={false}
       saveError={null}
       apiKeyError={null}
+      oauthError={null}
       exportDataResult={null}
       importDataResult={null}
       dataError={null}
       onSubmit={vi.fn(async () => undefined)}
       onSaveApiKey={vi.fn(async () => undefined)}
       onClearApiKey={vi.fn(async () => undefined)}
+      onStartOauth={vi.fn(async () => ({}))}
+      onClearOauth={vi.fn(async () => undefined)}
       onExportData={vi.fn(async () => undefined)}
       onImportData={vi.fn(async () => undefined)}
     />,
@@ -112,6 +135,10 @@ function createProviderStatus(): ProviderStatus {
     baseUrl: 'https://openrouter.ai/api/v1',
     apiKeyLabel: 'OpenRouter API key',
     apiKeyPresent: true,
+    authMethod: 'api-key',
+    authLabel: 'API key',
+    authPresent: true,
+    authMethods: [{ authMethod: 'api-key', label: 'API key', present: true }],
     isReady: true,
     issues: [],
     hints: [],

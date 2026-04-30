@@ -12,26 +12,32 @@ export function ProviderSettingsForm({
   initialSettings,
   isSaving,
   saveError,
-  apiKeySection,
+  authSection,
   onProviderChange,
   onSubmit,
 }: {
   initialSettings: AppSettings
   isSaving: boolean
   saveError: string | null
-  apiKeySection?: ReactNode
+  authSection?: ReactNode
   onProviderChange: (provider: AppSettings['provider']['provider']) => void
   onSubmit: (settings: AppSettings) => Promise<void>
 }) {
   const [saveMessage, setSaveMessage] = useState<string | null>(null)
+  const [selectedProvider, setSelectedProvider] = useState(initialSettings.provider.provider)
+  const selectedProviderDefinition = getProviderDefinition(selectedProvider)
   const form = useForm({
     defaultValues: initialSettings,
     onSubmit: async ({ value }) => {
+      const providerDefinition = getProviderDefinition(value.provider.provider)
       const normalizedSettings: AppSettings = {
         provider: {
           provider: value.provider.provider,
           model: value.provider.model.trim(),
-          baseUrl: value.provider.baseUrl?.trim() || getProviderDefinition(value.provider.provider).baseUrl,
+          baseUrl:
+            providerDefinition.adapterId === 'chatgpt-subscription'
+              ? providerDefinition.baseUrl
+              : value.provider.baseUrl?.trim() || providerDefinition.baseUrl,
           reasoning: value.provider.reasoning,
         },
         workspace: {
@@ -75,6 +81,7 @@ export function ProviderSettingsForm({
                       onChange={(event) => {
                         const nextProvider = event.target.value as AppSettings['provider']['provider']
                         field.handleChange(nextProvider)
+                        setSelectedProvider(nextProvider)
                         onProviderChange(nextProvider)
                         const nextSettings = applyProviderDefaults(form.state.values, nextProvider)
                         form.setFieldValue('provider.model', nextSettings.provider.model)
@@ -92,7 +99,7 @@ export function ProviderSettingsForm({
               </LabeledField>
             </div>
           </section>
-          {apiKeySection ? <div className="settings-field">{apiKeySection}</div> : null}
+          {authSection ? <div className="settings-field">{authSection}</div> : null}
         </div>
 
         <section className="settings-section" aria-labelledby="provider-endpoint-heading">
@@ -100,7 +107,7 @@ export function ProviderSettingsForm({
             <p className="eyebrow" id="provider-endpoint-heading">
               Endpoint
             </p>
-            <p>Model and API endpoint.</p>
+            <p>{selectedProviderDefinition.adapterId === 'chatgpt-subscription' ? 'Model and fixed ChatGPT subscription endpoint.' : 'Model and API endpoint.'}</p>
           </div>
 
           <div className="form-row action-row-left">
@@ -141,7 +148,7 @@ export function ProviderSettingsForm({
 
             <div className="settings-field">
               <LabeledField label="Base URL">
-                <FieldHint>OpenAI-compatible API root.</FieldHint>
+                <FieldHint>{selectedProviderDefinition.adapterId === 'chatgpt-subscription' ? 'Managed by the ChatGPT subscription provider.' : 'OpenAI-compatible API root.'}</FieldHint>
                 <form.Field
                   name="provider.baseUrl"
                   validators={{
@@ -153,6 +160,7 @@ export function ProviderSettingsForm({
                       name="provider-base-url"
                       placeholder="Example: http://127.0.0.1:8080/v1"
                       autoComplete="url"
+                      readOnly={selectedProviderDefinition.adapterId === 'chatgpt-subscription'}
                       spellCheck={false}
                     />
                   )}

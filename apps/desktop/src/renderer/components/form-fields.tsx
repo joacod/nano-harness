@@ -12,6 +12,7 @@ export function TextField({
   placeholder,
   autoComplete,
   inputType,
+  readOnly,
   spellCheck,
 }: {
   field: {
@@ -28,6 +29,7 @@ export function TextField({
   placeholder: string
   autoComplete?: string
   inputType?: 'password' | 'text'
+  readOnly?: boolean
   spellCheck?: boolean
 }) {
   const firstError = field.state.meta.errors[0]
@@ -43,6 +45,7 @@ export function TextField({
         onBlur={field.handleBlur}
         onChange={(event) => field.handleChange(event.target.value)}
         placeholder={placeholder}
+        readOnly={readOnly}
       />
       {typeof firstError === 'string' ? <FieldError>{firstError}</FieldError> : null}
     </>

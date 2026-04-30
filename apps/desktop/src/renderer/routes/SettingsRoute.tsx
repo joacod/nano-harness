@@ -31,6 +31,20 @@ export function SettingsRoute() {
       await queryClient.invalidateQueries({ queryKey: ['provider-status'] })
     },
   })
+  const startOauthMutation = useMutation({
+    mutationFn: async (input: { provider: AppSettings['provider']['provider'] }) =>
+      window.desktop.startProviderOauth({ ...input, authMethod: 'oauth' }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['provider-status'] })
+    },
+  })
+  const clearOauthMutation = useMutation({
+    mutationFn: async (input: { provider: AppSettings['provider']['provider'] }) =>
+      window.desktop.clearProviderAuth({ ...input, authMethod: 'oauth' }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['provider-status'] })
+    },
+  })
   const exportDataMutation = useMutation({
     mutationFn: async () => window.desktop.exportData(),
   })
@@ -55,11 +69,14 @@ export function SettingsRoute() {
       providerStatus={providerStatusQuery.data ?? null}
       isSaving={mutation.isPending}
       isSavingApiKey={saveApiKeyMutation.isPending}
+      isStartingOauth={startOauthMutation.isPending}
       isClearingApiKey={clearApiKeyMutation.isPending}
+      isClearingOauth={clearOauthMutation.isPending}
       isExportingData={exportDataMutation.isPending}
       isImportingData={importDataMutation.isPending}
       saveError={mutation.error instanceof Error ? mutation.error.message : null}
       apiKeyError={saveApiKeyMutation.error instanceof Error ? saveApiKeyMutation.error.message : clearApiKeyMutation.error instanceof Error ? clearApiKeyMutation.error.message : null}
+      oauthError={startOauthMutation.error instanceof Error ? startOauthMutation.error.message : clearOauthMutation.error instanceof Error ? clearOauthMutation.error.message : null}
       exportDataResult={exportDataMutation.data?.exportedFilePath ?? null}
       importDataResult={importDataMutation.data?.backupFilePath ?? null}
       dataError={exportDataMutation.error instanceof Error ? exportDataMutation.error.message : importDataMutation.error instanceof Error ? importDataMutation.error.message : null}
@@ -71,6 +88,12 @@ export function SettingsRoute() {
       }}
       onClearApiKey={async (input) => {
         await clearApiKeyMutation.mutateAsync(input)
+      }}
+      onStartOauth={async (input) => {
+        return await startOauthMutation.mutateAsync(input)
+      }}
+      onClearOauth={async (input) => {
+        await clearOauthMutation.mutateAsync(input)
       }}
       onExportData={async () => {
         await exportDataMutation.mutateAsync()

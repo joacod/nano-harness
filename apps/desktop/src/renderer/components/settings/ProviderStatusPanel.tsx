@@ -3,6 +3,8 @@ import type { ProviderStatus } from '../../../../../../packages/shared/src'
 import { FeedbackText, StatusBadge } from '../ui'
 
 export function ProviderStatusPanel({ providerStatus }: { providerStatus: ProviderStatus }) {
+  const authMethods = providerStatus.authMethods ?? []
+
   return (
     <section className="provider-status-card">
       <div className="sidebar-header-row">
@@ -23,12 +25,21 @@ export function ProviderStatusPanel({ providerStatus }: { providerStatus: Provid
           <dt>Base URL</dt>
           <dd>{providerStatus.baseUrl}</dd>
         </div>
-        <div>
-          <dt>API key</dt>
-          <dd>
-            {providerStatus.apiKeyLabel} {providerStatus.apiKeyPresent ? '(configured)' : providerStatus.isReady ? '(not required)' : '(missing)'}
-          </dd>
-        </div>
+        {authMethods.length > 0 ? (
+          authMethods.map((authMethod) => (
+            <div key={authMethod.authMethod}>
+              <dt>{authMethod.label}</dt>
+              <dd>{authMethod.accountId ? `${authMethod.accountId} (connected)` : authMethod.present ? 'Configured' : authMethod.authMethod === 'none' ? 'Not required' : 'Missing'}</dd>
+            </div>
+          ))
+        ) : (
+          <div>
+            <dt>API key</dt>
+            <dd>
+              {providerStatus.apiKeyLabel} {providerStatus.apiKeyPresent ? '(configured)' : providerStatus.isReady ? '(not required)' : '(missing)'}
+            </dd>
+          </div>
+        )}
       </dl>
       {providerStatus.issues.map((issue) => (
         <FeedbackText key={issue} variant="error">
