@@ -56,14 +56,14 @@ export function ProviderSettingsForm({
           void form.handleSubmit()
         }}
       >
-        <section className="settings-section" aria-labelledby="provider-account-heading">
-          <div className="settings-section-heading">
-            <p className="eyebrow" id="provider-account-heading">
-              Provider
-            </p>
-          </div>
+        <div className="settings-field-grid settings-provider-grid">
+          <section className="settings-mini-section" aria-labelledby="provider-account-heading">
+            <div className="settings-section-heading">
+              <p className="eyebrow" id="provider-account-heading">
+                Provider
+              </p>
+            </div>
 
-          <div className="settings-field-grid settings-provider-grid">
             <div className="settings-field">
               <LabeledField label="Provider">
                 <form.Field
@@ -91,9 +91,9 @@ export function ProviderSettingsForm({
                 />
               </LabeledField>
             </div>
-            {apiKeySection ? <div className="settings-field">{apiKeySection}</div> : null}
-          </div>
-        </section>
+          </section>
+          {apiKeySection ? <div className="settings-field">{apiKeySection}</div> : null}
+        </div>
 
         <section className="settings-section" aria-labelledby="provider-endpoint-heading">
           <div className="settings-section-heading">

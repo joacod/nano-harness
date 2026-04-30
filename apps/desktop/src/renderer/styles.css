@@ -1079,11 +1079,14 @@ a {
   background: rgba(3, 20, 18, 0.3);
 }
 
-.settings-inline-panel {
+.settings-mini-section {
   display: flex;
   flex-direction: column;
   gap: 12px;
   min-width: 0;
+  padding: 14px;
+  border: 1px solid rgba(67, 231, 255, 0.12);
+  background: rgba(1, 9, 7, 0.24);
 }
 
 .settings-section-heading {
@@ -1119,8 +1122,8 @@ a {
 }
 
 .settings-provider-grid {
-  grid-template-columns: minmax(240px, 420px) minmax(280px, 480px);
-  align-items: start;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: stretch;
 }
 
 .settings-field {
@@ -1587,6 +1590,10 @@ a {
   }
 
   .settings-section {
+    padding: 12px;
+  }
+
+  .settings-mini-section {
     padding: 12px;
   }
 

@@ -44,8 +44,8 @@ export function ApiKeySettingsForm({
 
   return (
     <>
-      <div
-        className="settings-inline-panel settings-form"
+      <section
+        className="settings-mini-section settings-form"
         aria-labelledby="provider-api-key-heading"
         onKeyDown={(event) => {
           if (event.key !== 'Enter') {
@@ -113,7 +113,7 @@ export function ApiKeySettingsForm({
             {isClearingApiKey ? 'Clearing…' : 'Clear API key'}
           </Button>
         </div>
-      </div>
+      </section>
 
       {apiKeyMessage ? (
         <FeedbackText variant="success" live>
