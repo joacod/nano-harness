@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
+import { createDefaultProviderSettings } from '@nano-harness/shared'
+
 import { CoreRunEngine } from '../src'
 import {
   createActionDefinition,
@@ -59,8 +61,8 @@ describe('CoreRunEngine', () => {
       store,
       provider: new FakeProvider([{ content: 'unused' }]),
       providerCredentialResolver: {
-        async getProviderApiKey() {
-          return null
+        async getProviderAuth() {
+          return { authMethod: 'none' }
         },
       },
       actionExecutor: new FakeActionExecutor([], async (input) => createActionResult({ actionCallId: input.call.id })),
@@ -95,8 +97,8 @@ describe('CoreRunEngine', () => {
       store,
       provider,
       providerCredentialResolver: {
-        async getProviderApiKey() {
-          return null
+        async getProviderAuth() {
+          return { authMethod: 'none' }
         },
       },
       actionExecutor: new FakeActionExecutor([], async (input) => createActionResult({ actionCallId: input.call.id })),
@@ -110,7 +112,47 @@ describe('CoreRunEngine', () => {
     await waitForCondition(() => store.runs.get(handle.runId)?.status === 'completed')
 
     expect(provider.calls).toHaveLength(1)
+    expect(provider.calls[0].providerAuth).toEqual({ authMethod: 'none' })
     expect(store.messages[1]).toMatchObject({ content: 'Local response.' })
+  })
+
+  it('fails an OpenAI run with a clear sign-in message when OAuth auth is missing', async () => {
+    const store = new FakeStore()
+    store.settings = {
+      ...testSettings,
+      provider: createDefaultProviderSettings('openai'),
+    }
+    const engine = new CoreRunEngine({
+      store,
+      provider: new FakeProvider([
+        async ({ providerAuth }) => {
+          if (providerAuth.authMethod !== 'oauth') {
+            throw new Error('Sign in with ChatGPT before starting an OpenAI run.')
+          }
+
+          return { content: 'unused' }
+        },
+      ]),
+      providerCredentialResolver: {
+        async getProviderAuth() {
+          return { authMethod: 'none' }
+        },
+      },
+      actionExecutor: new FakeActionExecutor([], async (input) => createActionResult({ actionCallId: input.call.id })),
+      policy: new FakePolicy(() => ({ effect: 'allow' })),
+      now: () => '2026-04-29T10:00:00.000Z',
+      createId: createSequentialId(),
+    })
+
+    const handle = await engine.startRun(createRunInput())
+
+    await waitForCondition(() => store.runs.get(handle.runId)?.status === 'failed')
+
+    expect(store.runs.get(handle.runId)).toMatchObject({
+      status: 'failed',
+      failureMessage: 'Sign in with ChatGPT before starting an OpenAI run.',
+    })
+    expect(store.events.map((event) => event.type)).toContain('provider.error')
   })
 
   it('executes tool calls, persists tool output, and continues the provider loop', async () => {

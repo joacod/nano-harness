@@ -5,7 +5,7 @@ import path from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import type { ActionExecutionInput } from '@nano-harness/core'
-import type { ActionDefinition, AppSettings, JsonValue, Run } from '@nano-harness/shared'
+import { createDefaultProviderSettings, type ActionDefinition, type AppSettings, type JsonValue, type Run } from '@nano-harness/shared'
 
 import { BuiltInActionExecutor } from '../src'
 
@@ -17,10 +17,7 @@ const testRun: Run = {
 }
 
 const workspaceSettings: AppSettings = {
-  provider: {
-    provider: 'openrouter',
-    model: 'x-ai/grok-4.1-fast',
-  },
+  provider: createDefaultProviderSettings('openrouter'),
   workspace: {
     rootPath: '',
     approvalPolicy: 'on-request',

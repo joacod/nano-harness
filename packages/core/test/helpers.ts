@@ -11,6 +11,7 @@ import type {
   RunEvent,
   RunStatus,
 } from '@nano-harness/shared'
+import { createDefaultProviderSettings } from '@nano-harness/shared'
 
 import type {
   ActionExecutionInput,
@@ -32,10 +33,7 @@ import type {
 type ProviderStep = ProviderGenerateResult | ((input: ProviderGenerateInput) => Promise<ProviderGenerateResult>)
 
 export const testSettings: AppSettings = {
-  provider: {
-    provider: 'openrouter',
-    model: 'x-ai/grok-4.1-fast',
-  },
+  provider: createDefaultProviderSettings('openrouter'),
   workspace: {
     rootPath: '/workspace',
     approvalPolicy: 'on-request',
@@ -294,8 +292,8 @@ export class ManualApprovalCoordinator implements ApprovalCoordinator {
 }
 
 export const defaultCredentialResolver: ProviderCredentialResolver = {
-  async getProviderApiKey() {
-    return 'test-api-key'
+  async getProviderAuth() {
+    return { authMethod: 'api-key', apiKey: 'test-api-key' }
   },
 }
 

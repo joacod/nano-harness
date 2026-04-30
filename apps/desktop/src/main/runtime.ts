@@ -2,12 +2,13 @@ import { app, BrowserWindow } from 'electron'
 import { mkdir } from 'node:fs/promises'
 import { join } from 'node:path'
 
-import type { ProviderCredentialResolver } from '../../../../packages/core/src'
+import type { Provider, ProviderCredentialResolver, ProviderGenerateInput, ProviderGenerateResult } from '../../../../packages/core/src'
 import { CoreRunEngine, InMemoryEventBus, StaticPolicy } from '../../../../packages/core/src'
-import { BuiltInActionExecutor, OpenAICompatibleProvider, createSqliteStore } from '../../../../packages/infra/src'
-import { desktopBridgeChannels, getProviderDefinition, providerStatusSchema, runEventSchema, type AppSettings } from '../../../../packages/shared/src'
+import { BuiltInActionExecutor, ChatGptSubscriptionProvider, OpenAICompatibleProvider, createSqliteStore } from '../../../../packages/infra/src'
+import { createDefaultProviderSettings, desktopBridgeChannels, getProviderDefinition, providerAuthSchema, providerDefaultModels, providerStatusSchema, runEventSchema, storedProviderCredentialSchema, type AppSettings, type ProviderAuthMethod } from '../../../../packages/shared/src'
 import { DesktopApprovalCoordinator } from './approval-coordinator'
-import { decryptApiKey } from './secure-credentials'
+import { refreshOpenAIChatGptCredential } from './openai-chatgpt-auth'
+import { decryptCredentialPayload, encryptCredentialPayload } from './secure-credentials'
 
 export type DesktopRuntime = {
   store: Awaited<ReturnType<typeof createSqliteStore>>
@@ -16,7 +17,7 @@ export type DesktopRuntime = {
   approvalCoordinator: DesktopApprovalCoordinator
 }
 
-type ProviderStatusStore = Pick<DesktopRuntime['store'], 'getProviderCredentialStatus'>
+type ProviderStatusStore = Pick<DesktopRuntime['store'], 'getEncryptedProviderCredentialPayload' | 'getProviderCredentialStatus'>
 
 type EventForwardingRuntime = {
   eventBus: {
@@ -24,15 +25,22 @@ type EventForwardingRuntime = {
   }
 }
 
-function buildDefaultSettings(): AppSettings {
-  const provider = getProviderDefinition('openrouter')
+class DesktopProviderRouter implements Provider {
+  private readonly chatGptSubscriptionProvider = new ChatGptSubscriptionProvider()
+  private readonly openAICompatibleProvider = new OpenAICompatibleProvider()
 
+  async generate(input: ProviderGenerateInput): Promise<ProviderGenerateResult> {
+    if (input.settings.provider.provider === 'openai') {
+      return await this.chatGptSubscriptionProvider.generate(input)
+    }
+
+    return await this.openAICompatibleProvider.generate(input)
+  }
+}
+
+function buildDefaultSettings(): AppSettings {
   return {
-    provider: {
-      provider: provider.key,
-      model: provider.defaultModel,
-      baseUrl: provider.baseUrl,
-    },
+    provider: createDefaultProviderSettings('openrouter'),
     workspace: {
       rootPath: join(app.getPath('home'), 'nano-harness'),
       approvalPolicy: 'on-request',
@@ -46,21 +54,45 @@ export async function buildProviderStatus(runtime: { store: ProviderStatusStore 
   }
 
   const provider = getProviderDefinition(settings.provider.provider)
-  const { apiKeyPresent } = await runtime.store.getProviderCredentialStatus(settings.provider.provider)
+  const credentialStatus = await runtime.store.getProviderCredentialStatus(settings.provider.provider)
+  const { apiKeyPresent } = credentialStatus
   const baseUrl = settings.provider.baseUrl?.trim() || provider.baseUrl
   const issues: string[] = []
   const hints: string[] = []
+  let oauthAccountId: string | undefined
+
+  if ((provider.authMethods as readonly ProviderAuthMethod[]).includes('oauth')) {
+    const encryptedPayload = await runtime.store.getEncryptedProviderCredentialPayload(settings.provider.provider, 'oauth')
+
+    if (encryptedPayload) {
+      try {
+        const credential = storedProviderCredentialSchema.parse(decryptCredentialPayload(encryptedPayload))
+
+        if (credential.authMethod === 'oauth') {
+          oauthAccountId = credential.accountId
+        }
+      } catch {
+        issues.push(`Reconnect ${provider.label}; the stored credential could not be read.`)
+      }
+    } else if (settings.provider.provider === 'openai') {
+      issues.push('Sign in with ChatGPT before starting an OpenAI run.')
+    }
+  }
 
   if (provider.requiresApiKey && !apiKeyPresent) {
     issues.push(`Add your ${provider.label} API key before starting a hosted-provider run.`)
   }
 
   if (settings.provider.provider === 'openrouter' && !settings.provider.model.includes('/')) {
-    hints.push('OpenRouter models usually include the provider prefix, for example x-ai/grok-4.1-fast.')
+    hints.push(`OpenRouter models usually include the provider prefix, for example ${providerDefaultModels.openrouter}.`)
   }
 
   if (settings.provider.provider === 'llama-cpp') {
     hints.push('Start llama-server before running a local model. The API endpoint should expose /v1/chat/completions.')
+  }
+
+  if (oauthAccountId) {
+    hints.push(`ChatGPT account: ${oauthAccountId}`)
   }
 
   return providerStatusSchema.parse({
@@ -70,6 +102,15 @@ export async function buildProviderStatus(runtime: { store: ProviderStatusStore 
     baseUrl,
     apiKeyLabel: provider.requiresApiKey ? 'Stored securely on this device' : 'Optional for this local provider',
     apiKeyPresent,
+    authMethod: provider.defaultAuthMethod,
+    authLabel: provider.defaultAuthMethod === 'oauth' ? 'ChatGPT account' : provider.defaultAuthMethod === 'api-key' ? 'API key' : provider.defaultAuthMethod,
+    authPresent: credentialStatus.authMethods?.some((credential) => credential.authMethod === provider.defaultAuthMethod && credential.present) ?? false,
+    authMethods: provider.authMethods.map((authMethod) => ({
+      authMethod,
+      label: authMethod === 'oauth' ? 'ChatGPT account' : authMethod === 'api-key' ? 'API key' : authMethod,
+      present: credentialStatus.authMethods?.some((credential) => credential.authMethod === authMethod && credential.present) ?? false,
+      accountId: authMethod === 'oauth' ? oauthAccountId : undefined,
+    })),
     isReady: issues.length === 0,
     issues,
     hints,
@@ -93,14 +134,47 @@ export async function createRuntime(): Promise<DesktopRuntime> {
   const eventBus = new InMemoryEventBus()
   const approvalCoordinator = new DesktopApprovalCoordinator()
   const providerCredentialResolver: ProviderCredentialResolver = {
-    async getProviderApiKey(provider) {
-      const encryptedApiKey = await store.getEncryptedProviderCredential(provider)
-      return encryptedApiKey ? decryptApiKey(encryptedApiKey) : null
+    async getProviderAuth(input) {
+      const providerDefinition = getProviderDefinition(input.provider)
+      const authMethod = input.authMethod ?? providerDefinition.defaultAuthMethod
+
+      if (!(providerDefinition.authMethods as readonly ProviderAuthMethod[]).includes(authMethod)) {
+        throw new Error(`${providerDefinition.label} does not support ${authMethod} auth.`)
+      }
+
+      if (authMethod === 'none') {
+        return { authMethod: 'none' }
+      }
+
+      const encryptedPayload = await store.getEncryptedProviderCredentialPayload(input.provider, authMethod)
+
+      if (!encryptedPayload) {
+        return providerAuthSchema.parse({ authMethod: 'none' })
+      }
+
+      const credential = storedProviderCredentialSchema.parse(decryptCredentialPayload(encryptedPayload))
+
+      if (credential.authMethod !== authMethod) {
+        throw new Error(`Stored credential does not match ${providerDefinition.label} ${authMethod} auth.`)
+      }
+
+      if (input.provider === 'openai' && credential.authMethod === 'oauth' && credential.expiresAt <= Date.now() + 60_000) {
+        const refreshedCredential = await refreshOpenAIChatGptCredential(credential)
+        await store.saveProviderCredentialPayload(
+          input.provider,
+          authMethod,
+          encryptCredentialPayload(refreshedCredential),
+        )
+
+        return providerAuthSchema.parse(refreshedCredential)
+      }
+
+      return providerAuthSchema.parse(credential)
     },
   }
   const runEngine = new CoreRunEngine({
     store,
-    provider: new OpenAICompatibleProvider(),
+    provider: new DesktopProviderRouter(),
     providerCredentialResolver,
     actionExecutor: new BuiltInActionExecutor(),
     policy: new StaticPolicy(),

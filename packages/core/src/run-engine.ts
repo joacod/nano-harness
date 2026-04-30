@@ -334,9 +334,11 @@ export class CoreRunEngine implements RunEngine {
         let streamedMessage = ''
         const actions = await this.actionExecutor.listDefinitions()
         const providerDefinition = getProviderDefinition(context.settings.provider.provider)
-        const providerApiKey = await this.providerCredentialResolver.getProviderApiKey(context.settings.provider.provider)
+        const providerAuth = await this.providerCredentialResolver.getProviderAuth({
+          provider: context.settings.provider.provider,
+        })
 
-        if (providerDefinition.requiresApiKey && !providerApiKey) {
+        if (providerDefinition.requiresApiKey && providerAuth.authMethod !== 'api-key') {
           throw new Error(`Missing API key for ${providerDefinition.label}`)
         }
 
@@ -345,7 +347,7 @@ export class CoreRunEngine implements RunEngine {
           messages,
           actions,
           settings: context.settings,
-          providerApiKey: providerApiKey ?? undefined,
+          providerAuth,
           signal: context.signal,
           onDelta: async (delta) => {
             streamedMessage += delta

@@ -2,6 +2,7 @@ import { contextBridge, ipcRenderer } from 'electron'
 
 import {
   appSettingsSchema,
+  clearProviderAuthInputSchema,
   conversationListSchema,
   conversationSnapshotSchema,
   desktopBridgeChannels,
@@ -17,7 +18,9 @@ import {
   runCreateInputSchema,
   runEventSchema,
   runIdInputSchema,
-  saveProviderApiKeyInputSchema,
+  saveProviderAuthInputSchema,
+  startProviderOauthInputSchema,
+  startProviderOauthResultSchema,
   startRunResultSchema,
   type DesktopApi,
 } from '../../../../packages/shared/src'
@@ -38,13 +41,19 @@ const desktopApi: DesktopApi = {
       await ipcRenderer.invoke(desktopBridgeChannels.getProviderCredentialStatus, payload),
     )
   },
-  async saveProviderApiKey(input) {
-    const payload = saveProviderApiKeyInputSchema.parse(input)
-    await ipcRenderer.invoke(desktopBridgeChannels.saveProviderApiKey, payload)
+  async saveProviderAuth(input) {
+    const payload = saveProviderAuthInputSchema.parse(input)
+    await ipcRenderer.invoke(desktopBridgeChannels.saveProviderAuth, payload)
   },
-  async clearProviderApiKey(input) {
-    const payload = providerCredentialInputSchema.parse(input)
-    await ipcRenderer.invoke(desktopBridgeChannels.clearProviderApiKey, payload)
+  async startProviderOauth(input) {
+    const payload = startProviderOauthInputSchema.parse(input)
+    return startProviderOauthResultSchema.parse(
+      await ipcRenderer.invoke(desktopBridgeChannels.startProviderOauth, payload),
+    )
+  },
+  async clearProviderAuth(input) {
+    const payload = clearProviderAuthInputSchema.parse(input)
+    await ipcRenderer.invoke(desktopBridgeChannels.clearProviderAuth, payload)
   },
   async exportData() {
     return exportDataResultSchema.parse(await ipcRenderer.invoke(desktopBridgeChannels.exportData))

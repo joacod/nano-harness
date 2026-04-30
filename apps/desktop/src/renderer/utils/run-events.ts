@@ -1,5 +1,5 @@
 import type { AppSettings, ApprovalRequest, ConversationSnapshot, RunEvent } from '../../../../../packages/shared/src'
-import { getProviderDefinition } from '../../../../../packages/shared/src'
+import { createDefaultProviderSettings } from '../../../../../packages/shared/src'
 import { formatTimestamp, previewText } from './formatting'
 
 export type StreamingRunState = {
@@ -282,15 +282,11 @@ export function getProviderRequestForRun(events: RunEvent[], runId: string) {
 }
 
 export function applyProviderDefaults(settings: AppSettings, providerKey: AppSettings['provider']['provider']): AppSettings {
-  const provider = getProviderDefinition(providerKey)
-
   return {
     ...settings,
     provider: {
       ...settings.provider,
-      provider: provider.key,
-      model: provider.defaultModel,
-      baseUrl: provider.baseUrl,
+      ...createDefaultProviderSettings(providerKey),
     },
   }
 }

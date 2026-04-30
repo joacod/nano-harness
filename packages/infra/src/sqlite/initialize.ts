@@ -65,8 +65,10 @@ export const initializationStatements = [
     updated_at TEXT NOT NULL
   )`,
   `CREATE TABLE IF NOT EXISTS provider_credentials (
-    provider TEXT PRIMARY KEY NOT NULL,
-    encrypted_api_key TEXT NOT NULL,
-    updated_at TEXT NOT NULL
+    provider TEXT NOT NULL,
+    auth_method TEXT NOT NULL,
+    encrypted_payload TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    PRIMARY KEY (provider, auth_method)
   )`,
 ] as const

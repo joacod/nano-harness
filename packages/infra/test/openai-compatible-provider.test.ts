@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import type { ActionDefinition, AppSettings, Message, Run } from '@nano-harness/shared'
+import { providerDefaultModels, type ActionDefinition, type AppSettings, type Message, type Run } from '@nano-harness/shared'
 
 import { OpenAICompatibleProvider } from '../src'
 
@@ -16,7 +16,7 @@ const run: Run = {
 const settings: AppSettings = {
   provider: {
     provider: 'openrouter',
-    model: 'x-ai/grok-4.1-fast',
+    model: providerDefaultModels.openrouter,
     reasoning: {
       mode: 'effort',
       effort: 'medium',
@@ -99,7 +99,7 @@ describe('OpenAICompatibleProvider', () => {
       messages,
       actions,
       settings,
-      providerApiKey: 'api-key',
+      providerAuth: { authMethod: 'api-key', apiKey: 'api-key' },
       signal: new AbortController().signal,
     })
 
@@ -116,7 +116,7 @@ describe('OpenAICompatibleProvider', () => {
 
     const body = JSON.parse(String(capturedInit?.body)) as Record<string, unknown>
     expect(body).toMatchObject({
-      model: 'x-ai/grok-4.1-fast',
+      model: providerDefaultModels.openrouter,
       stream: true,
       reasoning: {
         effort: 'medium',
@@ -170,7 +170,7 @@ describe('OpenAICompatibleProvider', () => {
           baseUrl: 'http://127.0.0.1:8080/v1/',
         },
       },
-      providerApiKey: undefined,
+      providerAuth: { authMethod: 'none' },
       signal: new AbortController().signal,
     })
 
@@ -202,7 +202,7 @@ describe('OpenAICompatibleProvider', () => {
       messages: [messages[0]],
       actions,
       settings,
-      providerApiKey: 'api-key',
+      providerAuth: { authMethod: 'api-key', apiKey: 'api-key' },
       signal: new AbortController().signal,
       onDelta,
       onReasoningDelta,
@@ -269,7 +269,7 @@ describe('OpenAICompatibleProvider', () => {
       messages: [messages[0]],
       actions,
       settings,
-      providerApiKey: 'api-key',
+      providerAuth: { authMethod: 'api-key', apiKey: 'api-key' },
       signal: new AbortController().signal,
     })
 
@@ -298,7 +298,7 @@ describe('OpenAICompatibleProvider', () => {
         messages: [messages[0]],
         actions,
         settings,
-        providerApiKey: 'api-key',
+        providerAuth: { authMethod: 'api-key', apiKey: 'api-key' },
         signal: new AbortController().signal,
       }),
     ).rejects.toThrow('Rate limit exceeded')
@@ -315,7 +315,7 @@ describe('OpenAICompatibleProvider', () => {
         messages: [messages[0]],
         actions,
         settings,
-        providerApiKey: 'api-key',
+        providerAuth: { authMethod: 'api-key', apiKey: 'api-key' },
         signal: new AbortController().signal,
       }),
     ).rejects.toThrow('Provider stream failed')
@@ -331,7 +331,7 @@ describe('OpenAICompatibleProvider', () => {
       messages: [messages[0]],
       actions,
       settings,
-      providerApiKey: 'api-key',
+      providerAuth: { authMethod: 'api-key', apiKey: 'api-key' },
       signal: new AbortController().signal,
     })
 

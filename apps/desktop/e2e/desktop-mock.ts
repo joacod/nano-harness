@@ -7,6 +7,7 @@ import type {
   ProviderStatus,
   Run,
 } from '@nano-harness/shared'
+import { providerDefaultModels } from '@nano-harness/shared'
 
 import type { Page } from '@playwright/test'
 
@@ -55,8 +56,8 @@ export function createEmptyMockSetup(): MockSetup {
 }
 
 export async function installDesktopMock(page: Page, setup: MockSetup): Promise<void> {
-  await page.addInitScript((setupJson: string) => {
-    const initialSetup = JSON.parse(setupJson) as MockSetup
+  await page.addInitScript((input: { defaultModel: string; setupJson: string }) => {
+    const initialSetup = JSON.parse(input.setupJson) as MockSetup
     const state: DesktopMockState & {
       context: {
         platform: string
@@ -73,7 +74,7 @@ export async function installDesktopMock(page: Page, setup: MockSetup): Promise<
       settings: {
         provider: {
           provider: 'openrouter',
-          model: 'x-ai/grok-4.1-fast',
+          model: input.defaultModel,
         },
         workspace: {
           rootPath: '/workspace',
@@ -83,7 +84,7 @@ export async function installDesktopMock(page: Page, setup: MockSetup): Promise<
       providerStatus: {
         providerId: 'openai-compatible',
         providerLabel: 'OpenRouter',
-        model: 'x-ai/grok-4.1-fast',
+        model: input.defaultModel,
         baseUrl: 'https://openrouter.ai/api/v1',
         apiKeyLabel: 'Stored securely on this device',
         apiKeyPresent: true,
@@ -197,8 +198,11 @@ export async function installDesktopMock(page: Page, setup: MockSetup): Promise<
       async getProviderCredentialStatus() {
         return { apiKeyPresent: true }
       },
-      async saveProviderApiKey() {},
-      async clearProviderApiKey() {},
+      async saveProviderAuth() {},
+      async startProviderOauth(input: { provider: string }) {
+        return { provider: input.provider }
+      },
+      async clearProviderAuth() {},
       async exportData() {
         return { exportedFilePath: null }
       },
@@ -302,7 +306,7 @@ export async function installDesktopMock(page: Page, setup: MockSetup): Promise<
         }
       },
     }
-  }, JSON.stringify(setup))
+  }, { defaultModel: providerDefaultModels.openrouter, setupJson: JSON.stringify(setup) })
 }
 
 export async function getMockState(page: Page): Promise<ReturnType<Window['__desktopMock']['getState']>> {
@@ -322,8 +326,9 @@ declare global {
       listConversations(): Promise<unknown>
       getProviderStatus(): Promise<unknown>
       getProviderCredentialStatus(): Promise<unknown>
-      saveProviderApiKey(input: unknown): Promise<void>
-      clearProviderApiKey(input: unknown): Promise<void>
+      saveProviderAuth(input: unknown): Promise<void>
+      startProviderOauth(input: unknown): Promise<unknown>
+      clearProviderAuth(input: unknown): Promise<void>
       exportData(): Promise<unknown>
       importData(): Promise<unknown>
       getSettings(): Promise<unknown>

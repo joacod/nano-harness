@@ -4,6 +4,7 @@ import { approvalRequestSchema, approvalResolutionSchema } from '../approvals'
 import { runEventSchema } from '../events'
 import { conversationSchema, messageSchema } from '../messages'
 import { runSchema } from '../runs'
+import { providerAuthMethodSchema } from '../settings'
 
 export const desktopPlatformSchema = z.enum(['darwin', 'linux', 'win32'])
 
@@ -39,6 +40,15 @@ export const providerStatusSchema = z.object({
   baseUrl: z.string().min(1),
   apiKeyLabel: z.string().min(1),
   apiKeyPresent: z.boolean(),
+  authMethod: providerAuthMethodSchema.optional(),
+  authLabel: z.string().min(1).optional(),
+  authPresent: z.boolean().optional(),
+  authMethods: z.array(z.object({
+    authMethod: providerAuthMethodSchema,
+    label: z.string().min(1),
+    present: z.boolean(),
+    accountId: z.string().min(1).optional(),
+  })).optional(),
   isReady: z.boolean(),
   issues: z.array(z.string().min(1)),
   hints: z.array(z.string().min(1)),
@@ -48,9 +58,23 @@ export type ProviderStatus = z.infer<typeof providerStatusSchema>
 
 export const providerCredentialStatusSchema = z.object({
   apiKeyPresent: z.boolean(),
+  oauthPresent: z.boolean().optional(),
+  oauthAccountId: z.string().min(1).optional(),
+  authMethods: z.array(z.object({
+    authMethod: providerAuthMethodSchema,
+    present: z.boolean(),
+    accountId: z.string().min(1).optional(),
+  })).optional(),
 })
 
 export type ProviderCredentialStatus = z.infer<typeof providerCredentialStatusSchema>
+
+export const startProviderOauthResultSchema = z.object({
+  provider: z.string().min(1),
+  accountId: z.string().min(1).optional(),
+})
+
+export type StartProviderOauthResult = z.infer<typeof startProviderOauthResultSchema>
 
 export const startRunResultSchema = z.object({
   runId: z.string().min(1),

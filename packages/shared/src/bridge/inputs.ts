@@ -1,7 +1,7 @@
 import { z } from 'zod'
 
 import { approvalResolutionSchema } from '../approvals'
-import { providerKeySchema } from '../settings'
+import { providerAuthMethodSchema, providerKeySchema } from '../settings'
 
 export const providerCredentialInputSchema = z.object({
   provider: providerKeySchema,
@@ -9,12 +9,27 @@ export const providerCredentialInputSchema = z.object({
 
 export type ProviderCredentialInput = z.infer<typeof providerCredentialInputSchema>
 
-export const saveProviderApiKeyInputSchema = z.object({
+export const saveProviderAuthInputSchema = z.object({
   provider: providerKeySchema,
+  authMethod: z.literal('api-key'),
   apiKey: z.string().min(1),
 })
 
-export type SaveProviderApiKeyInput = z.infer<typeof saveProviderApiKeyInputSchema>
+export type SaveProviderAuthInput = z.infer<typeof saveProviderAuthInputSchema>
+
+export const startProviderOauthInputSchema = z.object({
+  provider: providerKeySchema,
+  authMethod: providerAuthMethodSchema.optional(),
+})
+
+export type StartProviderOauthInput = z.infer<typeof startProviderOauthInputSchema>
+
+export const clearProviderAuthInputSchema = z.object({
+  provider: providerKeySchema,
+  authMethod: providerAuthMethodSchema.optional(),
+})
+
+export type ClearProviderAuthInput = z.infer<typeof clearProviderAuthInputSchema>
 
 export const resolveApprovalInputSchema = z.object({
   runId: z.string().min(1),

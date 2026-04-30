@@ -5,18 +5,24 @@ import {
   desktopBridgeChannels,
   desktopContextSchema,
   getConversationInputSchema,
+  getProviderDefinition,
   openExternalUrlInputSchema,
   providerCredentialInputSchema,
   resolveApprovalInputSchema,
   runCreateInputSchema,
   runIdInputSchema,
-  saveProviderApiKeyInputSchema,
+  saveProviderAuthInputSchema,
+  clearProviderAuthInputSchema,
+  startProviderOauthInputSchema,
+  startProviderOauthResultSchema,
   startRunResultSchema,
+  type ProviderAuthMethod,
 } from '../../../../packages/shared/src'
 import { exportData, importData } from './data-transfer'
+import { startOpenAIChatGptOAuth } from './openai-chatgpt-auth'
 import type { DesktopRuntime } from './runtime'
 import { buildProviderStatus } from './runtime'
-import { encryptApiKey } from './secure-credentials'
+import { encryptCredentialPayload } from './secure-credentials'
 
 type IpcRuntime = {
   store: {
@@ -27,7 +33,8 @@ type IpcRuntime = {
     listConversations: DesktopRuntime['store']['listConversations']
     listRuns: DesktopRuntime['store']['listRuns']
     getProviderCredentialStatus: DesktopRuntime['store']['getProviderCredentialStatus']
-    saveProviderCredential: DesktopRuntime['store']['saveProviderCredential']
+    getEncryptedProviderCredentialPayload: DesktopRuntime['store']['getEncryptedProviderCredentialPayload']
+    saveProviderCredentialPayload: DesktopRuntime['store']['saveProviderCredentialPayload']
     clearProviderCredential: DesktopRuntime['store']['clearProviderCredential']
     getSettings: DesktopRuntime['store']['getSettings']
     saveSettings: DesktopRuntime['store']['saveSettings']
@@ -79,14 +86,49 @@ export function setupIpcHandlers(runtime: IpcRuntime): void {
     return await runtime.store.getProviderCredentialStatus(input.provider)
   })
 
-  ipcMain.handle(desktopBridgeChannels.saveProviderApiKey, async (_event, payload) => {
-    const input = saveProviderApiKeyInputSchema.parse(payload)
-    await runtime.store.saveProviderCredential(input.provider, encryptApiKey(input.apiKey.trim()))
+  ipcMain.handle(desktopBridgeChannels.saveProviderAuth, async (_event, payload) => {
+    const input = saveProviderAuthInputSchema.parse(payload)
+    await runtime.store.saveProviderCredentialPayload(
+      input.provider,
+      input.authMethod,
+      encryptCredentialPayload({ authMethod: 'api-key', apiKey: input.apiKey.trim() }),
+    )
   })
 
-  ipcMain.handle(desktopBridgeChannels.clearProviderApiKey, async (_event, payload) => {
-    const input = providerCredentialInputSchema.parse(payload)
-    await runtime.store.clearProviderCredential(input.provider)
+  ipcMain.handle(desktopBridgeChannels.startProviderOauth, async (_event, payload) => {
+    const input = startProviderOauthInputSchema.parse(payload)
+    const provider = getProviderDefinition(input.provider)
+
+    if (!(provider.authMethods as readonly ProviderAuthMethod[]).includes('oauth')) {
+      throw new Error(`${provider.label} does not support OAuth sign-in.`)
+    }
+
+    const credential = await startOpenAIChatGptOAuth({ openExternal: (url) => shell.openExternal(url) })
+
+    await runtime.store.saveProviderCredentialPayload(
+      input.provider,
+      'oauth',
+      encryptCredentialPayload(credential),
+    )
+
+    return startProviderOauthResultSchema.parse({
+      provider: input.provider,
+      accountId: credential.accountId,
+    })
+  })
+
+  ipcMain.handle(desktopBridgeChannels.clearProviderAuth, async (_event, payload) => {
+    const input = clearProviderAuthInputSchema.parse(payload)
+    const provider = getProviderDefinition(input.provider)
+    const authMethod = input.authMethod ?? provider.defaultAuthMethod
+
+    if (!(provider.authMethods as readonly ProviderAuthMethod[]).includes(authMethod)) {
+      throw new Error(`${provider.label} does not support ${authMethod} auth.`)
+    }
+
+    if (authMethod !== 'none') {
+      await runtime.store.clearProviderCredential(input.provider, authMethod)
+    }
   })
 
   ipcMain.handle(desktopBridgeChannels.exportData, async () => {

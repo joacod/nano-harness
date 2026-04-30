@@ -1,4 +1,5 @@
 export * from './built-in-actions'
+export * from './chatgpt-subscription-provider'
 export * from './schema'
 export * from './openai-compatible-provider'
 export * from './sqlite-store'

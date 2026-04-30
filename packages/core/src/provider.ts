@@ -1,4 +1,4 @@
-import type { ActionDefinition, AppSettings, JsonValue, Message, ProviderKey, ProviderReasoningDelta, ReasoningDetail, Run } from '@nano-harness/shared'
+import type { ActionDefinition, AppSettings, JsonValue, Message, ProviderAuth, ProviderAuthMethod, ProviderKey, ProviderReasoningDelta, ReasoningDetail, Run } from '@nano-harness/shared'
 
 export interface ProviderActionRequest {
   toolCallId: string
@@ -11,7 +11,7 @@ export interface ProviderGenerateInput {
   messages: Message[]
   actions: ActionDefinition[]
   settings: AppSettings
-  providerApiKey?: string
+  providerAuth: ProviderAuth
   signal: AbortSignal
   onDelta?: (delta: string) => Promise<void> | void
   onReasoningDelta?: (delta: ProviderReasoningDelta) => Promise<void> | void
@@ -29,5 +29,5 @@ export interface Provider {
 }
 
 export interface ProviderCredentialResolver {
-  getProviderApiKey(provider: ProviderKey): Promise<string | null>
+  getProviderAuth(input: { provider: ProviderKey; authMethod?: ProviderAuthMethod }): Promise<ProviderAuth>
 }

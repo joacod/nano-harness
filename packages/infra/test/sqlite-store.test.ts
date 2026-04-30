@@ -5,7 +5,7 @@ import path from 'node:path'
 import { createClient } from '@libsql/client/node'
 import { afterEach, describe, expect, it } from 'vitest'
 
-import type { AppSettings, Message, RunEvent } from '@nano-harness/shared'
+import { createDefaultProviderSettings, type AppSettings, type Message, type RunEvent } from '@nano-harness/shared'
 
 import { createSqliteStore } from '../src'
 import { requiredDatabaseTables } from '../src/sqlite/initialize'
@@ -44,8 +44,7 @@ describe('SqliteStore', () => {
     try {
       const settings: AppSettings = {
         provider: {
-          provider: 'openrouter',
-          model: 'x-ai/grok-4.1-fast',
+          ...createDefaultProviderSettings('openrouter'),
           reasoning: {
             mode: 'effort',
             effort: 'low',
@@ -60,12 +59,26 @@ describe('SqliteStore', () => {
       await store.saveSettings(settings)
       expect(await store.getSettings()).toEqual(settings)
 
-      expect(await store.getProviderCredentialStatus('openrouter')).toEqual({ apiKeyPresent: false })
-      await store.saveProviderCredential('openrouter', 'encrypted-key')
-      expect(await store.getProviderCredentialStatus('openrouter')).toEqual({ apiKeyPresent: true })
-      expect(await store.getEncryptedProviderCredential('openrouter')).toBe('encrypted-key')
-      await store.clearProviderCredential('openrouter')
-      expect(await store.getEncryptedProviderCredential('openrouter')).toBeNull()
+      expect(await store.getProviderCredentialStatus('openrouter')).toMatchObject({
+        apiKeyPresent: false,
+        oauthPresent: false,
+        authMethods: [],
+      })
+      await store.saveProviderCredentialPayload('openrouter', 'api-key', 'encrypted-key')
+      await store.saveProviderCredentialPayload('openrouter', 'oauth', 'encrypted-oauth')
+      expect(await store.getProviderCredentialStatus('openrouter')).toMatchObject({
+        apiKeyPresent: true,
+        oauthPresent: true,
+        authMethods: expect.arrayContaining([
+          { authMethod: 'api-key', present: true },
+          { authMethod: 'oauth', present: true },
+        ]),
+      })
+      expect(await store.getEncryptedProviderCredentialPayload('openrouter', 'api-key')).toBe('encrypted-key')
+      expect(await store.getEncryptedProviderCredentialPayload('openrouter', 'oauth')).toBe('encrypted-oauth')
+      await store.clearProviderCredential('openrouter', 'api-key')
+      expect(await store.getEncryptedProviderCredentialPayload('openrouter', 'api-key')).toBeNull()
+      expect(await store.getEncryptedProviderCredentialPayload('openrouter', 'oauth')).toBe('encrypted-oauth')
 
       await store.saveConversation({
         id: 'conversation-1',
@@ -222,6 +235,33 @@ describe('SqliteStore', () => {
           decidedAt: '2026-04-29T10:00:09.500Z',
         },
       ])
+    } finally {
+      await store.close()
+    }
+  })
+
+  it('sanitizes provider credentials from exported or staged database files', async () => {
+    const store = await createTestStore()
+    const backupFilePath = path.join(store.paths.dataDir, 'export.db')
+
+    try {
+      await store.saveProviderCredentialPayload('openrouter', 'api-key', 'encrypted-api-key')
+      await store.saveProviderCredentialPayload('openai', 'oauth', 'encrypted-oauth-token-account-claim')
+      await store.backupToFile(backupFilePath)
+      await store.sanitizeDatabaseFile(backupFilePath)
+
+      const backupClient = createClient({ url: `file:${backupFilePath}` })
+
+      try {
+        const rows = await backupClient.execute('SELECT provider, auth_method, encrypted_payload FROM provider_credentials')
+
+        expect(rows.rows).toEqual([])
+      } finally {
+        await backupClient.close()
+      }
+
+      expect(await store.getEncryptedProviderCredentialPayload('openrouter', 'api-key')).toBe('encrypted-api-key')
+      expect(await store.getEncryptedProviderCredentialPayload('openai', 'oauth')).toBe('encrypted-oauth-token-account-claim')
     } finally {
       await store.close()
     }

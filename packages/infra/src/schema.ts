@@ -1,4 +1,4 @@
-import { index, sqliteTable, text } from 'drizzle-orm/sqlite-core'
+import { index, primaryKey, sqliteTable, text } from 'drizzle-orm/sqlite-core'
 
 export const conversationsTable = sqliteTable('conversations', {
   id: text('id').primaryKey(),
@@ -78,11 +78,16 @@ export const settingsTable = sqliteTable('settings', {
   updatedAt: text('updated_at').notNull(),
 })
 
-export const providerCredentialsTable = sqliteTable('provider_credentials', {
-  provider: text('provider').primaryKey(),
-  encryptedApiKey: text('encrypted_api_key').notNull(),
-  updatedAt: text('updated_at').notNull(),
-})
+export const providerCredentialsTable = sqliteTable(
+  'provider_credentials',
+  {
+    provider: text('provider').notNull(),
+    authMethod: text('auth_method').notNull(),
+    encryptedPayload: text('encrypted_payload').notNull(),
+    updatedAt: text('updated_at').notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.provider, table.authMethod] })],
+)
 
 export const schema = {
   conversationsTable,

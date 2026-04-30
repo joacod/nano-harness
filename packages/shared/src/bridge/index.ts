@@ -5,4 +5,4 @@ export * from './outputs'
 
 export { runEventSchema } from '../events'
 export { runCreateInputSchema } from '../runs'
-export { appSettingsSchema } from '../settings'
+export { appSettingsSchema, providerAuthMethodSchema } from '../settings'

@@ -4,7 +4,7 @@ import { cleanup, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import type { ApprovalRequest, Run, RunEvent } from '@nano-harness/shared'
+import { providerDefaultModels, type ApprovalRequest, type Run, type RunEvent } from '@nano-harness/shared'
 
 import type { StreamingRunState } from '../../src/renderer/utils/run-events'
 import { RunInspectorCard } from '../../src/renderer/components/RunInspectorCard'
@@ -35,7 +35,7 @@ describe('RunInspectorCard', () => {
     renderWithQueryClient(
       <RunInspectorCard
         run={createRun({ status: 'started', startedAt: '2026-04-29T10:01:00.000Z' })}
-        events={[event('provider.requested', { provider: 'OpenRouter', model: 'x-ai/grok-4.1-fast' })]}
+        events={[event('provider.requested', { provider: 'OpenRouter', model: providerDefaultModels.openrouter })]}
         pendingApproval={null}
         streamingState={createStreamingState()}
       />,

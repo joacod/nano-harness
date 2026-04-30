@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import type { ProviderKey, RunEvent } from '@nano-harness/shared'
+import { createDefaultProviderSettings, providerDefaultModels, type ProviderKey, type RunEvent } from '@nano-harness/shared'
 
 const { getAllWindows } = vi.hoisted(() => ({
   getAllWindows: vi.fn<() => Array<{ webContents: { send: (channel: string, payload: RunEvent) => void } }>>(() => []),
@@ -31,6 +31,7 @@ import { buildProviderStatus, setupEventForwarding } from '../../src/main/runtim
 type ProviderStatusRuntime = {
   store: {
     getProviderCredentialStatus(provider: ProviderKey): Promise<{ apiKeyPresent: boolean }>
+    getEncryptedProviderCredentialPayload(provider: ProviderKey, authMethod: 'api-key' | 'none' | 'oauth'): Promise<string | null>
   }
 }
 
@@ -45,6 +46,7 @@ describe('desktop runtime helpers', () => {
     const runtime = {
       store: {
         getProviderCredentialStatus: vi.fn(async () => ({ apiKeyPresent: false })),
+        getEncryptedProviderCredentialPayload: vi.fn(async () => null),
       },
     } satisfies ProviderStatusRuntime
 
@@ -55,14 +57,12 @@ describe('desktop runtime helpers', () => {
     const runtime = {
       store: {
         getProviderCredentialStatus: vi.fn(async () => ({ apiKeyPresent: false })),
+        getEncryptedProviderCredentialPayload: vi.fn(async () => null),
       },
     } satisfies ProviderStatusRuntime
 
     const result = await buildProviderStatus(runtime, {
-      provider: {
-        provider: 'openrouter',
-        model: 'x-ai/grok-4.1-fast',
-      },
+      provider: createDefaultProviderSettings('openrouter'),
       workspace: {
         rootPath: '/workspace',
         approvalPolicy: 'on-request',
@@ -81,6 +81,7 @@ describe('desktop runtime helpers', () => {
     const runtime = {
       store: {
         getProviderCredentialStatus: vi.fn(async () => ({ apiKeyPresent: true })),
+        getEncryptedProviderCredentialPayload: vi.fn(async () => null),
       },
     } satisfies ProviderStatusRuntime
 
@@ -99,7 +100,7 @@ describe('desktop runtime helpers', () => {
       apiKeyPresent: true,
       isReady: true,
       issues: [],
-      hints: ['OpenRouter models usually include the provider prefix, for example x-ai/grok-4.1-fast.'],
+      hints: [`OpenRouter models usually include the provider prefix, for example ${providerDefaultModels.openrouter}.`],
     })
   })
 
@@ -107,6 +108,7 @@ describe('desktop runtime helpers', () => {
     const runtime = {
       store: {
         getProviderCredentialStatus: vi.fn(async () => ({ apiKeyPresent: false })),
+        getEncryptedProviderCredentialPayload: vi.fn(async () => null),
       },
     } satisfies ProviderStatusRuntime
 
@@ -186,7 +188,7 @@ describe('DesktopApprovalCoordinator', () => {
         createdAt: '2026-04-29T10:00:00.000Z',
       },
       settings: {
-        provider: { provider: 'openrouter', model: 'x-ai/grok-4.1-fast' },
+        provider: createDefaultProviderSettings('openrouter'),
         workspace: { rootPath: '/workspace', approvalPolicy: 'on-request' },
       },
       signal: new AbortController().signal,
@@ -224,7 +226,7 @@ describe('DesktopApprovalCoordinator', () => {
         createdAt: '2026-04-29T10:00:00.000Z',
       },
       settings: {
-        provider: { provider: 'openrouter', model: 'x-ai/grok-4.1-fast' },
+        provider: createDefaultProviderSettings('openrouter'),
         workspace: { rootPath: '/workspace', approvalPolicy: 'on-request' },
       },
       signal: controller.signal,

@@ -2,11 +2,17 @@ import { describe, expect, it } from 'vitest'
 
 import {
   appSettingsSchema,
+  clearProviderAuthInputSchema,
   getProviderDefinition,
   messageSchema,
+  providerDefaultModels,
   openExternalUrlInputSchema,
+  providerOptions,
   resolveApprovalInputSchema,
+  saveProviderAuthInputSchema,
+  startProviderOauthResultSchema,
   runEventSchema,
+  startProviderOauthInputSchema,
 } from '../src'
 
 describe('shared contracts', () => {
@@ -16,8 +22,10 @@ describe('shared contracts', () => {
       label: 'OpenRouter',
       adapterId: 'openai-compatible',
       baseUrl: 'https://openrouter.ai/api/v1',
-      defaultModel: 'x-ai/grok-4.1-fast',
+      defaultModel: providerDefaultModels.openrouter,
       requiresApiKey: true,
+      authMethods: ['api-key'],
+      defaultAuthMethod: 'api-key',
     })
 
     expect(getProviderDefinition('llama-cpp')).toMatchObject({
@@ -25,9 +33,34 @@ describe('shared contracts', () => {
       label: 'llama.cpp',
       adapterId: 'openai-compatible',
       baseUrl: 'http://127.0.0.1:8080/v1',
-      defaultModel: 'ggml-org/gemma-3-1b-it-GGUF',
+      defaultModel: providerDefaultModels['llama-cpp'],
       requiresApiKey: false,
+      authMethods: ['none'],
+      defaultAuthMethod: 'none',
     })
+
+    expect(getProviderDefinition('openai')).toMatchObject({
+      key: 'openai',
+      label: 'OpenAI',
+      adapterId: 'chatgpt-subscription',
+      baseUrl: 'https://chatgpt.com/backend-api/codex',
+      defaultModel: providerDefaultModels.openai,
+      requiresApiKey: false,
+      authMethods: ['oauth'],
+      defaultAuthMethod: 'oauth',
+    })
+  })
+
+  it('includes OpenAI in provider options', () => {
+    expect(providerOptions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          key: 'openai',
+          label: 'OpenAI',
+          defaultModel: providerDefaultModels.openai,
+        }),
+      ]),
+    )
   })
 
   it('parses assistant and tool messages with tool metadata', () => {
@@ -109,6 +142,20 @@ describe('shared contracts', () => {
     })
 
     expect(() => openExternalUrlInputSchema.parse({ url: 'not a url' })).toThrow()
+  })
+
+  it('validates OAuth bridge payloads', () => {
+    expect(startProviderOauthInputSchema.parse({ provider: 'openai' })).toEqual({ provider: 'openai' })
+    expect(startProviderOauthInputSchema.parse({ provider: 'openai', authMethod: 'oauth' })).toEqual({ provider: 'openai', authMethod: 'oauth' })
+    expect(startProviderOauthResultSchema.parse({ provider: 'openai', accountId: 'account-1' })).toEqual({ provider: 'openai', accountId: 'account-1' })
+    expect(saveProviderAuthInputSchema.parse({ provider: 'openrouter', authMethod: 'api-key', apiKey: 'key' })).toEqual({
+      provider: 'openrouter',
+      authMethod: 'api-key',
+      apiKey: 'key',
+    })
+    expect(clearProviderAuthInputSchema.parse({ provider: 'openai', authMethod: 'oauth' })).toEqual({ provider: 'openai', authMethod: 'oauth' })
+    expect(() => startProviderOauthInputSchema.parse({ provider: 'not-a-provider' })).toThrow()
+    expect(() => saveProviderAuthInputSchema.parse({ provider: 'openai', authMethod: 'oauth', apiKey: 'key' })).toThrow()
   })
 
   it('rejects invalid app settings payloads', () => {

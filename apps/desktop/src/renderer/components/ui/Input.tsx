@@ -56,7 +56,6 @@ export function Select({ name, value, children, className, onChange }: SelectPro
   const id = useId()
   const rootRef = useRef<HTMLDivElement>(null)
   const [isOpen, setIsOpen] = useState(false)
-  const [opensUp, setOpensUp] = useState(false)
   const [menuPosition, setMenuPosition] = useState<{ left: number; top?: number; bottom?: number; width: number } | null>(null)
   const options = getSelectOptions(children)
   const selectedOption = options.find((option) => option.value === value) ?? options[0]
@@ -90,7 +89,6 @@ export function Select({ name, value, children, className, onChange }: SelectPro
       const spaceAbove = rect.top
       const nextOpensUp = spaceBelow < menuHeight && spaceAbove > spaceBelow
 
-      setOpensUp(nextOpensUp)
       setMenuPosition({
         left: rect.left,
         width: rect.width,
