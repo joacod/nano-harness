@@ -91,19 +91,6 @@ export function ProviderSettingsForm({
                 />
               </LabeledField>
             </div>
-            <div className="settings-field settings-field-action">
-              <Button
-                type="button"
-                onClick={() => {
-                  const providerKey = form.getFieldValue('provider.provider')
-                  const nextSettings = applyProviderDefaults(form.state.values, providerKey)
-                  form.setFieldValue('provider.model', nextSettings.provider.model)
-                  form.setFieldValue('provider.baseUrl', nextSettings.provider.baseUrl)
-                }}
-              >
-                Use defaults
-              </Button>
-            </div>
           </div>
         </section>
 
@@ -115,6 +102,20 @@ export function ProviderSettingsForm({
               Endpoint
             </p>
             <p>Model and API endpoint.</p>
+          </div>
+
+          <div className="form-row action-row-left">
+            <Button
+              type="button"
+              onClick={() => {
+                const providerKey = form.getFieldValue('provider.provider')
+                const nextSettings = applyProviderDefaults(form.state.values, providerKey)
+                form.setFieldValue('provider.model', nextSettings.provider.model)
+                form.setFieldValue('provider.baseUrl', nextSettings.provider.baseUrl)
+              }}
+            >
+              Use defaults
+            </Button>
           </div>
 
           <div className="settings-field-grid">
