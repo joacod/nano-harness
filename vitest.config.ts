@@ -7,8 +7,11 @@ export default defineConfig({
       'packages/core/test/**/*.test.ts',
       'packages/infra/test/**/*.test.ts',
       'apps/desktop/test/main/**/*.test.ts',
+      'apps/desktop/test/main/**/*.test.tsx',
       'apps/desktop/test/preload/**/*.test.ts',
+      'apps/desktop/test/preload/**/*.test.tsx',
       'apps/desktop/test/renderer/**/*.test.ts',
+      'apps/desktop/test/renderer/**/*.test.tsx',
     ],
     environment: 'node',
     coverage: {

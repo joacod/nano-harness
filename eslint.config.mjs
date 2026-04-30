@@ -14,7 +14,7 @@ export default tseslint.config(
     }
   },
   {
-    files: ['packages/*/test/**/*.ts', 'apps/desktop/test/**/*.ts', 'apps/desktop/e2e/**/*.ts'],
+    files: ['packages/*/test/**/*.ts', 'apps/desktop/test/**/*.{ts,tsx}', 'apps/desktop/e2e/**/*.ts'],
     rules: {
       'no-restricted-syntax': [
         'error',
