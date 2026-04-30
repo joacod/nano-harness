@@ -5,7 +5,7 @@ import { join } from 'node:path'
 import type { Provider, ProviderGenerateInput, ProviderGenerateResult } from '../../../../packages/core/src'
 import { CoreRunEngine, InMemoryEventBus, StaticPolicy } from '../../../../packages/core/src'
 import { BuiltInActionExecutor, ChatGptSubscriptionProvider, OpenAICompatibleProvider, createSqliteStore } from '../../../../packages/infra/src'
-import { createDefaultProviderSettings, desktopBridgeChannels, getProviderDefinition, providerDefaultModels, providerStatusSchema, runEventSchema, storedProviderCredentialSchema, type AppSettings, type ProviderAdapterId, type ProviderAuthMethod } from '../../../../packages/shared/src'
+import { createDefaultProviderSettings, desktopBridgeChannels, getProviderDefinition, providerStatusSchema, runEventSchema, storedProviderCredentialSchema, type AppSettings, type ProviderAdapterId, type ProviderAuthMethod } from '../../../../packages/shared/src'
 import { DesktopApprovalCoordinator } from './approval-coordinator'
 import { refreshOpenAIChatGptCredential } from './openai-chatgpt-auth'
 import { createProviderCredentialResolver } from './provider-credential-resolver'
@@ -80,22 +80,20 @@ export async function buildProviderStatus(runtime: { store: ProviderStatusStore 
       } catch {
         issues.push(`Reconnect ${provider.label}; the stored credential could not be read.`)
       }
-    } else if (settings.provider.provider === 'openai') {
-      issues.push('Sign in with ChatGPT before starting an OpenAI run.')
+    } else if (provider.missingAuthIssue) {
+      issues.push(provider.missingAuthIssue)
     }
   }
 
   if (provider.requiresApiKey && !apiKeyPresent) {
-    issues.push(`Add your ${provider.label} API key before starting a hosted-provider run.`)
+    issues.push(provider.apiKeyMissingIssue ?? `Add your ${provider.label} API key before starting a hosted-provider run.`)
   }
 
-  if (settings.provider.provider === 'openrouter' && !settings.provider.model.includes('/')) {
-    hints.push(`OpenRouter models usually include the provider prefix, for example ${providerDefaultModels.openrouter}.`)
+  if (provider.modelPrefixHint && !settings.provider.model.includes('/')) {
+    hints.push(provider.modelPrefixHint)
   }
 
-  if (settings.provider.provider === 'llama-cpp') {
-    hints.push('Start llama-server before running a local model. The API endpoint should expose /v1/chat/completions.')
-  }
+  hints.push(...provider.statusHints)
 
   if (oauthAccountId) {
     hints.push(`ChatGPT account: ${oauthAccountId}`)
@@ -106,14 +104,14 @@ export async function buildProviderStatus(runtime: { store: ProviderStatusStore 
     providerLabel: provider.label,
     model: settings.provider.model,
     baseUrl,
-    apiKeyLabel: provider.requiresApiKey ? 'Stored securely on this device' : 'Optional for this local provider',
+    apiKeyLabel: provider.apiKeyLabel,
     apiKeyPresent,
     authMethod: provider.defaultAuthMethod,
-    authLabel: provider.defaultAuthMethod === 'oauth' ? 'ChatGPT account' : provider.defaultAuthMethod === 'api-key' ? 'API key' : provider.defaultAuthMethod,
+    authLabel: provider.authLabels[provider.defaultAuthMethod] ?? provider.defaultAuthMethod,
     authPresent: credentialStatus.authMethods?.some((credential) => credential.authMethod === provider.defaultAuthMethod && credential.present) ?? false,
     authMethods: provider.authMethods.map((authMethod) => ({
       authMethod,
-      label: authMethod === 'oauth' ? 'ChatGPT account' : authMethod === 'api-key' ? 'API key' : authMethod,
+      label: provider.authLabels[authMethod] ?? authMethod,
       present: credentialStatus.authMethods?.some((credential) => credential.authMethod === authMethod && credential.present) ?? false,
       accountId: authMethod === 'oauth' ? oauthAccountId : undefined,
     })),
