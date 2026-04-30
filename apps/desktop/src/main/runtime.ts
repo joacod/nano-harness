@@ -2,12 +2,13 @@ import { app, BrowserWindow } from 'electron'
 import { mkdir } from 'node:fs/promises'
 import { join } from 'node:path'
 
-import type { ProviderCredentialResolver } from '../../../../packages/core/src'
+import type { Provider, ProviderCredentialResolver, ProviderGenerateInput, ProviderGenerateResult } from '../../../../packages/core/src'
 import { CoreRunEngine, InMemoryEventBus, StaticPolicy } from '../../../../packages/core/src'
-import { BuiltInActionExecutor, OpenAICompatibleProvider, createSqliteStore } from '../../../../packages/infra/src'
+import { BuiltInActionExecutor, ChatGptSubscriptionProvider, OpenAICompatibleProvider, createSqliteStore } from '../../../../packages/infra/src'
 import { desktopBridgeChannels, getProviderDefinition, providerAuthSchema, providerStatusSchema, runEventSchema, storedProviderCredentialSchema, type AppSettings, type ProviderAuthMethod } from '../../../../packages/shared/src'
 import { DesktopApprovalCoordinator } from './approval-coordinator'
-import { decryptCredentialPayload } from './secure-credentials'
+import { refreshOpenAIChatGptCredential } from './openai-chatgpt-auth'
+import { decryptCredentialPayload, encryptCredentialPayload } from './secure-credentials'
 
 export type DesktopRuntime = {
   store: Awaited<ReturnType<typeof createSqliteStore>>
@@ -21,6 +22,19 @@ type ProviderStatusStore = Pick<DesktopRuntime['store'], 'getEncryptedProviderCr
 type EventForwardingRuntime = {
   eventBus: {
     subscribe(listener: (event: Parameters<InMemoryEventBus['publish']>[0]) => void): () => void
+  }
+}
+
+class DesktopProviderRouter implements Provider {
+  private readonly chatGptSubscriptionProvider = new ChatGptSubscriptionProvider()
+  private readonly openAICompatibleProvider = new OpenAICompatibleProvider()
+
+  async generate(input: ProviderGenerateInput): Promise<ProviderGenerateResult> {
+    if (input.settings.provider.provider === 'openai') {
+      return await this.chatGptSubscriptionProvider.generate(input)
+    }
+
+    return await this.openAICompatibleProvider.generate(input)
   }
 }
 
@@ -150,12 +164,23 @@ export async function createRuntime(): Promise<DesktopRuntime> {
         throw new Error(`Stored credential does not match ${providerDefinition.label} ${authMethod} auth.`)
       }
 
+      if (input.provider === 'openai' && credential.authMethod === 'oauth' && credential.expiresAt <= Date.now() + 60_000) {
+        const refreshedCredential = await refreshOpenAIChatGptCredential(credential)
+        await store.saveProviderCredentialPayload(
+          input.provider,
+          authMethod,
+          encryptCredentialPayload(refreshedCredential),
+        )
+
+        return providerAuthSchema.parse(refreshedCredential)
+      }
+
       return providerAuthSchema.parse(credential)
     },
   }
   const runEngine = new CoreRunEngine({
     store,
-    provider: new OpenAICompatibleProvider(),
+    provider: new DesktopProviderRouter(),
     providerCredentialResolver,
     actionExecutor: new BuiltInActionExecutor(),
     policy: new StaticPolicy(),
