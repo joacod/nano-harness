@@ -21,7 +21,7 @@ describe('SettingsFormCard', () => {
     expect(screen.getByRole('tab', { name: 'Providers' }).getAttribute('aria-selected')).toBe('true')
     expect(screen.getByText('Provider status')).toBeTruthy()
     expect(screen.getAllByText('OpenRouter').length).toBeGreaterThan(0)
-    expect(screen.getByText('API Key')).toBeTruthy()
+    expect(screen.getAllByText('API Key').length).toBeGreaterThan(0)
     expect(screen.getAllByText('Model').length).toBeGreaterThan(0)
     expect(screen.getAllByText('Base URL').length).toBeGreaterThan(0)
     expect(screen.queryByText('Workspace Root')).toBeNull()
@@ -49,7 +49,7 @@ describe('SettingsFormCard', () => {
 
     const { container } = renderSettingsFormCard()
 
-    expect(screen.getByText('API Key')).toBeTruthy()
+    expect(screen.getAllByText('API Key').length).toBeGreaterThan(0)
 
     const providerSelect = container.querySelector<HTMLButtonElement>('[data-select-trigger="provider"]')
 

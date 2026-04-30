@@ -50,37 +50,64 @@ export function WorkspaceSettingsForm({
           void form.handleSubmit()
         }}
       >
-        <LabeledField label="Workspace Root">
-          <FieldHint>Built-in file actions are restricted to this directory tree.</FieldHint>
-          <form.Field
-            name="workspace.rootPath"
-            validators={{
-              onChange: ({ value }) => (value.trim() ? undefined : 'Workspace root is required.'),
-            }}
-            children={(field) => (
-              <TextField field={field} name="workspace-root" placeholder="Example: /Users/name/project" autoComplete="off" spellCheck={false} />
-            )}
-          />
-        </LabeledField>
+        <section className="settings-section" aria-labelledby="workspace-files-heading">
+          <div className="settings-section-heading">
+            <p className="eyebrow" id="workspace-files-heading">
+              File Access
+            </p>
+            <p>Limit built-in file actions to the workspace tree.</p>
+          </div>
 
-        <LabeledField label="Approval Policy">
-          <form.Field
-            name="workspace.approvalPolicy"
-            children={(field) => (
-              <Select
-                name="approval-policy"
-                value={field.state.value}
-                onChange={(event) => field.handleChange(event.target.value as AppSettings['workspace']['approvalPolicy'])}
-              >
-                <option value="on-request">on-request</option>
-                <option value="always">always</option>
-                <option value="never">never</option>
-              </Select>
-            )}
-          />
-        </LabeledField>
+          <div className="settings-field-grid settings-field-grid-wide">
+            <div className="settings-field settings-field-wide">
+              <LabeledField label="Workspace Root">
+                <FieldHint>Built-in file actions are restricted to this directory tree.</FieldHint>
+                <form.Field
+                  name="workspace.rootPath"
+                  validators={{
+                    onChange: ({ value }) => (value.trim() ? undefined : 'Workspace root is required.'),
+                  }}
+                  children={(field) => (
+                    <TextField field={field} name="workspace-root" placeholder="Example: /Users/name/project" autoComplete="off" spellCheck={false} />
+                  )}
+                />
+              </LabeledField>
+            </div>
+          </div>
+        </section>
 
-        <div className="form-row">
+        <section className="settings-section" aria-labelledby="workspace-approvals-heading">
+          <div className="settings-section-heading">
+            <p className="eyebrow" id="workspace-approvals-heading">
+              Action Safety
+            </p>
+            <p>Choose when tool actions should ask before running.</p>
+          </div>
+
+          <div className="settings-field-grid settings-field-grid-compact">
+            <div className="settings-field">
+              <LabeledField label="Approval Policy">
+                <FieldHint>Use on-request for a balanced default, always for manual review, or never to deny approval-required actions.</FieldHint>
+                <form.Field
+                  name="workspace.approvalPolicy"
+                  children={(field) => (
+                    <Select
+                      name="approval-policy"
+                      value={field.state.value}
+                      onChange={(event) => field.handleChange(event.target.value as AppSettings['workspace']['approvalPolicy'])}
+                    >
+                      <option value="on-request">on-request</option>
+                      <option value="always">always</option>
+                      <option value="never">never</option>
+                    </Select>
+                  )}
+                />
+              </LabeledField>
+            </div>
+          </div>
+        </section>
+
+        <div className="form-row action-row-left settings-save-row">
           <Button type="submit" variant="primary" disabled={isSaving}>
             {isSaving ? 'Saving...' : 'Save workspace settings'}
           </Button>

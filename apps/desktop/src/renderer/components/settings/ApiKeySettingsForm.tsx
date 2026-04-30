@@ -46,8 +46,9 @@ export function ApiKeySettingsForm({
 
   return (
     <>
-      <div
-        className="settings-form"
+      <section
+        className="settings-section settings-section-subtle settings-form"
+        aria-labelledby="provider-api-key-heading"
         onKeyDown={(event) => {
           if (event.key !== 'Enter') {
             return
@@ -59,29 +60,40 @@ export function ApiKeySettingsForm({
           void form.handleSubmit()
         }}
       >
-        <LabeledField label="API Key">
-          <FieldHint>
-            {providerDefinition.requiresApiKey
-              ? 'API keys are encrypted with OS-backed secure storage and are not included in portable backups.'
-              : 'Optional for local OpenAI-compatible servers that enforce bearer-token authentication.'}
-          </FieldHint>
-          <form.Field
-            name="apiKey"
-            validators={{
-              onChange: ({ value }) => (value.trim() ? undefined : 'API key is required.'),
-            }}
-            children={(field) => (
-              <TextField
-                field={field}
-                name="api-key"
-                placeholder="Paste API key"
-                autoComplete="off"
-                inputType="password"
-                spellCheck={false}
+        <div className="settings-section-heading">
+          <p className="eyebrow" id="provider-api-key-heading">
+            API Key
+          </p>
+          <p>Save or clear the secure key for this provider.</p>
+        </div>
+
+        <div className="settings-field-grid settings-field-grid-compact">
+          <div className="settings-field">
+            <LabeledField label="API Key">
+              <FieldHint>
+                {providerDefinition.requiresApiKey
+                  ? 'Encrypted with OS-backed secure storage and excluded from portable backups.'
+                  : 'Optional for local OpenAI-compatible servers that enforce bearer-token authentication.'}
+              </FieldHint>
+              <form.Field
+                name="apiKey"
+                validators={{
+                  onChange: ({ value }) => (value.trim() ? undefined : 'API key is required.'),
+                }}
+                children={(field) => (
+                  <TextField
+                    field={field}
+                    name="api-key"
+                    placeholder="Paste API key"
+                    autoComplete="off"
+                    inputType="password"
+                    spellCheck={false}
+                  />
+                )}
               />
-            )}
-          />
-        </LabeledField>
+            </LabeledField>
+          </div>
+        </div>
 
         <div className="form-row action-row-left">
           <Button
@@ -108,7 +120,7 @@ export function ApiKeySettingsForm({
             {isClearingApiKey ? 'Clearing…' : 'Clear API key'}
           </Button>
         </div>
-      </div>
+      </section>
 
       {apiKeyMessage ? (
         <FeedbackText variant="success" live>

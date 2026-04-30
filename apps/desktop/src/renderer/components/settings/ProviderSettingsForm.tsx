@@ -56,122 +56,163 @@ export function ProviderSettingsForm({
           void form.handleSubmit()
         }}
       >
-        <LabeledField label="Provider">
-          <FieldHint>Select the hosted provider you want to use.</FieldHint>
-          <form.Field
-            name="provider.provider"
-            children={(field) => (
-              <Select
-                name="provider"
-                value={field.state.value}
-                onChange={(event) => {
-                  const nextProvider = event.target.value as AppSettings['provider']['provider']
-                  field.handleChange(nextProvider)
-                  onProviderChange(nextProvider)
-                  const nextSettings = applyProviderDefaults(form.state.values, nextProvider)
+        <section className="settings-section" aria-labelledby="provider-account-heading">
+          <div className="settings-section-heading">
+            <p className="eyebrow" id="provider-account-heading">
+              Provider
+            </p>
+            <p>Choose the provider account and credentials used for new runs.</p>
+          </div>
+
+          <div className="settings-field-grid settings-field-grid-compact">
+            <div className="settings-field">
+              <LabeledField label="Provider">
+                <FieldHint>Select the hosted or local provider you want to use.</FieldHint>
+                <form.Field
+                  name="provider.provider"
+                  children={(field) => (
+                    <Select
+                      name="provider"
+                      value={field.state.value}
+                      onChange={(event) => {
+                        const nextProvider = event.target.value as AppSettings['provider']['provider']
+                        field.handleChange(nextProvider)
+                        onProviderChange(nextProvider)
+                        const nextSettings = applyProviderDefaults(form.state.values, nextProvider)
+                        form.setFieldValue('provider.model', nextSettings.provider.model)
+                        form.setFieldValue('provider.baseUrl', nextSettings.provider.baseUrl)
+                      }}
+                    >
+                      {providerOptions.map((provider) => (
+                        <option key={provider.key} value={provider.key}>
+                          {provider.label}
+                        </option>
+                      ))}
+                    </Select>
+                  )}
+                />
+              </LabeledField>
+            </div>
+            <div className="settings-field settings-field-action">
+              <Button
+                type="button"
+                onClick={() => {
+                  const providerKey = form.getFieldValue('provider.provider')
+                  const nextSettings = applyProviderDefaults(form.state.values, providerKey)
                   form.setFieldValue('provider.model', nextSettings.provider.model)
                   form.setFieldValue('provider.baseUrl', nextSettings.provider.baseUrl)
                 }}
               >
-                {providerOptions.map((provider) => (
-                  <option key={provider.key} value={provider.key}>
-                    {provider.label}
-                  </option>
-                ))}
-              </Select>
-            )}
-          />
-          <div className="preset-row">
-            <Button
-              type="button"
-              onClick={() => {
-                const providerKey = form.getFieldValue('provider.provider')
-                const nextSettings = applyProviderDefaults(form.state.values, providerKey)
-                form.setFieldValue('provider.model', nextSettings.provider.model)
-                form.setFieldValue('provider.baseUrl', nextSettings.provider.baseUrl)
-              }}
-            >
-              Use defaults
-            </Button>
+                Use defaults
+              </Button>
+            </div>
           </div>
-        </LabeledField>
+        </section>
 
         {apiKeySection}
 
-        <LabeledField label="Model">
-          <FieldHint>Choose a model available for your selected provider.</FieldHint>
-          <form.Field
-            name="provider.model"
-            validators={{
-              onChange: ({ value }) => (value.trim() ? undefined : 'Model is required.'),
-            }}
-            children={(field) => (
-              <TextField
-                field={field}
-                name="model"
-                placeholder="Example: x-ai/grok-4.1-fast"
-                autoComplete="off"
-                spellCheck={false}
-              />
-            )}
-          />
-        </LabeledField>
+        <section className="settings-section" aria-labelledby="provider-endpoint-heading">
+          <div className="settings-section-heading">
+            <p className="eyebrow" id="provider-endpoint-heading">
+              Endpoint
+            </p>
+            <p>Configure the model and OpenAI-compatible API endpoint.</p>
+          </div>
 
-        <LabeledField label="Base URL">
-          <FieldHint>OpenAI-compatible API root. llama.cpp usually runs at http://127.0.0.1:8080/v1.</FieldHint>
-          <form.Field
-            name="provider.baseUrl"
-            validators={{
-              onChange: ({ value }) => (value?.trim() ? undefined : 'Base URL is required.'),
-            }}
-            children={(field) => (
-              <TextField
-                field={field}
-                name="provider-base-url"
-                placeholder="Example: http://127.0.0.1:8080/v1"
-                autoComplete="url"
-                spellCheck={false}
-              />
-            )}
-          />
-        </LabeledField>
-
-        <LabeledField label="Reasoning">
-          <FieldHint>Show provider-supplied model thinking when the selected provider and model expose it. Effort modes may increase cost and latency.</FieldHint>
-          <form.Field
-            name="provider.reasoning"
-            children={(field) => {
-              const value = field.state.value?.mode === 'effort' ? field.state.value.effort : field.state.value?.mode ?? 'auto'
-
-              return (
-                <Select
-                  name="provider-reasoning"
-                  value={value}
-                  onChange={(event) => {
-                    const nextValue = event.target.value
-
-                    if (nextValue === 'auto' || nextValue === 'off') {
-                      field.handleChange({ mode: nextValue })
-                      return
-                    }
-
-                    field.handleChange({ mode: 'effort', effort: nextValue as 'minimal' | 'low' | 'medium' | 'high' | 'xhigh' })
+          <div className="settings-field-grid">
+            <div className="settings-field">
+              <LabeledField label="Model">
+                <FieldHint>Choose a model available for your selected provider.</FieldHint>
+                <form.Field
+                  name="provider.model"
+                  validators={{
+                    onChange: ({ value }) => (value.trim() ? undefined : 'Model is required.'),
                   }}
-                >
-                  <option value="auto">auto</option>
-                  <option value="off">off</option>
-                  <option value="minimal">minimal effort</option>
-                  <option value="low">low effort</option>
-                  <option value="medium">medium effort</option>
-                  <option value="high">high effort</option>
-                  <option value="xhigh">xhigh effort</option>
-                </Select>
-              )
-            }}
-          />
-        </LabeledField>
+                  children={(field) => (
+                    <TextField
+                      field={field}
+                      name="model"
+                      placeholder="Example: x-ai/grok-4.1-fast"
+                      autoComplete="off"
+                      spellCheck={false}
+                    />
+                  )}
+                />
+              </LabeledField>
+            </div>
 
-        <div className="form-row">
+            <div className="settings-field">
+              <LabeledField label="Base URL">
+                <FieldHint>OpenAI-compatible API root. llama.cpp usually runs at http://127.0.0.1:8080/v1.</FieldHint>
+                <form.Field
+                  name="provider.baseUrl"
+                  validators={{
+                    onChange: ({ value }) => (value?.trim() ? undefined : 'Base URL is required.'),
+                  }}
+                  children={(field) => (
+                    <TextField
+                      field={field}
+                      name="provider-base-url"
+                      placeholder="Example: http://127.0.0.1:8080/v1"
+                      autoComplete="url"
+                      spellCheck={false}
+                    />
+                  )}
+                />
+              </LabeledField>
+            </div>
+          </div>
+        </section>
+
+        <section className="settings-section" aria-labelledby="provider-generation-heading">
+          <div className="settings-section-heading">
+            <p className="eyebrow" id="provider-generation-heading">
+              Generation
+            </p>
+            <p>Control provider-specific generation features.</p>
+          </div>
+
+          <div className="settings-field-grid settings-field-grid-compact">
+            <div className="settings-field">
+              <LabeledField label="Reasoning">
+                <FieldHint>Show provider-supplied thinking when supported. Effort modes may increase cost and latency.</FieldHint>
+                <form.Field
+                  name="provider.reasoning"
+                  children={(field) => {
+                    const value = field.state.value?.mode === 'effort' ? field.state.value.effort : field.state.value?.mode ?? 'auto'
+
+                    return (
+                      <Select
+                        name="provider-reasoning"
+                        value={value}
+                        onChange={(event) => {
+                          const nextValue = event.target.value
+
+                          if (nextValue === 'auto' || nextValue === 'off') {
+                            field.handleChange({ mode: nextValue })
+                            return
+                          }
+
+                          field.handleChange({ mode: 'effort', effort: nextValue as 'minimal' | 'low' | 'medium' | 'high' | 'xhigh' })
+                        }}
+                      >
+                        <option value="auto">auto</option>
+                        <option value="off">off</option>
+                        <option value="minimal">minimal effort</option>
+                        <option value="low">low effort</option>
+                        <option value="medium">medium effort</option>
+                        <option value="high">high effort</option>
+                        <option value="xhigh">xhigh effort</option>
+                      </Select>
+                    )
+                  }}
+                />
+              </LabeledField>
+            </div>
+          </div>
+        </section>
+
+        <div className="form-row action-row-left settings-save-row">
           <Button type="submit" variant="primary" disabled={isSaving}>
             {isSaving ? 'Saving…' : 'Save settings'}
           </Button>
