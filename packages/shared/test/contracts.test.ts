@@ -5,6 +5,7 @@ import {
   clearProviderAuthInputSchema,
   getProviderDefinition,
   messageSchema,
+  providerAdapterIdSchema,
   providerDefaultModels,
   openExternalUrlInputSchema,
   providerOptions,
@@ -61,6 +62,10 @@ describe('shared contracts', () => {
         }),
       ]),
     )
+  })
+
+  it('keeps provider adapter ids explicit', () => {
+    expect(providerAdapterIdSchema.options).toEqual(['openai-compatible', 'chatgpt-subscription'])
   })
 
   it('parses assistant and tool messages with tool metadata', () => {

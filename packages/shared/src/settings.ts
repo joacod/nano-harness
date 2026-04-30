@@ -12,6 +12,10 @@ export const providerAuthMethodSchema = z.enum(['api-key', 'none', 'oauth'])
 
 export type ProviderAuthMethod = z.infer<typeof providerAuthMethodSchema>
 
+export const providerAdapterIdSchema = z.enum(['openai-compatible', 'chatgpt-subscription'])
+
+export type ProviderAdapterId = z.infer<typeof providerAdapterIdSchema>
+
 export const reasoningEffortSchema = z.enum(['minimal', 'low', 'medium', 'high', 'xhigh'])
 
 export type ReasoningEffort = z.infer<typeof reasoningEffortSchema>
@@ -67,7 +71,7 @@ export const providerCatalog = {
 } as const satisfies Record<ProviderKey, {
   key: ProviderKey
   label: string
-  adapterId: string
+  adapterId: ProviderAdapterId
   baseUrl: string
   defaultModel: string
   requiresApiKey: boolean

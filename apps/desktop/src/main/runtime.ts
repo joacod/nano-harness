@@ -5,7 +5,7 @@ import { join } from 'node:path'
 import type { Provider, ProviderCredentialResolver, ProviderGenerateInput, ProviderGenerateResult } from '../../../../packages/core/src'
 import { CoreRunEngine, InMemoryEventBus, StaticPolicy } from '../../../../packages/core/src'
 import { BuiltInActionExecutor, ChatGptSubscriptionProvider, OpenAICompatibleProvider, createSqliteStore } from '../../../../packages/infra/src'
-import { createDefaultProviderSettings, desktopBridgeChannels, getProviderDefinition, providerAuthSchema, providerDefaultModels, providerStatusSchema, runEventSchema, storedProviderCredentialSchema, type AppSettings, type ProviderAuthMethod } from '../../../../packages/shared/src'
+import { createDefaultProviderSettings, desktopBridgeChannels, getProviderDefinition, providerAuthSchema, providerDefaultModels, providerStatusSchema, runEventSchema, storedProviderCredentialSchema, type AppSettings, type ProviderAdapterId, type ProviderAuthMethod } from '../../../../packages/shared/src'
 import { DesktopApprovalCoordinator } from './approval-coordinator'
 import { refreshOpenAIChatGptCredential } from './openai-chatgpt-auth'
 import { decryptCredentialPayload, encryptCredentialPayload } from './secure-credentials'
@@ -26,15 +26,20 @@ type EventForwardingRuntime = {
 }
 
 class DesktopProviderRouter implements Provider {
-  private readonly chatGptSubscriptionProvider = new ChatGptSubscriptionProvider()
-  private readonly openAICompatibleProvider = new OpenAICompatibleProvider()
+  private readonly providersByAdapter = {
+    'openai-compatible': new OpenAICompatibleProvider(),
+    'chatgpt-subscription': new ChatGptSubscriptionProvider(),
+  } satisfies Record<ProviderAdapterId, Provider>
 
   async generate(input: ProviderGenerateInput): Promise<ProviderGenerateResult> {
-    if (input.settings.provider.provider === 'openai') {
-      return await this.chatGptSubscriptionProvider.generate(input)
+    const providerDefinition = getProviderDefinition(input.settings.provider.provider)
+    const provider = this.providersByAdapter[providerDefinition.adapterId]
+
+    if (!provider) {
+      throw new Error(`No provider adapter registered for ${providerDefinition.adapterId}.`)
     }
 
-    return await this.openAICompatibleProvider.generate(input)
+    return await provider.generate(input)
   }
 }
 
