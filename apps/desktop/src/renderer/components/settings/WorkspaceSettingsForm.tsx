@@ -55,13 +55,12 @@ export function WorkspaceSettingsForm({
             <p className="eyebrow" id="workspace-files-heading">
               File Access
             </p>
-            <p>Limit built-in file actions to the workspace tree.</p>
+            <p>Directory available to built-in file actions.</p>
           </div>
 
           <div className="settings-field-grid settings-field-grid-wide">
             <div className="settings-field settings-field-wide">
               <LabeledField label="Workspace Root">
-                <FieldHint>Built-in file actions are restricted to this directory tree.</FieldHint>
                 <form.Field
                   name="workspace.rootPath"
                   validators={{
@@ -81,13 +80,13 @@ export function WorkspaceSettingsForm({
             <p className="eyebrow" id="workspace-approvals-heading">
               Action Safety
             </p>
-            <p>Choose when tool actions should ask before running.</p>
+            <p>Approval behavior for tool actions.</p>
           </div>
 
           <div className="settings-field-grid settings-field-grid-compact">
             <div className="settings-field">
               <LabeledField label="Approval Policy">
-                <FieldHint>Use on-request for a balanced default, always for manual review, or never to deny approval-required actions.</FieldHint>
+                <FieldHint>on-request is the balanced default.</FieldHint>
                 <form.Field
                   name="workspace.approvalPolicy"
                   children={(field) => (

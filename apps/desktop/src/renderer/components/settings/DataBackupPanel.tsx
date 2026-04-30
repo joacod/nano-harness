@@ -36,11 +36,11 @@ export function DataBackupPanel({
       <div className="data-backup-notices" aria-label="Backup and restore notes">
         <div className="data-backup-notice">
           <strong>Export</strong>
-          <p>Includes conversations, run history, approvals, and non-sensitive settings. API keys are not included.</p>
+          <p>Backs up conversations, run history, approvals, and settings. Excludes API keys.</p>
         </div>
         <div className="data-backup-notice data-backup-notice-warning">
           <strong>Import</strong>
-          <p>Replaces current app data after creating a local safety backup, then relaunches the app.</p>
+          <p>Replaces current data after creating a safety backup.</p>
         </div>
       </div>
       <div className="form-row action-row-left data-backup-actions">

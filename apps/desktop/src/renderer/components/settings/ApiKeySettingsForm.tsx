@@ -3,8 +3,7 @@ import { useState } from 'react'
 import { useForm } from '@tanstack/react-form'
 
 import type { AppSettings, ProviderStatus } from '../../../../../../packages/shared/src'
-import { getProviderDefinition } from '../../../../../../packages/shared/src'
-import { FieldHint, LabeledField, TextField } from '../form-fields'
+import { LabeledField, TextField } from '../form-fields'
 import { Button, FeedbackText } from '../ui'
 
 export function ApiKeySettingsForm({
@@ -25,7 +24,6 @@ export function ApiKeySettingsForm({
   onSaveApiKey: (input: { provider: AppSettings['provider']['provider']; apiKey: string }) => Promise<void>
 }) {
   const [apiKeyMessage, setApiKeyMessage] = useState<string | null>(null)
-  const providerDefinition = getProviderDefinition(provider)
   const form = useForm({
     defaultValues: {
       apiKey: '',
@@ -64,17 +62,12 @@ export function ApiKeySettingsForm({
           <p className="eyebrow" id="provider-api-key-heading">
             API Key
           </p>
-          <p>Save or clear the secure key for this provider.</p>
+          <p>Stored securely on this device. Not included in backups.</p>
         </div>
 
         <div className="settings-field-grid settings-field-grid-compact">
           <div className="settings-field">
             <LabeledField label="API Key">
-              <FieldHint>
-                {providerDefinition.requiresApiKey
-                  ? 'Encrypted with OS-backed secure storage and excluded from portable backups.'
-                  : 'Optional for local OpenAI-compatible servers that enforce bearer-token authentication.'}
-              </FieldHint>
               <form.Field
                 name="apiKey"
                 validators={{

@@ -61,13 +61,11 @@ export function ProviderSettingsForm({
             <p className="eyebrow" id="provider-account-heading">
               Provider
             </p>
-            <p>Choose the provider account and credentials used for new runs.</p>
           </div>
 
           <div className="settings-field-grid settings-field-grid-compact">
             <div className="settings-field">
               <LabeledField label="Provider">
-                <FieldHint>Select the hosted or local provider you want to use.</FieldHint>
                 <form.Field
                   name="provider.provider"
                   children={(field) => (
@@ -116,13 +114,13 @@ export function ProviderSettingsForm({
             <p className="eyebrow" id="provider-endpoint-heading">
               Endpoint
             </p>
-            <p>Configure the model and OpenAI-compatible API endpoint.</p>
+            <p>Model and API endpoint.</p>
           </div>
 
           <div className="settings-field-grid">
             <div className="settings-field">
               <LabeledField label="Model">
-                <FieldHint>Choose a model available for your selected provider.</FieldHint>
+                <FieldHint>Model ID to use for runs.</FieldHint>
                 <form.Field
                   name="provider.model"
                   validators={{
@@ -143,7 +141,7 @@ export function ProviderSettingsForm({
 
             <div className="settings-field">
               <LabeledField label="Base URL">
-                <FieldHint>OpenAI-compatible API root. llama.cpp usually runs at http://127.0.0.1:8080/v1.</FieldHint>
+                <FieldHint>OpenAI-compatible API root.</FieldHint>
                 <form.Field
                   name="provider.baseUrl"
                   validators={{
@@ -169,13 +167,12 @@ export function ProviderSettingsForm({
             <p className="eyebrow" id="provider-generation-heading">
               Generation
             </p>
-            <p>Control provider-specific generation features.</p>
           </div>
 
           <div className="settings-field-grid settings-field-grid-compact">
             <div className="settings-field">
               <LabeledField label="Reasoning">
-                <FieldHint>Show provider-supplied thinking when supported. Effort modes may increase cost and latency.</FieldHint>
+                <FieldHint>Model thinking, when supported.</FieldHint>
                 <form.Field
                   name="provider.reasoning"
                   children={(field) => {

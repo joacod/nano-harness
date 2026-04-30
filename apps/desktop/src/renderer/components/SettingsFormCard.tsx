@@ -6,7 +6,7 @@ import { DataBackupPanel } from './settings/DataBackupPanel'
 import { ProviderSettingsForm } from './settings/ProviderSettingsForm'
 import { ProviderStatusPanel } from './settings/ProviderStatusPanel'
 import { WorkspaceSettingsForm } from './settings/WorkspaceSettingsForm'
-import { Card, FeedbackText, Tabs } from './ui'
+import { Card, Tabs } from './ui'
 
 type SettingsTab = 'providers' | 'workspace' | 'data'
 
@@ -68,10 +68,6 @@ export function SettingsFormCard({
             label: 'Providers',
             panel: (
               <div className="settings-tab-stack">
-                <FeedbackText>
-                  Choose a hosted or local provider and model. API keys are stored separately using this device's secure storage.
-                </FeedbackText>
-
                 {providerStatus ? <ProviderStatusPanel providerStatus={providerStatus} /> : null}
 
                 <ProviderSettingsForm
