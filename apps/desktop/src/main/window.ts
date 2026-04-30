@@ -13,6 +13,7 @@ export function createWindow(): void {
     minHeight: 640,
     title: 'Nano Harness',
     icon: getAppIconPath(),
+    backgroundColor: '#020604',
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       contextIsolation: true,
