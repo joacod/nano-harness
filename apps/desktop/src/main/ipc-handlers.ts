@@ -11,7 +11,7 @@ import {
   resolveApprovalInputSchema,
   runCreateInputSchema,
   runIdInputSchema,
-  saveProviderApiKeyInputSchema,
+  saveProviderAuthInputSchema,
   clearProviderAuthInputSchema,
   startProviderOauthInputSchema,
   startRunResultSchema,
@@ -83,18 +83,13 @@ export function setupIpcHandlers(runtime: IpcRuntime): void {
     return await runtime.store.getProviderCredentialStatus(input.provider)
   })
 
-  ipcMain.handle(desktopBridgeChannels.saveProviderApiKey, async (_event, payload) => {
-    const input = saveProviderApiKeyInputSchema.parse(payload)
+  ipcMain.handle(desktopBridgeChannels.saveProviderAuth, async (_event, payload) => {
+    const input = saveProviderAuthInputSchema.parse(payload)
     await runtime.store.saveProviderCredentialPayload(
       input.provider,
-      'api-key',
+      input.authMethod,
       encryptCredentialPayload({ authMethod: 'api-key', apiKey: input.apiKey.trim() }),
     )
-  })
-
-  ipcMain.handle(desktopBridgeChannels.clearProviderApiKey, async (_event, payload) => {
-    const input = providerCredentialInputSchema.parse(payload)
-    await runtime.store.clearProviderCredential(input.provider, 'api-key')
   })
 
   ipcMain.handle(desktopBridgeChannels.startProviderOauth, async (_event, payload) => {

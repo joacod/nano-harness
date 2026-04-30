@@ -129,8 +129,9 @@ describe('setupIpcHandlers', () => {
     const runtime = createRuntime()
     setupIpcHandlers(runtime)
 
-    await invokeHandler(desktopBridgeChannels.saveProviderApiKey, {
+    await invokeHandler(desktopBridgeChannels.saveProviderAuth, {
       provider: 'openrouter',
+      authMethod: 'api-key',
       apiKey: '  secret-key  ',
     })
 

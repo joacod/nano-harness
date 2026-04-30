@@ -18,7 +18,7 @@ import {
   runCreateInputSchema,
   runEventSchema,
   runIdInputSchema,
-  saveProviderApiKeyInputSchema,
+  saveProviderAuthInputSchema,
   startProviderOauthInputSchema,
   startProviderOauthResultSchema,
   startRunResultSchema,
@@ -41,13 +41,9 @@ const desktopApi: DesktopApi = {
       await ipcRenderer.invoke(desktopBridgeChannels.getProviderCredentialStatus, payload),
     )
   },
-  async saveProviderApiKey(input) {
-    const payload = saveProviderApiKeyInputSchema.parse(input)
-    await ipcRenderer.invoke(desktopBridgeChannels.saveProviderApiKey, payload)
-  },
-  async clearProviderApiKey(input) {
-    const payload = providerCredentialInputSchema.parse(input)
-    await ipcRenderer.invoke(desktopBridgeChannels.clearProviderApiKey, payload)
+  async saveProviderAuth(input) {
+    const payload = saveProviderAuthInputSchema.parse(input)
+    await ipcRenderer.invoke(desktopBridgeChannels.saveProviderAuth, payload)
   },
   async startProviderOauth(input) {
     const payload = startProviderOauthInputSchema.parse(input)

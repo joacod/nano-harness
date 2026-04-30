@@ -89,8 +89,8 @@ describe('SettingsRoute', () => {
   it('loads settings data and wires mutations to the desktop bridge', async () => {
     const user = userEvent.setup()
     const saveSettings = vi.fn(async (settings: AppSettings) => settings)
-    const saveProviderApiKey = vi.fn(async () => undefined)
-    const clearProviderApiKey = vi.fn(async () => undefined)
+    const saveProviderAuth = vi.fn(async () => undefined)
+    const clearProviderAuth = vi.fn(async () => undefined)
     const exportData = vi.fn(async () => ({ exportedFilePath: '/tmp/export.zip' }))
     const importData = vi.fn(async () => ({ imported: true, backupFilePath: '/tmp/backup.zip' }))
 
@@ -99,8 +99,8 @@ describe('SettingsRoute', () => {
       getSettings: async () => createSettings(),
       getProviderStatus: async () => createProviderStatus(),
       saveSettings,
-      saveProviderApiKey,
-      clearProviderApiKey,
+      saveProviderAuth,
+      clearProviderAuth,
       exportData,
       importData,
     })
@@ -121,8 +121,8 @@ describe('SettingsRoute', () => {
 
     await waitFor(() => {
       expect(saveSettings).toHaveBeenCalledWith(createSettings({ provider: { model: 'next/model' } }))
-      expect(saveProviderApiKey).toHaveBeenCalledWith({ provider: 'openrouter', apiKey: 'secret-key' })
-      expect(clearProviderApiKey).toHaveBeenCalledWith({ provider: 'openrouter' })
+      expect(saveProviderAuth).toHaveBeenCalledWith({ provider: 'openrouter', authMethod: 'api-key', apiKey: 'secret-key' })
+      expect(clearProviderAuth).toHaveBeenCalledWith({ provider: 'openrouter', authMethod: 'api-key' })
       expect(exportData).toHaveBeenCalledTimes(1)
       expect(importData).toHaveBeenCalledTimes(1)
     })

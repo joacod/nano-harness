@@ -197,8 +197,11 @@ export async function installDesktopMock(page: Page, setup: MockSetup): Promise<
       async getProviderCredentialStatus() {
         return { apiKeyPresent: true }
       },
-      async saveProviderApiKey() {},
-      async clearProviderApiKey() {},
+      async saveProviderAuth() {},
+      async startProviderOauth(input: { provider: string }) {
+        return { provider: input.provider }
+      },
+      async clearProviderAuth() {},
       async exportData() {
         return { exportedFilePath: null }
       },
@@ -322,8 +325,9 @@ declare global {
       listConversations(): Promise<unknown>
       getProviderStatus(): Promise<unknown>
       getProviderCredentialStatus(): Promise<unknown>
-      saveProviderApiKey(input: unknown): Promise<void>
-      clearProviderApiKey(input: unknown): Promise<void>
+      saveProviderAuth(input: unknown): Promise<void>
+      startProviderOauth(input: unknown): Promise<unknown>
+      clearProviderAuth(input: unknown): Promise<void>
       exportData(): Promise<unknown>
       importData(): Promise<unknown>
       getSettings(): Promise<unknown>

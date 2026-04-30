@@ -19,13 +19,14 @@ export function SettingsRoute() {
   })
   const saveApiKeyMutation = useMutation({
     mutationFn: async (input: { provider: AppSettings['provider']['provider']; apiKey: string }) =>
-      window.desktop.saveProviderApiKey(input),
+      window.desktop.saveProviderAuth({ ...input, authMethod: 'api-key' }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['provider-status'] })
     },
   })
   const clearApiKeyMutation = useMutation({
-    mutationFn: async (input: { provider: AppSettings['provider']['provider'] }) => window.desktop.clearProviderApiKey(input),
+    mutationFn: async (input: { provider: AppSettings['provider']['provider'] }) =>
+      window.desktop.clearProviderAuth({ ...input, authMethod: 'api-key' }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['provider-status'] })
     },
