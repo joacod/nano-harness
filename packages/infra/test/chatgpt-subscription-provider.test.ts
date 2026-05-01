@@ -128,6 +128,7 @@ describe('ChatGptSubscriptionProvider', () => {
       reasoning: { effort: 'medium' },
       parallel_tool_calls: false,
     })
+    expect(body.instructions).toEqual(expect.stringContaining('Workspace root: /workspace.'))
     expect(body.input).toMatchObject([
       { role: 'user', content: [{ type: 'input_text', text: 'Read notes.txt' }] },
       { role: 'assistant', content: [{ type: 'output_text', text: 'Calling the tool.' }] },

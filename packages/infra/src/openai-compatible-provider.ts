@@ -96,31 +96,46 @@ function toOpenAICompatibleAssistantToolCalls(toolCalls: AssistantToolCall[]) {
   }))
 }
 
-function toOpenAICompatibleMessages(messages: Message[]): OpenAICompatibleMessage[] {
-  return messages.map((message) => {
-    if (message.role === 'tool') {
+function createWorkspaceInstructions(settings: ProviderGenerateInput['settings']): string {
+  return [
+    `Workspace root: ${settings.workspace.rootPath}.`,
+    'All file action paths must be relative to that workspace root.',
+    'Use list_directory before assuming project or file paths, especially when the user names a folder or project.',
+    'If read_file fails because a path is missing, use list_directory to discover the correct path and continue.',
+  ].join(' ')
+}
+
+function toOpenAICompatibleMessages(messages: Message[], settings: ProviderGenerateInput['settings']): OpenAICompatibleMessage[] {
+  return [
+    {
+      role: 'system' as const,
+      content: createWorkspaceInstructions(settings),
+    },
+    ...messages.map((message): OpenAICompatibleMessage => {
+      if (message.role === 'tool') {
+        return {
+          role: 'tool',
+          content: message.content,
+          tool_call_id: message.toolCallId,
+        }
+      }
+
+      if (message.role === 'assistant') {
+        return {
+          role: 'assistant',
+          content: message.content || null,
+          reasoning: message.reasoning,
+          reasoning_details: message.reasoningDetails,
+          tool_calls: message.toolCalls?.length ? toOpenAICompatibleAssistantToolCalls(message.toolCalls) : undefined,
+        }
+      }
+
       return {
-        role: 'tool',
+        role: message.role === 'system' ? 'system' : 'user',
         content: message.content,
-        tool_call_id: message.toolCallId,
       }
-    }
-
-    if (message.role === 'assistant') {
-      return {
-        role: 'assistant',
-        content: message.content || null,
-        reasoning: message.reasoning,
-        reasoning_details: message.reasoningDetails,
-        tool_calls: message.toolCalls?.length ? toOpenAICompatibleAssistantToolCalls(message.toolCalls) : undefined,
-      }
-    }
-
-    return {
-      role: message.role,
-      content: message.content,
-    }
-  })
+    }),
+  ]
 }
 
 function toOpenAICompatibleReasoning(settings: ProviderGenerateInput['settings']): Record<string, unknown> | undefined {
@@ -293,7 +308,7 @@ export class OpenAICompatibleProvider implements Provider {
         body: JSON.stringify({
           model: input.settings.provider.model,
           stream: true,
-          messages: toOpenAICompatibleMessages(input.messages),
+          messages: toOpenAICompatibleMessages(input.messages, input.settings),
           tools: toOpenAICompatibleTools(input.actions),
           reasoning: toOpenAICompatibleReasoning(input.settings),
           parallel_tool_calls: false,

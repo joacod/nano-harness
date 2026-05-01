@@ -125,6 +125,10 @@ describe('OpenAICompatibleProvider', () => {
       parallel_tool_calls: false,
     })
     expect(body.messages).toMatchObject([
+      {
+        role: 'system',
+        content: expect.stringContaining('Workspace root: /workspace.'),
+      },
       { role: 'user', content: 'Read notes.txt' },
       {
         role: 'assistant',

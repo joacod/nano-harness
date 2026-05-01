@@ -52,6 +52,16 @@ type PendingFunctionCall = {
 const CHATGPT_CODEX_RESPONSES_URL = 'https://chatgpt.com/backend-api/codex/responses'
 const CHATGPT_CODEX_INSTRUCTIONS = 'You are Nano Harness, a local desktop coding assistant. Help the user complete their request using the available tools when needed.'
 
+function createInstructions(settings: ProviderGenerateInput['settings']): string {
+  return [
+    CHATGPT_CODEX_INSTRUCTIONS,
+    `Workspace root: ${settings.workspace.rootPath}.`,
+    'All file action paths must be relative to that workspace root.',
+    'Use list_directory before assuming project or file paths, especially when the user names a folder or project.',
+    'If read_file fails because a path is missing, use list_directory to discover the correct path and continue.',
+  ].join('\n\n')
+}
+
 function toResponsesToolCalls(toolCalls: AssistantToolCall[]): ResponsesInputItem[] {
   return toolCalls.map((toolCall) => ({
     type: 'function_call',
@@ -201,7 +211,7 @@ export class ChatGptSubscriptionProvider implements Provider {
       headers,
       body: JSON.stringify({
         model: input.settings.provider.model,
-        instructions: CHATGPT_CODEX_INSTRUCTIONS,
+        instructions: createInstructions(input.settings),
         store: false,
         stream: true,
         input: toResponsesInput(input.messages),
