@@ -6,7 +6,7 @@ import { RouterProvider } from '@tanstack/react-router'
 import type { DesktopContext, RunEvent } from '../../../../packages/shared/src'
 import { contextQueryOptions } from './queries'
 import { router } from './router'
-import { updateLiveRunEvents, updateStreamingState, type StreamingRunState } from './utils/run-events'
+import { isTransientRunEvent, updateLiveRunEvents, updateStreamingState, type StreamingRunState } from './utils/run-events'
 
 type RuntimeUiState = {
   context: DesktopContext | null
@@ -55,7 +55,10 @@ export function RuntimeUiProvider() {
   useEffect(() => {
     const unsubscribe = window.desktop.onRunEvent((event) => {
       startTransition(() => {
-        setRecentEvents((currentEvents) => [event, ...currentEvents].slice(0, 20))
+        if (!isTransientRunEvent(event)) {
+          setRecentEvents((currentEvents) => [event, ...currentEvents].slice(0, 20))
+        }
+
         setLiveRunEvents((currentEvents) => updateLiveRunEvents(currentEvents, event))
         setStreamingRuns((currentRuns) => updateStreamingState(currentRuns, event))
       })

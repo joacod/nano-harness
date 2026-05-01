@@ -803,7 +803,10 @@ export class CoreRunEngine implements RunEngine {
   }
 
   private async emitEvent(event: RunEvent): Promise<void> {
-    await this.store.appendEvent(event)
+    if (event.type !== 'provider.delta' && event.type !== 'provider.reasoning_delta') {
+      await this.store.appendEvent(event)
+    }
+
     await this.eventBus.publish(event)
   }
 

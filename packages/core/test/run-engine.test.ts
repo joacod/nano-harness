@@ -55,6 +55,41 @@ describe('CoreRunEngine', () => {
     expect(eventBus.published.map((event) => event.type)).toEqual(store.events.map((event) => event.type))
   })
 
+  it('publishes provider stream events without persisting them', async () => {
+    const store = new FakeStore()
+    const provider = new FakeProvider([
+      async (input) => {
+        await input.onReasoningDelta?.({ text: 'thinking' })
+        await input.onDelta?.('Hello ')
+        await input.onDelta?.('world')
+
+        return {}
+      },
+    ])
+    const eventBus = new RecordingEventBus()
+    const actionExecutor = new FakeActionExecutor([], async (input) => createActionResult({ actionCallId: input.call.id }))
+    const engine = new CoreRunEngine({
+      store,
+      provider,
+      providerCredentialResolver: defaultCredentialResolver,
+      actionExecutor,
+      policy: new FakePolicy(() => ({ effect: 'allow' })),
+      eventBus,
+      now: () => '2026-04-29T10:00:00.000Z',
+      createId: createSequentialId(),
+    })
+
+    const handle = await engine.startRun(createRunInput({ prompt: 'Stream response.' }))
+
+    await waitForCondition(() => store.runs.get(handle.runId)?.status === 'completed')
+
+    expect(store.messages.at(-1)).toMatchObject({ role: 'assistant', content: 'Hello world' })
+    expect(eventBus.published.map((event) => event.type)).toContain('provider.reasoning_delta')
+    expect(eventBus.published.map((event) => event.type).filter((type) => type === 'provider.delta')).toHaveLength(2)
+    expect(store.events.map((event) => event.type)).not.toContain('provider.delta')
+    expect(store.events.map((event) => event.type)).not.toContain('provider.reasoning_delta')
+  })
+
   it('fails a run when the provider api key is missing', async () => {
     const store = new FakeStore()
     const engine = new CoreRunEngine({

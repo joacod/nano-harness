@@ -127,8 +127,8 @@ describe('renderer run-events utilities', () => {
         id: `event-${index}`,
         runId: 'run-1',
         timestamp: `2026-04-29T10:00:${String(index).padStart(2, '0')}.000Z`,
-        type: 'provider.delta',
-        payload: { delta: String(index) },
+        type: 'run.started',
+        payload: { startedAt: '2026-04-29T10:00:00.000Z' },
       })
     }
 
@@ -138,17 +138,35 @@ describe('renderer run-events utilities', () => {
     const merged = mergeRunEvents(
       [
         event('provider.requested', { provider: 'OpenRouter', model: providerDefaultModels.openrouter }, 'event-a', '2026-04-29T10:00:00.000Z'),
-        event('provider.delta', { delta: 'old' }, 'shared-id', '2026-04-29T10:00:01.000Z'),
+        event('run.started', { startedAt: '2026-04-29T10:00:01.000Z' }, 'shared-id', '2026-04-29T10:00:01.000Z'),
       ],
       [
-        event('provider.delta', { delta: 'new' }, 'shared-id', '2026-04-29T10:00:02.000Z'),
+        event('run.started', { startedAt: '2026-04-29T10:00:02.000Z' }, 'shared-id', '2026-04-29T10:00:02.000Z'),
         event('provider.completed', { messageId: 'message-1' }, 'event-b', '2026-04-29T10:00:03.000Z'),
       ],
     )
 
     expect(merged).toHaveLength(3)
     expect(merged.map((item) => item.id)).toEqual(['event-a', 'shared-id', 'event-b'])
-    expect(merged[1]).toMatchObject({ payload: { delta: 'new' } })
+    expect(merged[1]).toMatchObject({ payload: { startedAt: '2026-04-29T10:00:02.000Z' } })
+  })
+
+  it('keeps provider stream events out of live history and merged timelines', () => {
+    let current: Record<string, RunEvent[]> = {}
+
+    current = updateLiveRunEvents(current, event('provider.delta', { delta: 'Hello' }, 'event-delta'))
+    current = updateLiveRunEvents(current, event('provider.reasoning_delta', { text: 'thinking' }, 'event-reasoning'))
+    current = updateLiveRunEvents(current, event('provider.completed', { messageId: 'message-1' }, 'event-completed'))
+
+    expect(current['run-1']).toHaveLength(1)
+    expect(current['run-1'][0]?.type).toBe('provider.completed')
+
+    const merged = mergeRunEvents(
+      [event('provider.delta', { delta: 'persisted' }, 'event-persisted-delta')],
+      [event('provider.reasoning_delta', { text: 'live' }, 'event-live-reasoning'), event('provider.completed', { messageId: 'message-1' })],
+    )
+
+    expect(merged.map((item) => item.type)).toEqual(['provider.completed'])
   })
 
   it('returns selectors and defaults for approvals, provider requests, and event families', () => {
