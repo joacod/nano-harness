@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 
 import { providerDefaultModels, type ActionDefinition, type AppSettings, type Message, type Run } from '@nano-harness/shared'
+import { createProviderInstructions } from '@nano-harness/core'
 
 import { OpenAICompatibleProvider } from '../src'
 
@@ -127,7 +128,7 @@ describe('OpenAICompatibleProvider', () => {
     expect(body.messages).toMatchObject([
       {
         role: 'system',
-        content: expect.stringContaining('Workspace root: /workspace.'),
+        content: createProviderInstructions({ workspaceRoot: '/workspace' }),
       },
       { role: 'user', content: 'Read notes.txt' },
       {

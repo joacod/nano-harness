@@ -1,5 +1,5 @@
 import { getProviderDefinition, reasoningDetailSchema, type ActionDefinition, type AssistantToolCall, type JsonValue, type Message, type ProviderReasoningDelta, type ReasoningDetail } from '@nano-harness/shared'
-import type { Provider, ProviderActionRequest, ProviderGenerateInput, ProviderGenerateResult } from '@nano-harness/core'
+import { createProviderInstructions, type Provider, type ProviderActionRequest, type ProviderGenerateInput, type ProviderGenerateResult } from '@nano-harness/core'
 
 import { parseSseData, splitSseEvents } from './sse'
 
@@ -96,20 +96,11 @@ function toOpenAICompatibleAssistantToolCalls(toolCalls: AssistantToolCall[]) {
   }))
 }
 
-function createWorkspaceInstructions(settings: ProviderGenerateInput['settings']): string {
-  return [
-    `Workspace root: ${settings.workspace.rootPath}.`,
-    'All file action paths must be relative to that workspace root.',
-    'Use list_directory before assuming project or file paths, especially when the user names a folder or project.',
-    'If read_file fails because a path is missing, use list_directory to discover the correct path and continue.',
-  ].join(' ')
-}
-
 function toOpenAICompatibleMessages(messages: Message[], settings: ProviderGenerateInput['settings']): OpenAICompatibleMessage[] {
   return [
     {
       role: 'system' as const,
-      content: createWorkspaceInstructions(settings),
+      content: createProviderInstructions({ workspaceRoot: settings.workspace.rootPath }),
     },
     ...messages.map((message): OpenAICompatibleMessage => {
       if (message.role === 'tool') {
