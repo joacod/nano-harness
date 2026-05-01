@@ -55,6 +55,41 @@ describe('CoreRunEngine', () => {
     expect(eventBus.published.map((event) => event.type)).toEqual(store.events.map((event) => event.type))
   })
 
+  it('publishes provider stream events without persisting them', async () => {
+    const store = new FakeStore()
+    const provider = new FakeProvider([
+      async (input) => {
+        await input.onReasoningDelta?.({ text: 'thinking' })
+        await input.onDelta?.('Hello ')
+        await input.onDelta?.('world')
+
+        return {}
+      },
+    ])
+    const eventBus = new RecordingEventBus()
+    const actionExecutor = new FakeActionExecutor([], async (input) => createActionResult({ actionCallId: input.call.id }))
+    const engine = new CoreRunEngine({
+      store,
+      provider,
+      providerCredentialResolver: defaultCredentialResolver,
+      actionExecutor,
+      policy: new FakePolicy(() => ({ effect: 'allow' })),
+      eventBus,
+      now: () => '2026-04-29T10:00:00.000Z',
+      createId: createSequentialId(),
+    })
+
+    const handle = await engine.startRun(createRunInput({ prompt: 'Stream response.' }))
+
+    await waitForCondition(() => store.runs.get(handle.runId)?.status === 'completed')
+
+    expect(store.messages.at(-1)).toMatchObject({ role: 'assistant', content: 'Hello world' })
+    expect(eventBus.published.map((event) => event.type)).toContain('provider.reasoning_delta')
+    expect(eventBus.published.map((event) => event.type).filter((type) => type === 'provider.delta')).toHaveLength(2)
+    expect(store.events.map((event) => event.type)).not.toContain('provider.delta')
+    expect(store.events.map((event) => event.type)).not.toContain('provider.reasoning_delta')
+  })
+
   it('fails a run when the provider api key is missing', async () => {
     const store = new FakeStore()
     const engine = new CoreRunEngine({
@@ -198,6 +233,51 @@ describe('CoreRunEngine', () => {
       toolCallId: 'tool-call-1',
       toolName: 'read_file',
     })
+  })
+
+  it('returns failed tool results to the provider so the run can recover', async () => {
+    const store = new FakeStore()
+    const readFileAction = createActionDefinition({ id: 'read_file', title: 'Read File' })
+    const provider = new FakeProvider([
+      {
+        actionCalls: [createToolRequest('read_file', 'tool-call-1')],
+      },
+      async (input) => {
+        expect(input.messages.at(-1)).toMatchObject({
+          role: 'tool',
+          toolCallId: 'tool-call-1',
+          toolName: 'read_file',
+        })
+        expect(input.messages.at(-1)?.content).toContain('ENOENT')
+
+        return { content: 'I could not find README.md, so I checked another path.' }
+      },
+    ])
+    const actionExecutor = new FakeActionExecutor([readFileAction], async (input) =>
+      createActionResult({
+        actionCallId: input.call.id,
+        status: 'failed',
+        errorMessage: 'ENOENT: no such file or directory, open README.md',
+      }),
+    )
+    const engine = new CoreRunEngine({
+      store,
+      provider,
+      providerCredentialResolver: defaultCredentialResolver,
+      actionExecutor,
+      policy: new FakePolicy(() => ({ effect: 'allow' })),
+      now: () => '2026-04-29T10:00:00.000Z',
+      createId: createSequentialId(),
+    })
+
+    const handle = await engine.startRun(createRunInput())
+
+    await waitForCondition(() => store.runs.get(handle.runId)?.status === 'completed')
+
+    expect(provider.calls).toHaveLength(2)
+    expect(store.events.map((event) => event.type)).toContain('action.failed')
+    expect(store.runs.get(handle.runId)?.failureMessage).toBeUndefined()
+    expect(store.messages.map((message) => message.role)).toEqual(['user', 'assistant', 'tool', 'assistant'])
   })
 
   it('fails a run when policy denies an action', async () => {

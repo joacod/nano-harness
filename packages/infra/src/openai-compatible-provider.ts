@@ -1,5 +1,5 @@
 import { getProviderDefinition, reasoningDetailSchema, type ActionDefinition, type AssistantToolCall, type JsonValue, type Message, type ProviderReasoningDelta, type ReasoningDetail } from '@nano-harness/shared'
-import type { Provider, ProviderActionRequest, ProviderGenerateInput, ProviderGenerateResult } from '@nano-harness/core'
+import { createProviderInstructions, type Provider, type ProviderActionRequest, type ProviderGenerateInput, type ProviderGenerateResult } from '@nano-harness/core'
 
 import { parseSseData, splitSseEvents } from './sse'
 
@@ -96,31 +96,37 @@ function toOpenAICompatibleAssistantToolCalls(toolCalls: AssistantToolCall[]) {
   }))
 }
 
-function toOpenAICompatibleMessages(messages: Message[]): OpenAICompatibleMessage[] {
-  return messages.map((message) => {
-    if (message.role === 'tool') {
+function toOpenAICompatibleMessages(messages: Message[], settings: ProviderGenerateInput['settings']): OpenAICompatibleMessage[] {
+  return [
+    {
+      role: 'system' as const,
+      content: createProviderInstructions({ workspaceRoot: settings.workspace.rootPath }),
+    },
+    ...messages.map((message): OpenAICompatibleMessage => {
+      if (message.role === 'tool') {
+        return {
+          role: 'tool',
+          content: message.content,
+          tool_call_id: message.toolCallId,
+        }
+      }
+
+      if (message.role === 'assistant') {
+        return {
+          role: 'assistant',
+          content: message.content || null,
+          reasoning: message.reasoning,
+          reasoning_details: message.reasoningDetails,
+          tool_calls: message.toolCalls?.length ? toOpenAICompatibleAssistantToolCalls(message.toolCalls) : undefined,
+        }
+      }
+
       return {
-        role: 'tool',
+        role: message.role === 'system' ? 'system' : 'user',
         content: message.content,
-        tool_call_id: message.toolCallId,
       }
-    }
-
-    if (message.role === 'assistant') {
-      return {
-        role: 'assistant',
-        content: message.content || null,
-        reasoning: message.reasoning,
-        reasoning_details: message.reasoningDetails,
-        tool_calls: message.toolCalls?.length ? toOpenAICompatibleAssistantToolCalls(message.toolCalls) : undefined,
-      }
-    }
-
-    return {
-      role: message.role,
-      content: message.content,
-    }
-  })
+    }),
+  ]
 }
 
 function toOpenAICompatibleReasoning(settings: ProviderGenerateInput['settings']): Record<string, unknown> | undefined {
@@ -293,7 +299,7 @@ export class OpenAICompatibleProvider implements Provider {
         body: JSON.stringify({
           model: input.settings.provider.model,
           stream: true,
-          messages: toOpenAICompatibleMessages(input.messages),
+          messages: toOpenAICompatibleMessages(input.messages, input.settings),
           tools: toOpenAICompatibleTools(input.actions),
           reasoning: toOpenAICompatibleReasoning(input.settings),
           parallel_tool_calls: false,

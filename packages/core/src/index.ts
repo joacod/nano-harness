@@ -1,6 +1,7 @@
 export * from './actions'
 export * from './approvals'
 export * from './event-bus'
+export * from './instructions'
 export * from './policy'
 export * from './provider'
 export * from './run-status'

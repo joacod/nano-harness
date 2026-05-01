@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 
 import { providerDefaultModels, type ActionDefinition, type AppSettings, type Message, type Run } from '@nano-harness/shared'
+import { createProviderInstructions } from '@nano-harness/core'
 
 import { ChatGptSubscriptionProvider } from '../src'
 
@@ -122,7 +123,7 @@ describe('ChatGptSubscriptionProvider', () => {
     const body = JSON.parse(String(capturedInit?.body)) as Record<string, unknown>
     expect(body).toMatchObject({
       model: providerDefaultModels.openai,
-      instructions: expect.stringContaining('Nano Harness'),
+      instructions: createProviderInstructions({ workspaceRoot: '/workspace' }),
       store: false,
       stream: true,
       reasoning: { effort: 'medium' },

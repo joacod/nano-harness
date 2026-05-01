@@ -1,5 +1,6 @@
 import type {
   ActionCall,
+  ActionResult,
   AppSettings,
   ApprovalRequest,
   ApprovalResolution,
@@ -103,6 +104,20 @@ function stringifyToolOutput(value: JsonValue | undefined): string {
   }
 
   return JSON.stringify(value, null, 2)
+}
+
+function stringifyActionResult(result: ActionResult): string {
+  if (result.status === 'completed') {
+    return stringifyToolOutput(result.output)
+  }
+
+  const output: JsonValue = {
+    status: result.status,
+    errorMessage: result.errorMessage ?? 'Action failed',
+    ...(result.output === undefined ? {} : { output: result.output }),
+  }
+
+  return stringifyToolOutput(output)
 }
 
 function isAbortError(error: unknown): boolean {
@@ -627,16 +642,12 @@ export class CoreRunEngine implements RunEngine {
       payload: { result },
     })
 
-    if (result.status === 'failed') {
-      throw new Error(result.errorMessage ?? `Action ${actionDefinition.id} failed`)
-    }
-
     const toolMessage: Message = {
       id: this.createId(),
       conversationId: run.conversationId,
       runId: run.id,
       role: 'tool',
-      content: stringifyToolOutput(result.output),
+      content: stringifyActionResult(result),
       toolCallId: actionRequest.toolCallId,
       toolName: actionRequest.actionId,
       createdAt: this.now(),
@@ -803,7 +814,10 @@ export class CoreRunEngine implements RunEngine {
   }
 
   private async emitEvent(event: RunEvent): Promise<void> {
-    await this.store.appendEvent(event)
+    if (event.type !== 'provider.delta' && event.type !== 'provider.reasoning_delta') {
+      await this.store.appendEvent(event)
+    }
+
     await this.eventBus.publish(event)
   }
 

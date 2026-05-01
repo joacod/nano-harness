@@ -167,6 +167,10 @@ export function updateStreamingState(current: Record<string, StreamingRunState>,
 }
 
 export function updateLiveRunEvents(current: Record<string, RunEvent[]>, event: RunEvent): Record<string, RunEvent[]> {
+  if (isTransientRunEvent(event)) {
+    return current
+  }
+
   const nextEvents = [...(current[event.runId] ?? []), event].slice(-200)
 
   return {
@@ -178,15 +182,19 @@ export function updateLiveRunEvents(current: Record<string, RunEvent[]>, event: 
 export function mergeRunEvents(persistedEvents: RunEvent[], liveEvents: RunEvent[]): RunEvent[] {
   const mergedEvents = new Map<string, RunEvent>()
 
-  for (const event of persistedEvents) {
+  for (const event of persistedEvents.filter((item) => !isTransientRunEvent(item))) {
     mergedEvents.set(event.id, event)
   }
 
-  for (const event of liveEvents) {
+  for (const event of liveEvents.filter((item) => !isTransientRunEvent(item))) {
     mergedEvents.set(event.id, event)
   }
 
   return [...mergedEvents.values()].sort((left, right) => left.timestamp.localeCompare(right.timestamp))
+}
+
+export function isTransientRunEvent(event: RunEvent): boolean {
+  return event.type === 'provider.delta' || event.type === 'provider.reasoning_delta'
 }
 
 export function describeRunEvent(event: RunEvent) {

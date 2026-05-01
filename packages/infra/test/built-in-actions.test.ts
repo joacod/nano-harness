@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 
@@ -37,6 +37,31 @@ afterEach(async () => {
 })
 
 describe('BuiltInActionExecutor', () => {
+  it('lists files and directories inside the configured workspace', async () => {
+    const rootPath = await createWorkspace()
+    await mkdir(path.join(rootPath, 'farmagora'))
+    await writeFile(path.join(rootPath, 'README.md'), 'root readme', 'utf8')
+
+    const result = await createExecutor().execute(
+      createExecutionInput({
+        actionId: 'list_directory',
+        settings: { ...workspaceSettings, workspace: { ...workspaceSettings.workspace, rootPath } },
+        input: { path: '.' },
+      }),
+    )
+
+    expect(result).toMatchObject({
+      status: 'completed',
+      output: {
+        path: '.',
+        entries: [
+          { name: 'farmagora', type: 'directory', path: 'farmagora' },
+          { name: 'README.md', type: 'file', path: 'README.md' },
+        ],
+      },
+    })
+  })
+
   it('reads a utf-8 file inside the configured workspace', async () => {
     const rootPath = await createWorkspace()
     const notePath = path.join(rootPath, 'notes.txt')

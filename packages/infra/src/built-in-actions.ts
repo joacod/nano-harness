@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 
 import type { ActionExecutionInput, ActionExecutor } from '@nano-harness/core'
@@ -7,6 +7,18 @@ import type { ActionDefinition, ActionResult } from '@nano-harness/shared'
 function parseReadFileInput(value: Record<string, unknown>): { path: string } {
   if (typeof value.path !== 'string' || !value.path.trim()) {
     throw new Error('read_file requires a non-empty string path')
+  }
+
+  return { path: value.path }
+}
+
+function parseListDirectoryInput(value: Record<string, unknown>): { path: string } {
+  if (value.path === undefined) {
+    return { path: '.' }
+  }
+
+  if (typeof value.path !== 'string' || !value.path.trim()) {
+    throw new Error('list_directory path must be a non-empty string when provided')
   }
 
   return { path: value.path }
@@ -48,6 +60,22 @@ function parseFetchUrlInput(value: Record<string, unknown>): { url: string } {
 }
 
 const actionDefinitions: Record<string, ActionDefinition> = {
+  list_directory: {
+    id: 'list_directory',
+    title: 'List Directory',
+    description: 'List files and directories inside the configured workspace. Use this before guessing project paths.',
+    requiresApproval: false,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        path: {
+          type: 'string',
+          description: 'Directory path relative to the workspace root. Defaults to .',
+        },
+      },
+      additionalProperties: false,
+    },
+  },
   read_file: {
     id: 'read_file',
     title: 'Read File',
@@ -141,6 +169,26 @@ export class BuiltInActionExecutor implements ActionExecutor {
   async execute(input: ActionExecutionInput): Promise<ActionResult> {
     try {
       switch (input.action.id) {
+        case 'list_directory': {
+          const parsedInput = parseListDirectoryInput(input.call.input)
+          const resolvedPath = resolveWorkspacePath(input.settings.workspace.rootPath, parsedInput.path)
+          const entries = await readdir(resolvedPath, { withFileTypes: true })
+
+          return createActionResult({
+            actionCallId: input.call.id,
+            status: 'completed',
+            output: {
+              path: parsedInput.path,
+              entries: entries
+                .map((entry) => ({
+                  name: entry.name,
+                  type: entry.isDirectory() ? 'directory' : entry.isFile() ? 'file' : 'other',
+                  path: path.posix.join(parsedInput.path === '.' ? '' : parsedInput.path, entry.name),
+                }))
+                .sort((left, right) => left.type.localeCompare(right.type) || left.name.localeCompare(right.name)),
+            },
+          })
+        }
         case 'read_file': {
           const parsedInput = parseReadFileInput(input.call.input)
           const resolvedPath = resolveWorkspacePath(input.settings.workspace.rootPath, parsedInput.path)
