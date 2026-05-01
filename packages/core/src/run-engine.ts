@@ -18,7 +18,7 @@ import { getLatestPendingApproval } from './approvals'
 import type { EventBus } from './event-bus'
 import { noopEventBus } from './event-bus'
 import type { Policy } from './policy'
-import type { Provider, ProviderActionRequest, ProviderCredentialResolver } from './provider'
+import type { Provider, ProviderActionRequest, ProviderCredentialResolver, ProviderGenerateResult } from './provider'
 import { assertStatusTransition, isTerminalStatus } from './run-status'
 import type { ConversationSnapshot, Store } from './store'
 
@@ -53,6 +53,28 @@ type ContinueRunContext = {
   settings: AppSettings
   signal: AbortSignal
   pendingApproval?: PendingApprovalContext
+}
+
+type ProviderTurnResult = {
+  providerResult: ProviderGenerateResult
+  streamedMessage: string
+}
+
+type PersistAssistantResultInput = {
+  run: Run
+  messages: Message[]
+  providerResult: ProviderGenerateResult
+  streamedMessage: string
+}
+
+type PersistAssistantResultOutput = {
+  messages: Message[]
+  providerMessageId?: string
+}
+
+type ExecuteActionRequestsOutput = {
+  messages: Message[]
+  stopped: boolean
 }
 
 class RunAbortError extends Error {
@@ -320,96 +342,27 @@ export class CoreRunEngine implements RunEngine {
           throw new RunAbortError()
         }
 
-        await this.emitEvent({
-          id: this.createId(),
-          runId: run.id,
-          timestamp: this.now(),
-          type: 'provider.requested',
-          payload: {
-            provider: getProviderDefinition(context.settings.provider.provider).label,
-            model: context.settings.provider.model,
-          },
-        })
-
-        let streamedMessage = ''
-        const actions = await this.actionExecutor.listDefinitions()
-        const providerDefinition = getProviderDefinition(context.settings.provider.provider)
-        const providerAuth = await this.providerCredentialResolver.getProviderAuth({
-          provider: context.settings.provider.provider,
-        })
-
-        if (providerDefinition.requiresApiKey && providerAuth.authMethod !== 'api-key') {
-          throw new Error(`Missing API key for ${providerDefinition.label}`)
-        }
-
-        const providerResult = await this.provider.generate({
+        const { providerResult, streamedMessage } = await this.requestProviderTurn({
           run,
           messages,
-          actions,
           settings: context.settings,
-          providerAuth,
           signal: context.signal,
-          onDelta: async (delta) => {
-            streamedMessage += delta
-            await this.emitEvent({
-              id: this.createId(),
-              runId: run.id,
-              timestamp: this.now(),
-              type: 'provider.delta',
-              payload: { delta },
-            })
-          },
-          onReasoningDelta: async (delta) => {
-            await this.emitEvent({
-              id: this.createId(),
-              runId: run.id,
-              timestamp: this.now(),
-              type: 'provider.reasoning_delta',
-              payload: delta,
-            })
-          },
         })
+        const assistantResult = await this.persistAssistantResult({
+          run,
+          messages,
+          providerResult,
+          streamedMessage,
+        })
+        messages = assistantResult.messages
 
-        const assistantContent = providerResult.content ?? streamedMessage
-        let providerMessageId = messages.at(-1)?.id
-        const assistantToolCalls = providerResult.actionCalls?.map((actionCall) => ({
-          id: actionCall.toolCallId,
-          actionId: actionCall.actionId,
-          input: actionCall.input,
-        }))
-
-        if (assistantContent || (assistantToolCalls && assistantToolCalls.length > 0)) {
-          const assistantMessage: Message = {
-            id: this.createId(),
-            conversationId: run.conversationId,
-            runId: run.id,
-            role: 'assistant',
-            content: assistantContent,
-            toolCalls: assistantToolCalls,
-            reasoning: providerResult.reasoning,
-            reasoningDetails: providerResult.reasoningDetails,
-            createdAt: this.now(),
-          }
-
-          await this.store.saveMessage(assistantMessage)
-          await this.emitEvent({
-            id: this.createId(),
-            runId: run.id,
-            timestamp: assistantMessage.createdAt,
-            type: 'message.created',
-            payload: { message: assistantMessage },
-          })
-          messages = [...messages, assistantMessage]
-          providerMessageId = assistantMessage.id
-        }
-
-        if (providerMessageId) {
+        if (assistantResult.providerMessageId) {
           await this.emitEvent({
             id: this.createId(),
             runId: run.id,
             timestamp: this.now(),
             type: 'provider.completed',
-            payload: { messageId: providerMessageId },
+            payload: { messageId: assistantResult.providerMessageId },
           })
         }
 
@@ -420,14 +373,17 @@ export class CoreRunEngine implements RunEngine {
           return
         }
 
-        for (const actionRequest of actionRequests) {
-          const actionOutput = await this.handleActionRequest(run, actionRequest, context.settings, context.signal)
+        const actionResult = await this.executeActionRequests(
+          run,
+          actionRequests,
+          messages,
+          context.settings,
+          context.signal,
+        )
+        messages = actionResult.messages
 
-          if (actionOutput === null) {
-            return
-          }
-
-          messages = [...messages, actionOutput]
+        if (actionResult.stopped) {
+          return
         }
       }
 
@@ -441,6 +397,129 @@ export class CoreRunEngine implements RunEngine {
       const failureMessage = error instanceof Error ? error.message : 'Unknown run failure'
       await this.failRun(run, failureMessage)
     }
+  }
+
+  private async requestProviderTurn(input: {
+    run: Run
+    messages: Message[]
+    settings: AppSettings
+    signal: AbortSignal
+  }): Promise<ProviderTurnResult> {
+    await this.emitEvent({
+      id: this.createId(),
+      runId: input.run.id,
+      timestamp: this.now(),
+      type: 'provider.requested',
+      payload: {
+        provider: getProviderDefinition(input.settings.provider.provider).label,
+        model: input.settings.provider.model,
+      },
+    })
+
+    let streamedMessage = ''
+    const actions = await this.actionExecutor.listDefinitions()
+    const providerDefinition = getProviderDefinition(input.settings.provider.provider)
+    const providerAuth = await this.providerCredentialResolver.getProviderAuth({
+      provider: input.settings.provider.provider,
+    })
+
+    if (providerDefinition.requiresApiKey && providerAuth.authMethod !== 'api-key') {
+      throw new Error(`Missing API key for ${providerDefinition.label}`)
+    }
+
+    const providerResult = await this.provider.generate({
+      run: input.run,
+      messages: input.messages,
+      actions,
+      settings: input.settings,
+      providerAuth,
+      signal: input.signal,
+      onDelta: async (delta) => {
+        streamedMessage += delta
+        await this.emitEvent({
+          id: this.createId(),
+          runId: input.run.id,
+          timestamp: this.now(),
+          type: 'provider.delta',
+          payload: { delta },
+        })
+      },
+      onReasoningDelta: async (delta) => {
+        await this.emitEvent({
+          id: this.createId(),
+          runId: input.run.id,
+          timestamp: this.now(),
+          type: 'provider.reasoning_delta',
+          payload: delta,
+        })
+      },
+    })
+
+    return { providerResult, streamedMessage }
+  }
+
+  private async persistAssistantResult(input: PersistAssistantResultInput): Promise<PersistAssistantResultOutput> {
+    const assistantContent = input.providerResult.content ?? input.streamedMessage
+    let providerMessageId = input.messages.at(-1)?.id
+    const assistantToolCalls = input.providerResult.actionCalls?.map((actionCall) => ({
+      id: actionCall.toolCallId,
+      actionId: actionCall.actionId,
+      input: actionCall.input,
+    }))
+
+    if (!assistantContent && (!assistantToolCalls || assistantToolCalls.length === 0)) {
+      return { messages: input.messages, providerMessageId }
+    }
+
+    const assistantMessage: Message = {
+      id: this.createId(),
+      conversationId: input.run.conversationId,
+      runId: input.run.id,
+      role: 'assistant',
+      content: assistantContent,
+      toolCalls: assistantToolCalls,
+      reasoning: input.providerResult.reasoning,
+      reasoningDetails: input.providerResult.reasoningDetails,
+      createdAt: this.now(),
+    }
+
+    await this.store.saveMessage(assistantMessage)
+    await this.emitEvent({
+      id: this.createId(),
+      runId: input.run.id,
+      timestamp: assistantMessage.createdAt,
+      type: 'message.created',
+      payload: { message: assistantMessage },
+    })
+
+    providerMessageId = assistantMessage.id
+
+    return {
+      messages: [...input.messages, assistantMessage],
+      providerMessageId,
+    }
+  }
+
+  private async executeActionRequests(
+    run: Run,
+    actionRequests: ProviderActionRequest[],
+    messages: Message[],
+    settings: AppSettings,
+    signal: AbortSignal,
+  ): Promise<ExecuteActionRequestsOutput> {
+    let nextMessages = messages
+
+    for (const actionRequest of actionRequests) {
+      const actionOutput = await this.handleActionRequest(run, actionRequest, settings, signal)
+
+      if (actionOutput === null) {
+        return { messages: nextMessages, stopped: true }
+      }
+
+      nextMessages = [...nextMessages, actionOutput]
+    }
+
+    return { messages: nextMessages, stopped: false }
   }
 
   private async startLifecycle(run: Run): Promise<Run> {

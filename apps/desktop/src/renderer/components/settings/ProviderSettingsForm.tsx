@@ -35,7 +35,7 @@ export function ProviderSettingsForm({
           provider: value.provider.provider,
           model: value.provider.model.trim(),
           baseUrl:
-            providerDefinition.adapterId === 'chatgpt-subscription'
+            !providerDefinition.endpoint.editable
               ? providerDefinition.baseUrl
               : value.provider.baseUrl?.trim() || providerDefinition.baseUrl,
           reasoning: value.provider.reasoning,
@@ -107,7 +107,7 @@ export function ProviderSettingsForm({
             <p className="eyebrow" id="provider-endpoint-heading">
               Endpoint
             </p>
-            <p>{selectedProviderDefinition.adapterId === 'chatgpt-subscription' ? 'Model and fixed ChatGPT subscription endpoint.' : 'Model and API endpoint.'}</p>
+            <p>{selectedProviderDefinition.endpoint.description}</p>
           </div>
 
           <div className="form-row action-row-left">
@@ -148,7 +148,7 @@ export function ProviderSettingsForm({
 
             <div className="settings-field">
               <LabeledField label="Base URL">
-                <FieldHint>{selectedProviderDefinition.adapterId === 'chatgpt-subscription' ? 'Managed by the ChatGPT subscription provider.' : 'OpenAI-compatible API root.'}</FieldHint>
+                <FieldHint>{selectedProviderDefinition.endpoint.hint}</FieldHint>
                 <form.Field
                   name="provider.baseUrl"
                   validators={{
@@ -160,7 +160,7 @@ export function ProviderSettingsForm({
                       name="provider-base-url"
                       placeholder="Example: http://127.0.0.1:8080/v1"
                       autoComplete="url"
-                      readOnly={selectedProviderDefinition.adapterId === 'chatgpt-subscription'}
+                      readOnly={!selectedProviderDefinition.endpoint.editable}
                       spellCheck={false}
                     />
                   )}

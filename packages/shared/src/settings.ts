@@ -12,6 +12,10 @@ export const providerAuthMethodSchema = z.enum(['api-key', 'none', 'oauth'])
 
 export type ProviderAuthMethod = z.infer<typeof providerAuthMethodSchema>
 
+export const providerAdapterIdSchema = z.enum(['openai-compatible', 'chatgpt-subscription'])
+
+export type ProviderAdapterId = z.infer<typeof providerAdapterIdSchema>
+
 export const reasoningEffortSchema = z.enum(['minimal', 'low', 'medium', 'high', 'xhigh'])
 
 export type ReasoningEffort = z.infer<typeof reasoningEffortSchema>
@@ -33,6 +37,30 @@ export const providerDefaultModels = {
   openai: 'gpt-5.4-mini',
 } as const satisfies Record<ProviderKey, string>
 
+type ProviderEndpointDefinition = {
+  editable: boolean
+  description: string
+  hint: string
+}
+
+type ProviderCatalogDefinition = {
+  key: ProviderKey
+  label: string
+  adapterId: ProviderAdapterId
+  baseUrl: string
+  defaultModel: string
+  requiresApiKey: boolean
+  authMethods: readonly ProviderAuthMethod[]
+  defaultAuthMethod: ProviderAuthMethod
+  authLabels: Partial<Record<ProviderAuthMethod, string>>
+  apiKeyLabel: string
+  apiKeyMissingIssue?: string
+  missingAuthIssue?: string
+  modelPrefixHint?: string
+  statusHints: readonly string[]
+  endpoint: ProviderEndpointDefinition
+}
+
 export const providerCatalog = {
   openrouter: {
     key: 'openrouter',
@@ -43,6 +71,16 @@ export const providerCatalog = {
     requiresApiKey: true,
     authMethods: ['api-key'],
     defaultAuthMethod: 'api-key',
+    authLabels: { 'api-key': 'API key' },
+    apiKeyLabel: 'Stored securely on this device',
+    apiKeyMissingIssue: 'Add your OpenRouter API key before starting a hosted-provider run.',
+    modelPrefixHint: `OpenRouter models usually include the provider prefix, for example ${providerDefaultModels.openrouter}.`,
+    statusHints: [],
+    endpoint: {
+      editable: true,
+      description: 'Model and API endpoint.',
+      hint: 'OpenAI-compatible API root.',
+    },
   },
   'llama-cpp': {
     key: 'llama-cpp',
@@ -53,6 +91,14 @@ export const providerCatalog = {
     requiresApiKey: false,
     authMethods: ['none'],
     defaultAuthMethod: 'none',
+    authLabels: { none: 'none' },
+    apiKeyLabel: 'Optional for this local provider',
+    statusHints: ['Start llama-server before running a local model. The API endpoint should expose /v1/chat/completions.'],
+    endpoint: {
+      editable: true,
+      description: 'Model and API endpoint.',
+      hint: 'OpenAI-compatible API root.',
+    },
   },
   openai: {
     key: 'openai',
@@ -63,19 +109,19 @@ export const providerCatalog = {
     requiresApiKey: false,
     authMethods: ['oauth'],
     defaultAuthMethod: 'oauth',
+    authLabels: { oauth: 'ChatGPT account' },
+    apiKeyLabel: 'Not used for ChatGPT subscription auth',
+    missingAuthIssue: 'Sign in with ChatGPT before starting an OpenAI run.',
+    statusHints: [],
+    endpoint: {
+      editable: false,
+      description: 'Model and fixed ChatGPT subscription endpoint.',
+      hint: 'Managed by the ChatGPT subscription provider.',
+    },
   },
-} as const satisfies Record<ProviderKey, {
-  key: ProviderKey
-  label: string
-  adapterId: string
-  baseUrl: string
-  defaultModel: string
-  requiresApiKey: boolean
-  authMethods: readonly ProviderAuthMethod[]
-  defaultAuthMethod: ProviderAuthMethod
-}>
+} as const satisfies Record<ProviderKey, ProviderCatalogDefinition>
 
-export function getProviderDefinition(provider: ProviderKey) {
+export function getProviderDefinition(provider: ProviderKey): ProviderCatalogDefinition {
   return providerCatalog[provider]
 }
 

@@ -47,11 +47,13 @@ import {
 
 const SETTINGS_ROW_ID = 'app'
 
+type Database = ReturnType<typeof drizzle<typeof schema>>
+
 export { resolveSqliteStorePaths, type SqliteStoreOptions, type SqliteStorePaths } from './sqlite/paths'
 
 export class SqliteStore implements Store {
   private readonly client: Client
-  private readonly db
+  private readonly db: Database
   readonly paths: SqliteStorePaths
 
   constructor(options: SqliteStoreOptions = {}) {
@@ -107,48 +109,14 @@ export class SqliteStore implements Store {
   }
 
   async getConversation(conversationId: string): Promise<ConversationSnapshot> {
-    const [conversationRow] = await this.db
-      .select()
-      .from(conversationsTable)
-      .where(eq(conversationsTable.id, conversationId))
-
-    const runRows = await this.db
-      .select()
-      .from(runsTable)
-      .where(eq(runsTable.conversationId, conversationId))
-      .orderBy(asc(runsTable.createdAt))
-
-    const messageRows = await this.db
-      .select()
-      .from(messagesTable)
-      .where(eq(messagesTable.conversationId, conversationId))
-      .orderBy(asc(messagesTable.createdAt))
-
+    const conversationRow = await this.getConversationRow(conversationId)
+    const runRows = await this.listRunRowsForConversation(conversationId)
+    const messageRows = await this.listMessageRowsForConversation(conversationId)
     const runIds = runRows.map((run) => run.id)
-    const approvalRequests = runIds.length
-      ? await this.db
-          .select()
-          .from(approvalRequestsTable)
-          .where(inArray(approvalRequestsTable.runId, runIds))
-          .orderBy(asc(approvalRequestsTable.requestedAt))
-      : []
-
-    const eventRows = runIds.length
-      ? await this.db
-          .select()
-          .from(runEventsTable)
-          .where(inArray(runEventsTable.runId, runIds))
-          .orderBy(asc(runEventsTable.timestamp))
-      : []
-
+    const approvalRequests = await this.listApprovalRequestRowsForRuns(runIds)
+    const eventRows = await this.listEventRowsForRuns(runIds)
     const approvalRequestIds = approvalRequests.map((request) => request.id)
-    const approvalResolutions = approvalRequestIds.length
-      ? await this.db
-          .select()
-          .from(approvalResolutionsTable)
-          .where(inArray(approvalResolutionsTable.approvalRequestId, approvalRequestIds))
-          .orderBy(asc(approvalResolutionsTable.decidedAt))
-      : []
+    const approvalResolutions = await this.listApprovalResolutionRowsForRequests(approvalRequestIds)
 
     return {
       conversation: conversationRow ? conversationSchema.parse(conversationRow) : null,
@@ -158,6 +126,61 @@ export class SqliteStore implements Store {
       approvalRequests: approvalRequests.map((request) => approvalRequestSchema.parse(request)),
       approvalResolutions: approvalResolutions.map((resolution) => approvalResolutionSchema.parse(resolution)),
     }
+  }
+
+  private async getConversationRow(conversationId: string) {
+    const [conversationRow] = await this.db
+      .select()
+      .from(conversationsTable)
+      .where(eq(conversationsTable.id, conversationId))
+
+    return conversationRow ?? null
+  }
+
+  private async listRunRowsForConversation(conversationId: string) {
+    return await this.db
+      .select()
+      .from(runsTable)
+      .where(eq(runsTable.conversationId, conversationId))
+      .orderBy(asc(runsTable.createdAt))
+  }
+
+  private async listMessageRowsForConversation(conversationId: string) {
+    return await this.db
+      .select()
+      .from(messagesTable)
+      .where(eq(messagesTable.conversationId, conversationId))
+      .orderBy(asc(messagesTable.createdAt))
+  }
+
+  private async listApprovalRequestRowsForRuns(runIds: string[]) {
+    return runIds.length
+      ? await this.db
+          .select()
+          .from(approvalRequestsTable)
+          .where(inArray(approvalRequestsTable.runId, runIds))
+          .orderBy(asc(approvalRequestsTable.requestedAt))
+      : []
+  }
+
+  private async listEventRowsForRuns(runIds: string[]) {
+    return runIds.length
+      ? await this.db
+          .select()
+          .from(runEventsTable)
+          .where(inArray(runEventsTable.runId, runIds))
+          .orderBy(asc(runEventsTable.timestamp))
+      : []
+  }
+
+  private async listApprovalResolutionRowsForRequests(approvalRequestIds: string[]) {
+    return approvalRequestIds.length
+      ? await this.db
+          .select()
+          .from(approvalResolutionsTable)
+          .where(inArray(approvalResolutionsTable.approvalRequestId, approvalRequestIds))
+          .orderBy(asc(approvalResolutionsTable.decidedAt))
+      : []
   }
 
   async createRun(run: Parameters<typeof runSchema.parse>[0]): Promise<void> {

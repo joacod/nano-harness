@@ -1,6 +1,8 @@
 import type { ActionDefinition, AssistantToolCall, Message } from '@nano-harness/shared'
 import type { Provider, ProviderActionRequest, ProviderGenerateInput, ProviderGenerateResult } from '@nano-harness/core'
 
+import { parseSseData, splitSseEvents } from './sse'
+
 type FetchLike = typeof fetch
 
 type ChatGptSubscriptionProviderOptions = {
@@ -93,23 +95,6 @@ function toResponsesReasoning(settings: ProviderGenerateInput['settings']): Reco
   }
 
   return { effort: reasoning.effort }
-}
-
-function splitSseEvents(buffer: string): { events: string[]; remainder: string } {
-  const normalized = buffer.replace(/\r\n/g, '\n')
-  const parts = normalized.split('\n\n')
-  const remainder = parts.pop() ?? ''
-
-  return { events: parts, remainder }
-}
-
-function parseSseData(eventText: string): string | null {
-  const dataLines = eventText
-    .split('\n')
-    .filter((line) => line.startsWith('data:'))
-    .map((line) => line.slice(5).trimStart())
-
-  return dataLines.length ? dataLines.join('\n') : null
 }
 
 function getStreamErrorMessage(event: ResponsesStreamEvent): string | null {

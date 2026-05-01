@@ -5,6 +5,7 @@ import {
   clearProviderAuthInputSchema,
   getProviderDefinition,
   messageSchema,
+  providerAdapterIdSchema,
   providerDefaultModels,
   openExternalUrlInputSchema,
   providerOptions,
@@ -26,6 +27,12 @@ describe('shared contracts', () => {
       requiresApiKey: true,
       authMethods: ['api-key'],
       defaultAuthMethod: 'api-key',
+      authLabels: { 'api-key': 'API key' },
+      apiKeyLabel: 'Stored securely on this device',
+      endpoint: {
+        editable: true,
+        hint: 'OpenAI-compatible API root.',
+      },
     })
 
     expect(getProviderDefinition('llama-cpp')).toMatchObject({
@@ -37,6 +44,11 @@ describe('shared contracts', () => {
       requiresApiKey: false,
       authMethods: ['none'],
       defaultAuthMethod: 'none',
+      apiKeyLabel: 'Optional for this local provider',
+      statusHints: ['Start llama-server before running a local model. The API endpoint should expose /v1/chat/completions.'],
+      endpoint: {
+        editable: true,
+      },
     })
 
     expect(getProviderDefinition('openai')).toMatchObject({
@@ -48,6 +60,13 @@ describe('shared contracts', () => {
       requiresApiKey: false,
       authMethods: ['oauth'],
       defaultAuthMethod: 'oauth',
+      authLabels: { oauth: 'ChatGPT account' },
+      apiKeyLabel: 'Not used for ChatGPT subscription auth',
+      missingAuthIssue: 'Sign in with ChatGPT before starting an OpenAI run.',
+      endpoint: {
+        editable: false,
+        hint: 'Managed by the ChatGPT subscription provider.',
+      },
     })
   })
 
@@ -61,6 +80,10 @@ describe('shared contracts', () => {
         }),
       ]),
     )
+  })
+
+  it('keeps provider adapter ids explicit', () => {
+    expect(providerAdapterIdSchema.options).toEqual(['openai-compatible', 'chatgpt-subscription'])
   })
 
   it('parses assistant and tool messages with tool metadata', () => {
