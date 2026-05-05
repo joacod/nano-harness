@@ -4,7 +4,7 @@ import { cleanup, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { createDefaultProviderSettings, providerDefaultModels, type AppSettings, type ProviderStatus } from '@nano-harness/shared'
+import { createDefaultProviderSettings, providerDefaultModels, type AppSettings, type ProviderStatus, type SkillInventory } from '@nano-harness/shared'
 
 import { SettingsFormCard } from '../../src/renderer/components/SettingsFormCard'
 import { createDesktopMock, renderWithQueryClient } from './test-utils'
@@ -14,7 +14,7 @@ describe('SettingsFormCard', () => {
     cleanup()
   })
 
-  it('shows provider settings by default and moves workspace and data tools into separate tabs', async () => {
+  it('shows provider settings by default and moves workspace, skills, and data tools into separate tabs', async () => {
     const user = userEvent.setup()
 
     renderSettingsFormCard()
@@ -27,6 +27,7 @@ describe('SettingsFormCard', () => {
     expect(screen.getAllByText('Base URL').length).toBeGreaterThan(0)
     expect(screen.queryByText('Workspace Root')).toBeNull()
     expect(screen.queryByText('Approval Policy')).toBeNull()
+    expect(screen.queryByText('Skills hub')).toBeNull()
     expect(screen.queryByText('Backup and restore')).toBeNull()
 
     await user.click(screen.getByRole('tab', { name: 'Workspace' }))
@@ -36,6 +37,14 @@ describe('SettingsFormCard', () => {
     expect(screen.getByText('Approval Policy')).toBeTruthy()
     expect(screen.queryByText('Provider status')).toBeNull()
     expect(screen.queryByText('API Key')).toBeNull()
+
+    await user.click(screen.getByRole('tab', { name: 'Skills' }))
+
+    expect(screen.getByRole('tab', { name: 'Skills' }).getAttribute('aria-selected')).toBe('true')
+    expect(screen.getByText('Skills hub')).toBeTruthy()
+    expect(screen.getByText('Repo Onboarding')).toBeTruthy()
+    expect(screen.getByRole('switch', { name: 'Disable skill' })).toBeTruthy()
+    expect(screen.queryByText('Workspace Root')).toBeNull()
 
     await user.click(screen.getByRole('tab', { name: 'Data' }))
 
@@ -97,6 +106,7 @@ function renderSettingsFormCard() {
       initialSettings={createSettings()}
       dataPath="/tmp/nano-harness.db"
       providerStatus={createProviderStatus()}
+      skillInventory={createSkillInventory()}
       isSaving={false}
       isSavingApiKey={false}
       isStartingOauth={false}
@@ -104,12 +114,14 @@ function renderSettingsFormCard() {
       isClearingOauth={false}
       isExportingData={false}
       isImportingData={false}
+      isSavingSkills={false}
       saveError={null}
       apiKeyError={null}
       oauthError={null}
       exportDataResult={null}
       importDataResult={null}
       dataError={null}
+      skillsError={null}
       onSubmit={vi.fn(async () => undefined)}
       onSaveApiKey={vi.fn(async () => undefined)}
       onClearApiKey={vi.fn(async () => undefined)}
@@ -117,6 +129,7 @@ function renderSettingsFormCard() {
       onClearOauth={vi.fn(async () => undefined)}
       onExportData={vi.fn(async () => undefined)}
       onImportData={vi.fn(async () => undefined)}
+      onToggleSkill={vi.fn(async () => undefined)}
     />,
   )
 }
@@ -149,5 +162,22 @@ function createProviderStatus(): ProviderStatus {
     isReady: true,
     issues: [],
     hints: [],
+  }
+}
+
+function createSkillInventory(): SkillInventory {
+  return {
+    skills: [
+      {
+        id: 'repo-onboarding',
+        name: 'Repo Onboarding',
+        description: 'Survey repositories safely.',
+        triggers: ['repo'],
+        tools: ['grep'],
+        safetyNotes: [],
+        source: 'bundled',
+        enabled: true,
+      },
+    ],
   }
 }

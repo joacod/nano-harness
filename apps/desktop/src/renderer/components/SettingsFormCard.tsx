@@ -1,22 +1,24 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 
-import { getProviderDefinition, type AppSettings, type ProviderAuthMethod, type ProviderStatus } from '../../../../../packages/shared/src'
+import { getProviderDefinition, type AppSettings, type ProviderAuthMethod, type ProviderStatus, type SkillInventory } from '../../../../../packages/shared/src'
 import { providerCredentialStatusQueryOptions } from '../queries'
 import { ApiKeySettingsForm } from './settings/ApiKeySettingsForm'
 import { DataBackupPanel } from './settings/DataBackupPanel'
 import { OAuthSettingsForm } from './settings/OAuthSettingsForm'
 import { ProviderSettingsForm } from './settings/ProviderSettingsForm'
 import { ProviderStatusPanel } from './settings/ProviderStatusPanel'
+import { SkillsHubCard } from './settings/SkillsHubCard'
 import { WorkspaceSettingsForm } from './settings/WorkspaceSettingsForm'
 import { Card, Tabs } from './ui'
 
-type SettingsTab = 'providers' | 'workspace' | 'data'
+type SettingsTab = 'providers' | 'workspace' | 'skills' | 'data'
 
 export function SettingsFormCard({
   initialSettings,
   dataPath,
   providerStatus,
+  skillInventory,
   isSaving,
   isSavingApiKey,
   isStartingOauth,
@@ -24,12 +26,14 @@ export function SettingsFormCard({
   isClearingOauth,
   isExportingData,
   isImportingData,
+  isSavingSkills,
   saveError,
   apiKeyError,
   oauthError,
   exportDataResult,
   importDataResult,
   dataError,
+  skillsError,
   onSubmit,
   onSaveApiKey,
   onClearApiKey,
@@ -37,10 +41,12 @@ export function SettingsFormCard({
   onClearOauth,
   onExportData,
   onImportData,
+  onToggleSkill,
 }: {
   initialSettings: AppSettings
   dataPath: string | null
   providerStatus: ProviderStatus | null
+  skillInventory: SkillInventory | null
   isSaving: boolean
   isSavingApiKey: boolean
   isStartingOauth: boolean
@@ -48,12 +54,14 @@ export function SettingsFormCard({
   isClearingOauth: boolean
   isExportingData: boolean
   isImportingData: boolean
+  isSavingSkills: boolean
   saveError: string | null
   apiKeyError: string | null
   oauthError: string | null
   exportDataResult: string | null
   importDataResult: string | null
   dataError: string | null
+  skillsError: string | null
   onSubmit: (settings: AppSettings) => Promise<void>
   onSaveApiKey: (input: { provider: AppSettings['provider']['provider']; apiKey: string }) => Promise<void>
   onClearApiKey: (input: { provider: AppSettings['provider']['provider'] }) => Promise<void>
@@ -61,6 +69,7 @@ export function SettingsFormCard({
   onClearOauth: (input: { provider: AppSettings['provider']['provider'] }) => Promise<void>
   onExportData: () => Promise<void>
   onImportData: () => Promise<void>
+  onToggleSkill: (input: { skillId: string; enabled: boolean }) => Promise<void>
 }) {
   const [selectedProvider, setSelectedProvider] = useState(initialSettings.provider.provider)
   const [selectedTab, setSelectedTab] = useState<SettingsTab>('providers')
@@ -127,6 +136,18 @@ export function SettingsFormCard({
               <div className="settings-tab-stack">
                 <WorkspaceSettingsForm initialSettings={initialSettings} isSaving={isSaving} saveError={saveError} onSubmit={onSubmit} />
               </div>
+            ),
+          },
+          {
+            value: 'skills',
+            label: 'Skills',
+            panel: (
+              <SkillsHubCard
+                inventory={skillInventory}
+                isSaving={isSavingSkills}
+                error={skillsError}
+                onToggleSkill={onToggleSkill}
+              />
             ),
           },
           {
