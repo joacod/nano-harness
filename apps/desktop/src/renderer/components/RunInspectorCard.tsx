@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 
 import type { ApprovalRequest, ConversationSnapshot, RunEvent } from '../../../../../packages/shared/src'
 import { formatTimestamp } from '../utils/formatting'
-import { describeRunEvent, getEventFamily, getRecoverableRunAction, type StreamingRunState } from '../utils/run-events'
+import { describeRunEvent, getEventTone, getRecoverableRunAction, type StreamingRunState } from '../utils/run-events'
 import { Button, Card, FeedbackText, StatusBadge } from './ui'
 
 export function RunInspectorCard({
@@ -18,6 +18,7 @@ export function RunInspectorCard({
 }) {
   const queryClient = useQueryClient()
   const recoverableAction = run ? getRecoverableRunAction(run, pendingApproval) : null
+  const latestFirstEvents = [...events].reverse()
   const runControlMutation = useMutation({
     mutationFn: async (action: 'resume' | 'cancel') => {
       if (!run) {
@@ -163,13 +164,13 @@ export function RunInspectorCard({
 
           {events.length === 0 ? <FeedbackText>No events captured for this run yet.</FeedbackText> : null}
 
-          <ol className="timeline-list">
-            {events.map((event) => {
+          <ol className="timeline-list" aria-label="Signal trace, latest first">
+            {latestFirstEvents.map((event) => {
               const description = describeRunEvent(event)
 
               return (
                 <li key={event.id} className="timeline-item">
-                  <div className={`timeline-dot timeline-${getEventFamily(event.type)}`} />
+                  <div className={`timeline-dot timeline-${getEventTone(event)}`} />
                   <div className="timeline-card">
                     <div className="timeline-header">
                       <strong>{description.title}</strong>

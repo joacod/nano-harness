@@ -4,17 +4,14 @@ import { Outlet, useNavigate, useRouterState } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 
 import { providerStatusQueryOptions } from '../queries'
-import { useRuntimeUi, useTechnicalUi } from '../runtime-ui'
+import { useTechnicalUi } from '../runtime-ui'
 import { ConversationNav } from './sidebar/ConversationNav'
-import { RecentSignals } from './sidebar/RecentSignals'
-import { RuntimeSummary } from './sidebar/RuntimeSummary'
 import { Button, RuntimePill, Switch } from './ui'
 
 export function RootLayout() {
   const navigate = useNavigate()
   const currentPath = useRouterState({ select: (state) => state.location.pathname })
   const lastSessionPathRef = useRef('/')
-  const { context, recentEvents } = useRuntimeUi()
   const { isSidebarCollapsed, showTechnicalInfo, toggleSidebarCollapsed, toggleTechnicalInfo } = useTechnicalUi()
   const providerStatusQuery = useQuery(providerStatusQueryOptions)
   const providerStatus = providerStatusQuery.data
@@ -70,13 +67,6 @@ export function RootLayout() {
           </div>
 
           <ConversationNav />
-
-          {showTechnicalInfo ? (
-            <div className="sidebar-telemetry-details">
-              <RuntimeSummary context={context} />
-              <RecentSignals recentEvents={recentEvents} />
-            </div>
-          ) : null}
 
           <div className="sidebar-section sidebar-footer sidebar-collapsible-content">
             <button

@@ -1,4 +1,4 @@
-import { type ReactNode, useState } from 'react'
+import { type ReactNode, useEffect, useState } from 'react'
 
 import { useForm } from '@tanstack/react-form'
 
@@ -24,8 +24,11 @@ export function ProviderSettingsForm({
   onSubmit: (settings: AppSettings) => Promise<void>
 }) {
   const [saveMessage, setSaveMessage] = useState<string | null>(null)
+  const [savedSettings, setSavedSettings] = useState(() => normalizeProviderSettings(initialSettings))
+  const [draftSettings, setDraftSettings] = useState(() => normalizeProviderSettings(initialSettings))
   const [selectedProvider, setSelectedProvider] = useState(initialSettings.provider.provider)
   const selectedProviderDefinition = getProviderDefinition(selectedProvider)
+  const hasUnsavedChanges = serializeSettings(savedSettings) !== serializeSettings(normalizeProviderSettings(draftSettings))
   const form = useForm({
     defaultValues: initialSettings,
     onSubmit: async ({ value }) => {
@@ -47,9 +50,24 @@ export function ProviderSettingsForm({
       }
 
       await onSubmit(normalizedSettings)
+      setSavedSettings(normalizedSettings)
+      setDraftSettings(normalizedSettings)
       setSaveMessage('Settings saved.')
     },
   })
+
+  useEffect(() => {
+    if (!hasUnsavedChanges) {
+      return undefined
+    }
+
+    function handleBeforeUnload(event: BeforeUnloadEvent) {
+      event.preventDefault()
+    }
+
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [hasUnsavedChanges])
 
   return (
     <>
@@ -83,9 +101,17 @@ export function ProviderSettingsForm({
                         field.handleChange(nextProvider)
                         setSelectedProvider(nextProvider)
                         onProviderChange(nextProvider)
-                        const nextSettings = applyProviderDefaults(form.state.values, nextProvider)
+                        const nextSettings = applyProviderDefaults({
+                          ...form.state.values,
+                          provider: {
+                            ...form.state.values.provider,
+                            provider: nextProvider,
+                          },
+                        }, nextProvider)
                         form.setFieldValue('provider.model', nextSettings.provider.model)
                         form.setFieldValue('provider.baseUrl', nextSettings.provider.baseUrl)
+                        setDraftSettings(nextSettings)
+                        setSaveMessage(null)
                       }}
                     >
                       {providerOptions.map((provider) => (
@@ -118,6 +144,8 @@ export function ProviderSettingsForm({
                 const nextSettings = applyProviderDefaults(form.state.values, providerKey)
                 form.setFieldValue('provider.model', nextSettings.provider.model)
                 form.setFieldValue('provider.baseUrl', nextSettings.provider.baseUrl)
+                setDraftSettings(nextSettings)
+                setSaveMessage(null)
               }}
             >
               Use defaults
@@ -134,13 +162,20 @@ export function ProviderSettingsForm({
                     onChange: ({ value }) => (value.trim() ? undefined : 'Model is required.'),
                   }}
                   children={(field) => (
-                    <TextField
-                      field={field}
-                      name="model"
-                      placeholder={`Example: ${providerDefaultModels.openrouter}`}
-                      autoComplete="off"
-                      spellCheck={false}
-                    />
+                      <TextField
+                        field={field}
+                        name="model"
+                        placeholder={`Example: ${providerDefaultModels.openrouter}`}
+                        autoComplete="off"
+                        onValueChange={(value) => {
+                          setDraftSettings((current) => ({
+                            ...current,
+                            provider: { ...current.provider, model: value },
+                          }))
+                          setSaveMessage(null)
+                        }}
+                        spellCheck={false}
+                      />
                   )}
                 />
               </LabeledField>
@@ -155,13 +190,20 @@ export function ProviderSettingsForm({
                     onChange: ({ value }) => (value?.trim() ? undefined : 'Base URL is required.'),
                   }}
                   children={(field) => (
-                    <TextField
-                      field={field}
-                      name="provider-base-url"
-                      placeholder="Example: http://127.0.0.1:8080/v1"
-                      autoComplete="url"
-                      readOnly={!selectedProviderDefinition.endpoint.editable}
-                      spellCheck={false}
+                      <TextField
+                        field={field}
+                        name="provider-base-url"
+                        placeholder="Example: http://127.0.0.1:8080/v1"
+                        autoComplete="url"
+                        onValueChange={(value) => {
+                          setDraftSettings((current) => ({
+                            ...current,
+                            provider: { ...current.provider, baseUrl: value },
+                          }))
+                          setSaveMessage(null)
+                        }}
+                        readOnly={!selectedProviderDefinition.endpoint.editable}
+                        spellCheck={false}
                     />
                   )}
                 />
@@ -195,10 +237,21 @@ export function ProviderSettingsForm({
 
                           if (nextValue === 'auto' || nextValue === 'off') {
                             field.handleChange({ mode: nextValue })
+                            setDraftSettings((current) => ({
+                              ...current,
+                              provider: { ...current.provider, reasoning: { mode: nextValue } },
+                            }))
+                            setSaveMessage(null)
                             return
                           }
 
-                          field.handleChange({ mode: 'effort', effort: nextValue as 'minimal' | 'low' | 'medium' | 'high' | 'xhigh' })
+                          const reasoning = { mode: 'effort' as const, effort: nextValue as 'minimal' | 'low' | 'medium' | 'high' | 'xhigh' }
+                          field.handleChange(reasoning)
+                          setDraftSettings((current) => ({
+                            ...current,
+                            provider: { ...current.provider, reasoning },
+                          }))
+                          setSaveMessage(null)
                         }}
                       >
                         <option value="auto">auto</option>
@@ -218,9 +271,10 @@ export function ProviderSettingsForm({
         </section>
 
         <div className="form-row action-row-left settings-save-row">
-          <Button type="submit" variant="primary" disabled={isSaving}>
-            {isSaving ? 'Saving…' : 'Save settings'}
+          <Button type="submit" variant="primary" disabled={isSaving || !hasUnsavedChanges}>
+            {isSaving ? 'Saving…' : hasUnsavedChanges ? 'Save settings' : 'Saved'}
           </Button>
+          {hasUnsavedChanges ? <FeedbackText variant="warning">Unsaved provider changes. Save to make them active.</FeedbackText> : null}
         </div>
       </form>
 
@@ -236,4 +290,28 @@ export function ProviderSettingsForm({
       ) : null}
     </>
   )
+}
+
+function normalizeProviderSettings(settings: AppSettings): AppSettings {
+  const providerDefinition = getProviderDefinition(settings.provider.provider)
+
+  return {
+    provider: {
+      provider: settings.provider.provider,
+      model: settings.provider.model.trim(),
+      baseUrl:
+        !providerDefinition.endpoint.editable
+          ? providerDefinition.baseUrl
+          : settings.provider.baseUrl?.trim() || providerDefinition.baseUrl,
+      reasoning: settings.provider.reasoning,
+    },
+    workspace: {
+      ...settings.workspace,
+      rootPath: settings.workspace.rootPath.trim(),
+    },
+  }
+}
+
+function serializeSettings(settings: AppSettings): string {
+  return JSON.stringify(settings)
 }

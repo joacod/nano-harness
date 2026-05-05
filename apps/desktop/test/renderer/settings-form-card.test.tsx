@@ -1,12 +1,13 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen } from '@testing-library/react'
+import { cleanup, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { createDefaultProviderSettings, providerDefaultModels, type AppSettings, type ProviderStatus } from '@nano-harness/shared'
 
 import { SettingsFormCard } from '../../src/renderer/components/SettingsFormCard'
+import { createDesktopMock, renderWithQueryClient } from './test-utils'
 
 describe('SettingsFormCard', () => {
   afterEach(() => {
@@ -77,13 +78,21 @@ describe('SettingsFormCard', () => {
     await user.click(screen.getByRole('option', { name: 'OpenAI' }))
 
     expect(screen.getByText('ChatGPT Sign In')).toBeTruthy()
-    expect(screen.getByRole('button', { name: 'Sign in with ChatGPT' })).toBeTruthy()
+    expect(await screen.findByRole('button', { name: 'Reconnect ChatGPT' })).toBeTruthy()
     expect(screen.queryByText('API Key')).toBeNull()
   })
 })
 
 function renderSettingsFormCard() {
-  return render(
+  window.desktop = createDesktopMock({
+    getProviderCredentialStatus: async ({ provider }) => ({
+      apiKeyPresent: provider === 'openrouter',
+      oauthPresent: provider === 'openai',
+      authMethods: provider === 'openai' ? [{ authMethod: 'oauth', present: true }] : provider === 'openrouter' ? [{ authMethod: 'api-key', present: true }] : [],
+    }),
+  })
+
+  return renderWithQueryClient(
     <SettingsFormCard
       initialSettings={createSettings()}
       dataPath="/tmp/nano-harness.db"

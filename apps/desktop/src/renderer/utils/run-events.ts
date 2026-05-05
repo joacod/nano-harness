@@ -257,6 +257,14 @@ export function getEventFamily(eventType: RunEvent['type']) {
   return eventType.split('.')[0]
 }
 
+export function getEventTone(event: RunEvent) {
+  if (event.type === 'run.failed' || event.type === 'provider.error' || event.type === 'action.failed') {
+    return 'failed'
+  }
+
+  return getEventFamily(event.type)
+}
+
 export function getRecoverableRunAction(run: ConversationSnapshot['runs'][number], pendingApproval: ApprovalRequest | null) {
   if (run.status === 'created' || run.status === 'started') {
     return 'resume'

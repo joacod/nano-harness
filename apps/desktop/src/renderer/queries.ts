@@ -1,5 +1,7 @@
 import { queryOptions } from '@tanstack/react-query'
 
+import type { AppSettings, ConversationSnapshot, ProviderCredentialStatus } from '../../../../packages/shared/src'
+
 export const contextQueryOptions = queryOptions({
   queryKey: ['desktop-context'],
   queryFn: () => window.desktop.getContext(),
@@ -15,15 +17,25 @@ export const providerStatusQueryOptions = queryOptions({
   queryFn: () => window.desktop.getProviderStatus(),
 })
 
+type ProviderCredentialStatusQueryKey = readonly ['provider-credential-status', AppSettings['provider']['provider']]
+type ConversationQueryKey = readonly ['conversation', string]
+
+export function providerCredentialStatusQueryOptions(provider: AppSettings['provider']['provider']): ReturnType<typeof queryOptions<ProviderCredentialStatus, Error, ProviderCredentialStatus, ProviderCredentialStatusQueryKey>> {
+  return queryOptions({
+    queryKey: ['provider-credential-status', provider] as const,
+    queryFn: async (): Promise<ProviderCredentialStatus> => window.desktop.getProviderCredentialStatus({ provider }),
+  })
+}
+
 export const conversationsQueryOptions = queryOptions({
   queryKey: ['conversations'],
   queryFn: () => window.desktop.listConversations(),
 })
 
-export function conversationQueryOptions(conversationId: string) {
+export function conversationQueryOptions(conversationId: string): ReturnType<typeof queryOptions<ConversationSnapshot, Error, ConversationSnapshot, ConversationQueryKey>> {
   return queryOptions({
-    queryKey: ['conversation', conversationId],
-    queryFn: () => window.desktop.getConversation({ conversationId }),
+    queryKey: ['conversation', conversationId] as const,
+    queryFn: async (): Promise<ConversationSnapshot> => window.desktop.getConversation({ conversationId }),
   })
 }
 

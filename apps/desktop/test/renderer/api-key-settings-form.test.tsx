@@ -23,6 +23,7 @@ describe('ApiKeySettingsForm', () => {
         isClearingApiKey={false}
         isSavingApiKey={false}
         provider="openrouter"
+        credentialStatus={null}
         providerStatus={createProviderStatus({ apiKeyPresent: false })}
         onClearApiKey={vi.fn(async () => undefined)}
         onSaveApiKey={onSaveApiKey}
@@ -45,6 +46,7 @@ describe('ApiKeySettingsForm', () => {
         isClearingApiKey={false}
         isSavingApiKey={false}
         provider="openrouter"
+        credentialStatus={null}
         providerStatus={createProviderStatus()}
         onClearApiKey={vi.fn(async () => undefined)}
         onSaveApiKey={onSaveApiKey}
@@ -76,6 +78,7 @@ describe('ApiKeySettingsForm', () => {
         isClearingApiKey={false}
         isSavingApiKey={false}
         provider="openrouter"
+        credentialStatus={null}
         providerStatus={createProviderStatus()}
         onClearApiKey={onClearApiKey}
         onSaveApiKey={vi.fn(async () => undefined)}
