@@ -2,6 +2,7 @@ export const desktopBridgeChannels = {
   getContext: 'desktop:get-context',
   listConversations: 'desktop:list-conversations',
   getProviderStatus: 'desktop:get-provider-status',
+  listSkills: 'desktop:list-skills',
   getProviderCredentialStatus: 'desktop:get-provider-credential-status',
   saveProviderAuth: 'desktop:save-provider-auth',
   startProviderOauth: 'desktop:start-provider-oauth',

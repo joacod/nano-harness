@@ -48,6 +48,9 @@ type IpcRuntime = {
     createStagedImportCopy: DesktopRuntime['store']['createStagedImportCopy']
     close: DesktopRuntime['store']['close']
   }
+  skillResolver: {
+    listSkills: DesktopRuntime['skillResolver']['listSkills']
+  }
   runEngine: {
     startRun: DesktopRuntime['runEngine']['startRun']
     resumeRun: DesktopRuntime['runEngine']['resumeRun']
@@ -82,6 +85,27 @@ export function setupIpcHandlers(runtime: IpcRuntime): void {
 
   ipcMain.handle(desktopBridgeChannels.getProviderStatus, async () => {
     return await buildProviderStatus(runtime, await runtime.store.getSettings())
+  })
+
+  ipcMain.handle(desktopBridgeChannels.listSkills, async () => {
+    const settings = await runtime.store.getSettings()
+
+    if (!settings) {
+      return { skills: [] }
+    }
+
+    const skills = await runtime.skillResolver.listSkills(settings)
+    return { skills: skills.map((skill) => ({
+      id: skill.id,
+      name: skill.name,
+      description: skill.description,
+      triggers: skill.triggers,
+      tools: skill.tools,
+      safetyNotes: skill.safetyNotes,
+      source: skill.source,
+      path: skill.path,
+      enabled: skill.enabled,
+    })) }
   })
 
   ipcMain.handle(desktopBridgeChannels.getProviderCredentialStatus, async (_event, payload) => {

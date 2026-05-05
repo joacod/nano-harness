@@ -4,7 +4,7 @@ import { join } from 'node:path'
 
 import type { Provider, ProviderGenerateInput, ProviderGenerateResult } from '../../../../packages/core/src'
 import { CoreRunEngine, InMemoryEventBus, StaticPolicy } from '../../../../packages/core/src'
-import { BuiltInActionExecutor, ChatGptSubscriptionProvider, OpenAICompatibleProvider, createSqliteStore } from '../../../../packages/infra/src'
+import { BuiltInActionExecutor, ChatGptSubscriptionProvider, MarkdownSkillResolver, OpenAICompatibleProvider, createSqliteStore } from '../../../../packages/infra/src'
 import { createDefaultProviderSettings, desktopBridgeChannels, getProviderDefinition, providerStatusSchema, runEventSchema, storedProviderCredentialSchema, type AppSettings, type ProviderAdapterId, type ProviderAuthMethod } from '../../../../packages/shared/src'
 import { DesktopApprovalCoordinator } from './approval-coordinator'
 import { refreshOpenAIChatGptCredential } from './openai-chatgpt-auth'
@@ -14,6 +14,7 @@ import { decryptCredentialPayload, encryptCredentialPayload } from './secure-cre
 export type DesktopRuntime = {
   store: Awaited<ReturnType<typeof createSqliteStore>>
   runEngine: CoreRunEngine
+  skillResolver: MarkdownSkillResolver
   eventBus: InMemoryEventBus
   approvalCoordinator: DesktopApprovalCoordinator
 }
@@ -145,10 +146,12 @@ export async function createRuntime(): Promise<DesktopRuntime> {
       openai: refreshOpenAIChatGptCredential,
     },
   })
+  const skillResolver = new MarkdownSkillResolver()
   const runEngine = new CoreRunEngine({
     store,
     provider: new DesktopProviderRouter(),
     providerCredentialResolver,
+    skillResolver,
     actionExecutor: new BuiltInActionExecutor(),
     policy: new StaticPolicy(),
     eventBus,
@@ -157,6 +160,7 @@ export async function createRuntime(): Promise<DesktopRuntime> {
   const runtime: DesktopRuntime = {
     store,
     runEngine,
+    skillResolver,
     eventBus,
     approvalCoordinator,
   }

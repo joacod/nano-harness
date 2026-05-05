@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { runEventSchema } from '../events'
 import { runCreateInputSchema } from '../runs'
 import { appSettingsSchema } from '../settings'
+import type { SkillInventory } from '../skills'
 import type { ClearProviderAuthInput, ExportRunEvidenceInput, GetConversationInput, OpenExternalUrlInput, ProviderCredentialInput, ResolveApprovalInput, RunIdInput, SaveProviderAuthInput, StartProviderOauthInput } from './inputs'
 import type {
   ConversationList,
@@ -21,6 +22,7 @@ export type DesktopApi = {
   getContext(): Promise<DesktopContext>
   listConversations(): Promise<ConversationList>
   getProviderStatus(): Promise<ProviderStatus | null>
+  listSkills(): Promise<SkillInventory>
   getProviderCredentialStatus(input: ProviderCredentialInput): Promise<ProviderCredentialStatus>
   saveProviderAuth(input: SaveProviderAuthInput): Promise<void>
   startProviderOauth(input: StartProviderOauthInput): Promise<StartProviderOauthResult>

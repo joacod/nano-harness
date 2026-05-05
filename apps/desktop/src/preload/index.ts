@@ -15,6 +15,7 @@ import {
   providerCredentialInputSchema,
   providerCredentialStatusSchema,
   providerStatusSchema,
+  skillInventorySchema,
   openExternalUrlInputSchema,
   resolveApprovalInputSchema,
   runCreateInputSchema,
@@ -36,6 +37,9 @@ const desktopApi: DesktopApi = {
   },
   async getProviderStatus() {
     return providerStatusSchema.nullable().parse(await ipcRenderer.invoke(desktopBridgeChannels.getProviderStatus))
+  },
+  async listSkills() {
+    return skillInventorySchema.parse(await ipcRenderer.invoke(desktopBridgeChannels.listSkills))
   },
   async getProviderCredentialStatus(input) {
     const payload = providerCredentialInputSchema.parse(input)

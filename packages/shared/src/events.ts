@@ -5,6 +5,7 @@ import { approvalRequestSchema, approvalResolutionSchema } from './approvals'
 import { messageSchema } from './messages'
 import { providerReasoningDeltaSchema } from './reasoning'
 import { runSchema } from './runs'
+import { skillSummarySchema } from './skills'
 
 const eventBaseSchema = z.object({
   id: z.string().min(1),
@@ -40,8 +41,8 @@ export const runDryRunPreviewEventSchema = eventBaseSchema.extend({
     }),
     actions: z.array(actionDefinitionSchema.pick({ id: true, title: true, requiresApproval: true })),
     skills: z.object({
-      available: z.array(z.string()),
-      selected: z.array(z.string()),
+      available: z.array(skillSummarySchema),
+      selected: z.array(skillSummarySchema),
     }),
     mcp: z.object({
       servers: z.array(z.string()),

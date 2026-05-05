@@ -104,6 +104,16 @@ describe('setupIpcHandlers', () => {
     })
   })
 
+  it('lists skills with content omitted from IPC output', async () => {
+    const runtime = createRuntime()
+    setupIpcHandlers(runtime)
+
+    await expect(invokeHandler(desktopBridgeChannels.listSkills)).resolves.toEqual({
+      skills: [expect.objectContaining({ id: 'repo-onboarding', name: 'Repo Onboarding' })],
+    })
+    expect(runtime.skillResolver.listSkills).toHaveBeenCalled()
+  })
+
   it('delegates getConversation, startRun, cancelRun, and resolveApproval', async () => {
     const runtime = createRuntime()
     setupIpcHandlers(runtime)
@@ -272,6 +282,21 @@ function createRuntime() {
       validateDatabaseFile: vi.fn(async () => {}),
       createStagedImportCopy: vi.fn(async () => '/tmp/staged.db'),
       close: vi.fn(async () => {}),
+    },
+    skillResolver: {
+      listSkills: vi.fn(async () => [
+        {
+          id: 'repo-onboarding',
+          name: 'Repo Onboarding',
+          description: 'Survey repositories.',
+          triggers: ['repo'],
+          tools: ['grep'],
+          safetyNotes: [],
+          source: 'bundled' as const,
+          enabled: true,
+          content: 'Read first.',
+        },
+      ]),
     },
     runEngine: {
       startRun: vi.fn(async () => ({ runId: 'run-123', cancel: async () => {} })),

@@ -19,7 +19,8 @@ import { getLatestPendingApproval } from './approvals'
 import type { EventBus } from './event-bus'
 import { noopEventBus } from './event-bus'
 import type { Policy } from './policy'
-import type { Provider, ProviderActionRequest, ProviderCredentialResolver, ProviderGenerateResult } from './provider'
+import type { Provider, ProviderActionRequest, ProviderCredentialResolver, ProviderGenerateResult, SkillResolver } from './provider'
+import { EmptySkillResolver } from './provider'
 import { assertStatusTransition, isTerminalStatus } from './run-status'
 import type { ConversationSnapshot, Store } from './store'
 
@@ -27,6 +28,7 @@ export interface RunEngineDependencies {
   store: Store
   provider: Provider
   providerCredentialResolver: ProviderCredentialResolver
+  skillResolver?: SkillResolver
   actionExecutor: ActionExecutor
   policy: Policy
   eventBus?: EventBus
@@ -130,6 +132,7 @@ export class CoreRunEngine implements RunEngine {
   private readonly store: Store
   private readonly provider: Provider
   private readonly providerCredentialResolver: ProviderCredentialResolver
+  private readonly skillResolver: SkillResolver
   private readonly actionExecutor: ActionExecutor
   private readonly policy: Policy
   private readonly eventBus: EventBus
@@ -143,6 +146,7 @@ export class CoreRunEngine implements RunEngine {
     this.store = dependencies.store
     this.provider = dependencies.provider
     this.providerCredentialResolver = dependencies.providerCredentialResolver
+    this.skillResolver = dependencies.skillResolver ?? new EmptySkillResolver()
     this.actionExecutor = dependencies.actionExecutor
     this.policy = dependencies.policy
     this.eventBus = dependencies.eventBus ?? noopEventBus
@@ -200,7 +204,7 @@ export class CoreRunEngine implements RunEngine {
       runId: run.id,
       timestamp: now,
       type: 'run.dry_run_preview',
-      payload: await this.createDryRunPreview(settings),
+      payload: await this.createDryRunPreview(settings, run, [userMessage]),
     })
     await this.store.saveMessage(userMessage)
     await this.emitEvent({
@@ -442,6 +446,11 @@ export class CoreRunEngine implements RunEngine {
 
     let streamedMessage = ''
     const actions = await this.actionExecutor.listDefinitions()
+    const skills = await this.skillResolver.resolveForRun({
+      settings: input.settings,
+      run: input.run,
+      messages: input.messages,
+    })
     const providerDefinition = getProviderDefinition(input.settings.provider.provider)
     const providerAuth = await this.providerCredentialResolver.getProviderAuth({
       provider: input.settings.provider.provider,
@@ -457,6 +466,7 @@ export class CoreRunEngine implements RunEngine {
       actions,
       settings: input.settings,
       providerAuth,
+      skills,
       signal: input.signal,
       onDelta: async (delta) => {
         streamedMessage += delta
@@ -551,8 +561,9 @@ export class CoreRunEngine implements RunEngine {
     return this.transitionRun(run, 'started', { startedAt }, 'run.started', { startedAt })
   }
 
-  private async createDryRunPreview(settings: AppSettings): Promise<DryRunPreviewPayload> {
+  private async createDryRunPreview(settings: AppSettings, run: Run, messages: Message[]): Promise<DryRunPreviewPayload> {
     const actions = await this.actionExecutor.listDefinitions()
+    const skills = await this.skillResolver.resolveForRun({ settings, run, messages })
 
     return {
       provider: {
@@ -570,8 +581,18 @@ export class CoreRunEngine implements RunEngine {
         requiresApproval: action.requiresApproval,
       })),
       skills: {
-        available: [],
-        selected: [],
+        available: skills.available,
+        selected: skills.selected.map((skill) => ({
+          id: skill.id,
+          name: skill.name,
+          description: skill.description,
+          triggers: skill.triggers,
+          tools: skill.tools,
+          safetyNotes: skill.safetyNotes,
+          source: skill.source,
+          path: skill.path,
+          enabled: skill.enabled,
+        })),
       },
       mcp: {
         servers: [],

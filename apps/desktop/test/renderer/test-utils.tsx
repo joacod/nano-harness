@@ -28,6 +28,7 @@ export function createDesktopMock(overrides?: Partial<DesktopApi>): DesktopApi {
     getContext: async () => ({ platform: 'darwin', version: '0.0.1', dataPath: '/tmp/nano-harness.db' }),
     listConversations: async () => [],
     getProviderStatus: async () => null,
+    listSkills: async () => ({ skills: [] }),
     getProviderCredentialStatus: async () => ({ apiKeyPresent: false }),
     saveProviderAuth: async () => undefined,
     startProviderOauth: async (input) => ({ provider: input.provider }),
