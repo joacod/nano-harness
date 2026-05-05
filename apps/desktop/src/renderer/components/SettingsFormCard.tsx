@@ -1,6 +1,8 @@
 import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 
 import { getProviderDefinition, type AppSettings, type ProviderAuthMethod, type ProviderStatus } from '../../../../../packages/shared/src'
+import { providerCredentialStatusQueryOptions } from '../queries'
 import { ApiKeySettingsForm } from './settings/ApiKeySettingsForm'
 import { DataBackupPanel } from './settings/DataBackupPanel'
 import { OAuthSettingsForm } from './settings/OAuthSettingsForm'
@@ -63,6 +65,8 @@ export function SettingsFormCard({
   const [selectedProvider, setSelectedProvider] = useState(initialSettings.provider.provider)
   const [selectedTab, setSelectedTab] = useState<SettingsTab>('providers')
   const selectedProviderDefinition = getProviderDefinition(selectedProvider)
+  const selectedCredentialStatusQuery = useQuery(providerCredentialStatusQueryOptions(selectedProvider))
+  const selectedCredentialStatus = selectedCredentialStatusQuery.data ?? null
   const authMethods = selectedProviderDefinition.authMethods as readonly ProviderAuthMethod[]
   const authSection = authMethods.includes('api-key') ? (
     <ApiKeySettingsForm
@@ -71,6 +75,7 @@ export function SettingsFormCard({
       isSavingApiKey={isSavingApiKey}
       provider={selectedProvider}
       providerStatus={providerStatus}
+      credentialStatus={selectedCredentialStatus}
       onClearApiKey={onClearApiKey}
       onSaveApiKey={onSaveApiKey}
     />
@@ -81,6 +86,7 @@ export function SettingsFormCard({
       isStartingOauth={isStartingOauth}
       provider={selectedProvider}
       providerStatus={providerStatus}
+      credentialStatus={selectedCredentialStatus}
       onClearOauth={onClearOauth}
       onStartOauth={onStartOauth}
     />

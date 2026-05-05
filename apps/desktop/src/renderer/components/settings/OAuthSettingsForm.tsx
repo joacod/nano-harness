@@ -1,6 +1,6 @@
 import { useState } from 'react'
 
-import type { AppSettings, ProviderStatus } from '../../../../../../packages/shared/src'
+import type { AppSettings, ProviderCredentialStatus, ProviderStatus } from '../../../../../../packages/shared/src'
 import { Button, FeedbackText } from '../ui'
 
 export function OAuthSettingsForm({
@@ -8,6 +8,7 @@ export function OAuthSettingsForm({
   isClearingAuth,
   isStartingOauth,
   provider,
+  credentialStatus,
   providerStatus,
   onClearOauth,
   onStartOauth,
@@ -16,12 +17,20 @@ export function OAuthSettingsForm({
   isClearingAuth: boolean
   isStartingOauth: boolean
   provider: AppSettings['provider']['provider']
+  credentialStatus: ProviderCredentialStatus | null
   providerStatus: ProviderStatus | null
   onClearOauth: (input: { provider: AppSettings['provider']['provider'] }) => Promise<void>
   onStartOauth: (input: { provider: AppSettings['provider']['provider'] }) => Promise<{ accountId?: string }>
 }) {
   const [authMessage, setAuthMessage] = useState<string | null>(null)
-  const oauthStatus = providerStatus?.authMethods?.find((method) => method.authMethod === 'oauth')
+  const statusAuthMethod = providerStatus?.providerId === provider
+    ? providerStatus.authMethods?.find((method) => method.authMethod === 'oauth')
+    : null
+  const credentialAuthMethod = credentialStatus?.authMethods?.find((method) => method.authMethod === 'oauth')
+  const oauthStatus = {
+    present: credentialAuthMethod?.present ?? statusAuthMethod?.present ?? false,
+    accountId: credentialAuthMethod?.accountId ?? statusAuthMethod?.accountId,
+  }
   const accountId = oauthStatus?.accountId
 
   return (
@@ -37,7 +46,7 @@ export function OAuthSettingsForm({
         <dl className="summary-list">
           <div>
             <dt>Status</dt>
-            <dd>{oauthStatus?.present ? 'Connected' : 'Not connected'}</dd>
+            <dd>{oauthStatus.present ? 'Connected' : 'Not connected'}</dd>
           </div>
           {accountId ? (
             <div>
@@ -63,7 +72,7 @@ export function OAuthSettingsForm({
           </Button>
           <Button
             type="button"
-            disabled={isClearingAuth || !oauthStatus?.present}
+            disabled={isClearingAuth || !oauthStatus.present}
             onClick={() => {
               setAuthMessage(null)
               void onClearOauth({ provider }).then(() => {

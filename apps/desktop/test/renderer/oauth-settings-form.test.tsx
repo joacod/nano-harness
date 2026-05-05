@@ -23,6 +23,7 @@ describe('OAuthSettingsForm', () => {
         isClearingAuth={false}
         isStartingOauth={false}
         provider="openai"
+        credentialStatus={null}
         providerStatus={createProviderStatus({ present: false })}
         onClearOauth={vi.fn(async () => undefined)}
         onStartOauth={onStartOauth}
@@ -49,6 +50,7 @@ describe('OAuthSettingsForm', () => {
         isClearingAuth={false}
         isStartingOauth={false}
         provider="openai"
+        credentialStatus={null}
         providerStatus={createProviderStatus({ present: true, accountId: 'account-1' })}
         onClearOauth={onClearOauth}
         onStartOauth={vi.fn(async () => ({}))}
@@ -69,7 +71,7 @@ describe('OAuthSettingsForm', () => {
 
 function createProviderStatus(oauth: { present: boolean; accountId?: string }): ProviderStatus {
   return {
-    providerId: 'chatgpt-subscription',
+    providerId: 'openai',
     providerLabel: 'OpenAI',
     model: providerDefaultModels.openai,
     baseUrl: 'https://chatgpt.com/backend-api/codex',

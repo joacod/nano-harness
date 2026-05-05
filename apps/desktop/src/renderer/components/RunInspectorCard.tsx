@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 
 import type { ApprovalRequest, ConversationSnapshot, RunEvent } from '../../../../../packages/shared/src'
 import { formatTimestamp } from '../utils/formatting'
-import { describeRunEvent, getEventFamily, getRecoverableRunAction, type StreamingRunState } from '../utils/run-events'
+import { describeRunEvent, getEventTone, getRecoverableRunAction, type StreamingRunState } from '../utils/run-events'
 import { Button, Card, FeedbackText, StatusBadge } from './ui'
 
 export function RunInspectorCard({
@@ -170,7 +170,7 @@ export function RunInspectorCard({
 
               return (
                 <li key={event.id} className="timeline-item">
-                  <div className={`timeline-dot timeline-${getEventFamily(event.type)}`} />
+                  <div className={`timeline-dot timeline-${getEventTone(event)}`} />
                   <div className="timeline-card">
                     <div className="timeline-header">
                       <strong>{description.title}</strong>

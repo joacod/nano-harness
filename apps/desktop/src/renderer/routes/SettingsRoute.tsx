@@ -15,6 +15,7 @@ export function SettingsRoute() {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['settings'] })
       await queryClient.invalidateQueries({ queryKey: ['provider-status'] })
+      await queryClient.invalidateQueries({ queryKey: ['provider-credential-status'] })
     },
   })
   const saveApiKeyMutation = useMutation({
@@ -22,6 +23,7 @@ export function SettingsRoute() {
       window.desktop.saveProviderAuth({ ...input, authMethod: 'api-key' }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['provider-status'] })
+      await queryClient.invalidateQueries({ queryKey: ['provider-credential-status'] })
     },
   })
   const clearApiKeyMutation = useMutation({
@@ -29,6 +31,7 @@ export function SettingsRoute() {
       window.desktop.clearProviderAuth({ ...input, authMethod: 'api-key' }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['provider-status'] })
+      await queryClient.invalidateQueries({ queryKey: ['provider-credential-status'] })
     },
   })
   const startOauthMutation = useMutation({
@@ -36,6 +39,7 @@ export function SettingsRoute() {
       window.desktop.startProviderOauth({ ...input, authMethod: 'oauth' }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['provider-status'] })
+      await queryClient.invalidateQueries({ queryKey: ['provider-credential-status'] })
     },
   })
   const clearOauthMutation = useMutation({
@@ -43,6 +47,7 @@ export function SettingsRoute() {
       window.desktop.clearProviderAuth({ ...input, authMethod: 'oauth' }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['provider-status'] })
+      await queryClient.invalidateQueries({ queryKey: ['provider-credential-status'] })
     },
   })
   const exportDataMutation = useMutation({

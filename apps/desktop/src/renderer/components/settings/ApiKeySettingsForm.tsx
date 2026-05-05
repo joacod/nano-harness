@@ -2,7 +2,7 @@ import { useState } from 'react'
 
 import { useForm } from '@tanstack/react-form'
 
-import type { AppSettings, ProviderStatus } from '../../../../../../packages/shared/src'
+import type { AppSettings, ProviderCredentialStatus, ProviderStatus } from '../../../../../../packages/shared/src'
 import { LabeledField, TextField } from '../form-fields'
 import { Button, FeedbackText } from '../ui'
 
@@ -11,6 +11,7 @@ export function ApiKeySettingsForm({
   isClearingApiKey,
   isSavingApiKey,
   provider,
+  credentialStatus,
   providerStatus,
   onClearApiKey,
   onSaveApiKey,
@@ -19,6 +20,7 @@ export function ApiKeySettingsForm({
   isClearingApiKey: boolean
   isSavingApiKey: boolean
   provider: AppSettings['provider']['provider']
+  credentialStatus: ProviderCredentialStatus | null
   providerStatus: ProviderStatus | null
   onClearApiKey: (input: { provider: AppSettings['provider']['provider'] }) => Promise<void>
   onSaveApiKey: (input: { provider: AppSettings['provider']['provider']; apiKey: string }) => Promise<void>
@@ -26,6 +28,7 @@ export function ApiKeySettingsForm({
   const [apiKeyMessage, setApiKeyMessage] = useState<string | null>(null)
   const [apiKeyMessageVariant, setApiKeyMessageVariant] = useState<'success' | 'warning'>('success')
   const [apiKeyDraft, setApiKeyDraft] = useState('')
+  const apiKeyPresent = credentialStatus?.apiKeyPresent ?? (providerStatus?.providerId === provider ? providerStatus.apiKeyPresent : false)
   const form = useForm({
     defaultValues: {
       apiKey: '',
@@ -82,7 +85,7 @@ export function ApiKeySettingsForm({
                     <TextField
                       field={field}
                       name="api-key"
-                      placeholder={providerStatus?.apiKeyPresent ? '********' : 'Paste API key'}
+                      placeholder={apiKeyPresent ? '********' : 'Paste API key'}
                       autoComplete="off"
                       inputType="password"
                       onValueChange={(value) => {
@@ -111,7 +114,7 @@ export function ApiKeySettingsForm({
           </Button>
           <Button
             type="button"
-            disabled={isClearingApiKey || !providerStatus?.apiKeyPresent}
+            disabled={isClearingApiKey || !apiKeyPresent}
             onClick={() => {
               setApiKeyMessage(null)
               void onClearApiKey({ provider }).then(() => {

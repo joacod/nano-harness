@@ -752,11 +752,14 @@ a {
 
 .session-provider-chip::before {
   position: absolute;
+  top: 50%;
+  left: 12px;
   width: 7px;
   height: 7px;
   border-radius: 999px;
   background: var(--secondary);
   box-shadow: 0 0 12px var(--secondary);
+  transform: translateY(-50%);
   content: "";
 }
 
@@ -764,7 +767,7 @@ a {
 .session-provider-chip strong {
   min-width: 0;
   overflow: hidden;
-  padding-left: 16px;
+  padding-left: 22px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -1082,6 +1085,11 @@ a {
 .timeline-action {
   color: var(--warning);
   background: var(--warning);
+}
+
+.timeline-failed {
+  color: var(--danger);
+  background: var(--danger);
 }
 
 .timeline-approval {
