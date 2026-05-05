@@ -24,6 +24,8 @@ export function ApiKeySettingsForm({
   onSaveApiKey: (input: { provider: AppSettings['provider']['provider']; apiKey: string }) => Promise<void>
 }) {
   const [apiKeyMessage, setApiKeyMessage] = useState<string | null>(null)
+  const [apiKeyMessageVariant, setApiKeyMessageVariant] = useState<'success' | 'warning'>('success')
+  const [apiKeyDraft, setApiKeyDraft] = useState('')
   const form = useForm({
     defaultValues: {
       apiKey: '',
@@ -32,12 +34,15 @@ export function ApiKeySettingsForm({
       const apiKey = value.apiKey.trim()
 
       if (!apiKey) {
-        setApiKeyMessage(null)
+        setApiKeyMessageVariant('warning')
+        setApiKeyMessage('Paste an API key before saving.')
         return
       }
 
       await onSaveApiKey({ provider, apiKey })
       form.reset()
+      setApiKeyDraft('')
+      setApiKeyMessageVariant('success')
       setApiKeyMessage('API key saved securely on this device.')
     },
   })
@@ -62,7 +67,7 @@ export function ApiKeySettingsForm({
           <p className="eyebrow" id="provider-api-key-heading">
             API Key
           </p>
-          <p>Stored securely on this device. Not included in backups.</p>
+          <p>Saved immediately to secure device storage. Not included in backups.</p>
         </div>
 
         <div className="settings-field-grid settings-field-grid-compact">
@@ -74,14 +79,18 @@ export function ApiKeySettingsForm({
                   onChange: ({ value }) => (value.trim() ? undefined : 'API key is required.'),
                 }}
                 children={(field) => (
-                  <TextField
-                    field={field}
-                    name="api-key"
-                    placeholder={providerStatus?.apiKeyPresent ? '********' : 'Paste API key'}
-                    autoComplete="off"
-                    inputType="password"
-                    spellCheck={false}
-                  />
+                    <TextField
+                      field={field}
+                      name="api-key"
+                      placeholder={providerStatus?.apiKeyPresent ? '********' : 'Paste API key'}
+                      autoComplete="off"
+                      inputType="password"
+                      onValueChange={(value) => {
+                        setApiKeyDraft(value)
+                        setApiKeyMessage(null)
+                      }}
+                      spellCheck={false}
+                    />
                 )}
               />
             </LabeledField>
@@ -92,7 +101,7 @@ export function ApiKeySettingsForm({
           <Button
             type="button"
             variant="primary"
-            disabled={isSavingApiKey}
+            disabled={isSavingApiKey || !apiKeyDraft.trim()}
             onClick={() => {
               setApiKeyMessage(null)
               void form.handleSubmit()
@@ -115,8 +124,8 @@ export function ApiKeySettingsForm({
         </div>
       </section>
 
-      {apiKeyMessage ? (
-        <FeedbackText variant="success" live>
+          {apiKeyMessage ? (
+        <FeedbackText variant={apiKeyMessageVariant} live>
           {apiKeyMessage}
         </FeedbackText>
       ) : null}

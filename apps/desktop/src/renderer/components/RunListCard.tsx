@@ -37,9 +37,9 @@ export function RunListCard({
               key={run.id}
               type="button"
               fullWidth
-              aria-pressed={selectedRunId === run.id}
-              className={cn('run-card', selectedRunId === run.id && 'run-card-active')}
-              onClick={() => onSelectRun(run.id)}
+                aria-pressed={selectedRunId === run.id}
+                className={cn('run-card', run.status === 'failed' && 'run-card-failed', selectedRunId === run.id && 'run-card-active')}
+                onClick={() => onSelectRun(run.id)}
             >
               <div className="run-card-header">
                 <strong>{run.status}</strong>

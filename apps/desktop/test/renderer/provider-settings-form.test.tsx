@@ -81,6 +81,36 @@ describe('ProviderSettingsForm', () => {
     expect(baseUrlInput.value).toBe('https://openrouter.ai/api/v1')
   })
 
+  it('shows unsaved provider changes until settings are saved', async () => {
+    const user = userEvent.setup()
+    const onSubmit = vi.fn(async () => undefined)
+
+    const { container } = render(
+      <ProviderSettingsForm
+        initialSettings={createSettings()}
+        isSaving={false}
+        saveError={null}
+        onProviderChange={() => undefined}
+        onSubmit={onSubmit}
+      />,
+    )
+
+    expect(screen.queryByText('Unsaved provider changes. Save to make them active.')).toBeNull()
+
+    const modelInput = getRequiredElement<HTMLInputElement>(container, 'input[name="model"]')
+    await user.clear(modelInput)
+    await user.type(modelInput, 'changed/model')
+
+    expect(screen.getByText('Unsaved provider changes. Save to make them active.')).toBeTruthy()
+
+    await user.click(screen.getByRole('button', { name: 'Save settings' }))
+
+    await waitFor(() => {
+      expect(onSubmit).toHaveBeenCalled()
+    })
+    expect(screen.queryByText('Unsaved provider changes. Save to make them active.')).toBeNull()
+  })
+
   it('switches to llama.cpp defaults', async () => {
     const user = userEvent.setup()
     const onProviderChange = vi.fn()

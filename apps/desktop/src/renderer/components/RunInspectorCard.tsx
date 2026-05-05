@@ -18,6 +18,7 @@ export function RunInspectorCard({
 }) {
   const queryClient = useQueryClient()
   const recoverableAction = run ? getRecoverableRunAction(run, pendingApproval) : null
+  const latestFirstEvents = [...events].reverse()
   const runControlMutation = useMutation({
     mutationFn: async (action: 'resume' | 'cancel') => {
       if (!run) {
@@ -163,8 +164,8 @@ export function RunInspectorCard({
 
           {events.length === 0 ? <FeedbackText>No events captured for this run yet.</FeedbackText> : null}
 
-          <ol className="timeline-list">
-            {events.map((event) => {
+          <ol className="timeline-list" aria-label="Signal trace, latest first">
+            {latestFirstEvents.map((event) => {
               const description = describeRunEvent(event)
 
               return (

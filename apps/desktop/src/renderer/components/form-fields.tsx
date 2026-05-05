@@ -12,6 +12,7 @@ export function TextField({
   placeholder,
   autoComplete,
   inputType,
+  onValueChange,
   readOnly,
   spellCheck,
 }: {
@@ -29,6 +30,7 @@ export function TextField({
   placeholder: string
   autoComplete?: string
   inputType?: 'password' | 'text'
+  onValueChange?: (value: string) => void
   readOnly?: boolean
   spellCheck?: boolean
 }) {
@@ -43,7 +45,10 @@ export function TextField({
         spellCheck={spellCheck}
         value={field.state.value ?? ''}
         onBlur={field.handleBlur}
-        onChange={(event) => field.handleChange(event.target.value)}
+        onChange={(event) => {
+          field.handleChange(event.target.value)
+          onValueChange?.(event.target.value)
+        }}
         placeholder={placeholder}
         readOnly={readOnly}
       />

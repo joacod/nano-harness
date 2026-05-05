@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, screen, waitFor } from '@testing-library/react'
+import { cleanup, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
@@ -84,6 +84,26 @@ describe('RunInspectorCard', () => {
     })
   })
 
+  it('shows signal trace events latest first', () => {
+    window.desktop = createDesktopMock()
+
+    renderWithQueryClient(
+      <RunInspectorCard
+        run={createRun({ status: 'completed', startedAt: '2026-04-29T10:01:00.000Z' })}
+        events={[
+          event('run.started', { startedAt: '2026-04-29T10:01:00.000Z' }, 'event-started', '2026-04-29T10:01:00.000Z'),
+          event('provider.completed', { messageId: 'message-1' }, 'event-completed', '2026-04-29T10:03:00.000Z'),
+        ]}
+        pendingApproval={null}
+        streamingState={null}
+      />,
+    )
+
+    const items = within(screen.getByRole('list', { name: 'Signal trace, latest first' })).getAllByRole('listitem')
+    expect(items[0].textContent).toContain('Provider stream completed')
+    expect(items[1].textContent).toContain('Run started')
+  })
+
   it('surfaces mutation errors from run controls', async () => {
     const user = userEvent.setup()
     const cancelRun = vi.fn(async () => {
@@ -148,11 +168,13 @@ function createStreamingState(overrides?: Partial<StreamingRunState>): Streaming
 function event<T extends RunEvent['type']>(
   type: T,
   payload: Extract<RunEvent, { type: T }>['payload'],
+  id = `event-${type}`,
+  timestamp = '2026-04-29T10:03:00.000Z',
 ): Extract<RunEvent, { type: T }> {
   return {
-    id: `event-${type}`,
+    id,
     runId: 'run-1',
-    timestamp: '2026-04-29T10:03:00.000Z',
+    timestamp,
     type,
     payload,
   } as Extract<RunEvent, { type: T }>

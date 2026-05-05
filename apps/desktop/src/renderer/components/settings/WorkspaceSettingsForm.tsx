@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import { useForm } from '@tanstack/react-form'
 
@@ -18,6 +18,9 @@ export function WorkspaceSettingsForm({
   onSubmit: (settings: AppSettings) => Promise<void>
 }) {
   const [saveMessage, setSaveMessage] = useState<string | null>(null)
+  const [savedSettings, setSavedSettings] = useState(() => normalizeWorkspaceSettings(initialSettings))
+  const [draftSettings, setDraftSettings] = useState(() => normalizeWorkspaceSettings(initialSettings))
+  const hasUnsavedChanges = serializeSettings(savedSettings) !== serializeSettings(normalizeWorkspaceSettings(draftSettings))
   const form = useForm({
     defaultValues: initialSettings,
     onSubmit: async ({ value }) => {
@@ -35,9 +38,24 @@ export function WorkspaceSettingsForm({
       }
 
       await onSubmit(normalizedSettings)
+      setSavedSettings(normalizedSettings)
+      setDraftSettings(normalizedSettings)
       setSaveMessage('Workspace settings saved.')
     },
   })
+
+  useEffect(() => {
+    if (!hasUnsavedChanges) {
+      return undefined
+    }
+
+    function handleBeforeUnload(event: BeforeUnloadEvent) {
+      event.preventDefault()
+    }
+
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [hasUnsavedChanges])
 
   return (
     <>
@@ -67,7 +85,20 @@ export function WorkspaceSettingsForm({
                     onChange: ({ value }) => (value.trim() ? undefined : 'Workspace root is required.'),
                   }}
                   children={(field) => (
-                    <TextField field={field} name="workspace-root" placeholder="Example: /Users/name/project" autoComplete="off" spellCheck={false} />
+                    <TextField
+                      field={field}
+                      name="workspace-root"
+                      placeholder="Example: /Users/name/project"
+                      autoComplete="off"
+                      onValueChange={(value) => {
+                        setDraftSettings((current) => ({
+                          ...current,
+                          workspace: { ...current.workspace, rootPath: value },
+                        }))
+                        setSaveMessage(null)
+                      }}
+                      spellCheck={false}
+                    />
                   )}
                 />
               </LabeledField>
@@ -93,7 +124,15 @@ export function WorkspaceSettingsForm({
                     <Select
                       name="approval-policy"
                       value={field.state.value}
-                      onChange={(event) => field.handleChange(event.target.value as AppSettings['workspace']['approvalPolicy'])}
+                      onChange={(event) => {
+                        const approvalPolicy = event.target.value as AppSettings['workspace']['approvalPolicy']
+                        field.handleChange(approvalPolicy)
+                        setDraftSettings((current) => ({
+                          ...current,
+                          workspace: { ...current.workspace, approvalPolicy },
+                        }))
+                        setSaveMessage(null)
+                      }}
                     >
                       <option value="on-request">on-request</option>
                       <option value="always">always</option>
@@ -107,9 +146,10 @@ export function WorkspaceSettingsForm({
         </section>
 
         <div className="form-row action-row-left settings-save-row">
-          <Button type="submit" variant="primary" disabled={isSaving}>
-            {isSaving ? 'Saving...' : 'Save workspace settings'}
+          <Button type="submit" variant="primary" disabled={isSaving || !hasUnsavedChanges}>
+            {isSaving ? 'Saving...' : hasUnsavedChanges ? 'Save workspace settings' : 'Saved'}
           </Button>
+          {hasUnsavedChanges ? <FeedbackText variant="warning">Unsaved workspace changes. Save to make them active.</FeedbackText> : null}
         </div>
       </form>
 
@@ -125,4 +165,23 @@ export function WorkspaceSettingsForm({
       ) : null}
     </>
   )
+}
+
+function normalizeWorkspaceSettings(settings: AppSettings): AppSettings {
+  return {
+    provider: {
+      provider: settings.provider.provider,
+      model: settings.provider.model.trim(),
+      baseUrl: settings.provider.baseUrl?.trim(),
+      reasoning: settings.provider.reasoning,
+    },
+    workspace: {
+      ...settings.workspace,
+      rootPath: settings.workspace.rootPath.trim(),
+    },
+  }
+}
+
+function serializeSettings(settings: AppSettings): string {
+  return JSON.stringify(settings)
 }

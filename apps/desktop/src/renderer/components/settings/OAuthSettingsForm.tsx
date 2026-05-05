@@ -31,7 +31,7 @@ export function OAuthSettingsForm({
           <p className="eyebrow" id="provider-oauth-heading">
             ChatGPT Sign In
           </p>
-          <p>Connect your ChatGPT subscription in the browser. Tokens stay encrypted on this device and are not included in backups.</p>
+          <p>Connect in the browser and save immediately. Tokens stay encrypted on this device and are not included in backups.</p>
         </div>
 
         <dl className="summary-list">
