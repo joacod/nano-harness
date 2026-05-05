@@ -45,6 +45,10 @@ export const runIdInputSchema = z.object({
 
 export type RunIdInput = z.infer<typeof runIdInputSchema>
 
+export const exportRunEvidenceInputSchema = runIdInputSchema
+
+export type ExportRunEvidenceInput = z.infer<typeof exportRunEvidenceInputSchema>
+
 export const getConversationInputSchema = z.object({
   conversationId: z.string().min(1),
 })

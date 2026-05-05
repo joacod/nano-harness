@@ -33,6 +33,7 @@ export function createDesktopMock(overrides?: Partial<DesktopApi>): DesktopApi {
     startProviderOauth: async (input) => ({ provider: input.provider }),
     clearProviderAuth: async () => undefined,
     exportData: async () => ({ exportedFilePath: null }),
+    exportRunEvidence: async () => ({ exportedFilePath: '/tmp/run-evidence.json', changedFiles: [], validationOutputs: 0 }),
     importData: async () => ({ imported: false }),
     getSettings: async () => null,
     saveSettings: async (settings: AppSettings) => settings,

@@ -4,6 +4,7 @@ import {
   appSettingsSchema,
   desktopBridgeChannels,
   desktopContextSchema,
+  exportRunEvidenceInputSchema,
   getConversationInputSchema,
   getProviderDefinition,
   openExternalUrlInputSchema,
@@ -22,6 +23,7 @@ import { exportData, importData } from './data-transfer'
 import { startOpenAIChatGptOAuth } from './openai-chatgpt-auth'
 import type { DesktopRuntime } from './runtime'
 import { buildProviderStatus } from './runtime'
+import { exportRunEvidence } from './run-evidence-export'
 import { encryptCredentialPayload } from './secure-credentials'
 
 type IpcRuntime = {
@@ -39,6 +41,7 @@ type IpcRuntime = {
     getSettings: DesktopRuntime['store']['getSettings']
     saveSettings: DesktopRuntime['store']['saveSettings']
     getConversation: DesktopRuntime['store']['getConversation']
+    getRun: DesktopRuntime['store']['getRun']
     backupToFile: DesktopRuntime['store']['backupToFile']
     sanitizeDatabaseFile: DesktopRuntime['store']['sanitizeDatabaseFile']
     validateDatabaseFile: DesktopRuntime['store']['validateDatabaseFile']
@@ -137,6 +140,11 @@ export function setupIpcHandlers(runtime: IpcRuntime): void {
 
   ipcMain.handle(desktopBridgeChannels.importData, async () => {
     return await importData(runtime)
+  })
+
+  ipcMain.handle(desktopBridgeChannels.exportRunEvidence, async (_event, payload) => {
+    const input = exportRunEvidenceInputSchema.parse(payload)
+    return await exportRunEvidence(runtime, input.runId)
   })
 
   ipcMain.handle(desktopBridgeChannels.getSettings, async () => {

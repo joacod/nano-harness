@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-import { actionCallSchema, actionResultSchema } from './actions'
+import { actionCallSchema, actionDefinitionSchema, actionResultSchema } from './actions'
 import { approvalRequestSchema, approvalResolutionSchema } from './approvals'
 import { messageSchema } from './messages'
 import { providerReasoningDeltaSchema } from './reasoning'
@@ -23,6 +23,31 @@ export const runStartedEventSchema = eventBaseSchema.extend({
   type: z.literal('run.started'),
   payload: z.object({
     startedAt: z.string().datetime(),
+  }),
+})
+
+export const runDryRunPreviewEventSchema = eventBaseSchema.extend({
+  type: z.literal('run.dry_run_preview'),
+  payload: z.object({
+    provider: z.object({
+      provider: z.string().min(1),
+      model: z.string().min(1),
+      baseUrl: z.string().min(1).optional(),
+    }),
+    workspace: z.object({
+      rootPath: z.string().min(1),
+      approvalPolicy: z.string().min(1),
+    }),
+    actions: z.array(actionDefinitionSchema.pick({ id: true, title: true, requiresApproval: true })),
+    skills: z.object({
+      available: z.array(z.string()),
+      selected: z.array(z.string()),
+    }),
+    mcp: z.object({
+      servers: z.array(z.string()),
+      tools: z.array(z.string()),
+      resources: z.array(z.string()),
+    }),
   }),
 })
 
@@ -153,6 +178,7 @@ export const messageCreatedEventSchema = eventBaseSchema.extend({
 export const runEventSchema = z.discriminatedUnion('type', [
   runCreatedEventSchema,
   runStartedEventSchema,
+  runDryRunPreviewEventSchema,
   runWaitingApprovalEventSchema,
   runCompletedEventSchema,
   runFailedEventSchema,

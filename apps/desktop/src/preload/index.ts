@@ -8,6 +8,8 @@ import {
   desktopBridgeChannels,
   desktopContextSchema,
   exportDataResultSchema,
+  exportRunEvidenceInputSchema,
+  exportRunEvidenceResultSchema,
   getConversationInputSchema,
   importDataResultSchema,
   providerCredentialInputSchema,
@@ -57,6 +59,10 @@ const desktopApi: DesktopApi = {
   },
   async exportData() {
     return exportDataResultSchema.parse(await ipcRenderer.invoke(desktopBridgeChannels.exportData))
+  },
+  async exportRunEvidence(input) {
+    const payload = exportRunEvidenceInputSchema.parse(input)
+    return exportRunEvidenceResultSchema.parse(await ipcRenderer.invoke(desktopBridgeChannels.exportRunEvidence, payload))
   },
   async importData() {
     return importDataResultSchema.parse(await ipcRenderer.invoke(desktopBridgeChannels.importData))

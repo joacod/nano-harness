@@ -78,6 +78,8 @@ type ExecuteActionRequestsOutput = {
   stopped: boolean
 }
 
+type DryRunPreviewPayload = Extract<RunEvent, { type: 'run.dry_run_preview' }>['payload']
+
 class RunAbortError extends Error {
   constructor() {
     super('Run cancelled')
@@ -192,6 +194,13 @@ export class CoreRunEngine implements RunEngine {
       timestamp: now,
       type: 'run.created',
       payload: { run },
+    })
+    await this.emitEvent({
+      id: this.createId(),
+      runId: run.id,
+      timestamp: now,
+      type: 'run.dry_run_preview',
+      payload: await this.createDryRunPreview(settings),
     })
     await this.store.saveMessage(userMessage)
     await this.emitEvent({
@@ -542,6 +551,36 @@ export class CoreRunEngine implements RunEngine {
     return this.transitionRun(run, 'started', { startedAt }, 'run.started', { startedAt })
   }
 
+  private async createDryRunPreview(settings: AppSettings): Promise<DryRunPreviewPayload> {
+    const actions = await this.actionExecutor.listDefinitions()
+
+    return {
+      provider: {
+        provider: settings.provider.provider,
+        model: settings.provider.model,
+        baseUrl: settings.provider.baseUrl ?? getProviderDefinition(settings.provider.provider).baseUrl,
+      },
+      workspace: {
+        rootPath: settings.workspace.rootPath,
+        approvalPolicy: settings.workspace.approvalPolicy,
+      },
+      actions: actions.map((action) => ({
+        id: action.id,
+        title: action.title,
+        requiresApproval: action.requiresApproval,
+      })),
+      skills: {
+        available: [],
+        selected: [],
+      },
+      mcp: {
+        servers: [],
+        tools: [],
+        resources: [],
+      },
+    }
+  }
+
   private async completeRun(run: Run): Promise<void> {
     const finishedAt = this.now()
     await this.transitionRun(run, 'completed', { finishedAt }, 'run.completed', { finishedAt })
@@ -814,10 +853,7 @@ export class CoreRunEngine implements RunEngine {
   }
 
   private async emitEvent(event: RunEvent): Promise<void> {
-    if (event.type !== 'provider.delta' && event.type !== 'provider.reasoning_delta') {
-      await this.store.appendEvent(event)
-    }
-
+    await this.store.appendEvent(event)
     await this.eventBus.publish(event)
   }
 

@@ -8,6 +8,7 @@ export const desktopBridgeChannels = {
   clearProviderAuth: 'desktop:clear-provider-auth',
   exportData: 'desktop:export-data',
   importData: 'desktop:import-data',
+  exportRunEvidence: 'desktop:export-run-evidence',
   getSettings: 'desktop:get-settings',
   saveSettings: 'desktop:save-settings',
   getConversation: 'desktop:get-conversation',

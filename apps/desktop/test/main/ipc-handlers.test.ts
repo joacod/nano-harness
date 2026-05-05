@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { createDefaultProviderSettings, providerDefaultModels, type AppSettings, type ConversationSnapshot } from '@nano-harness/shared'
 
-const { handlers, handle, openExternal, exportData, importData, buildProviderStatus, encryptCredentialPayload, startOpenAIChatGptOAuth } = vi.hoisted(() => {
+const { handlers, handle, openExternal, exportData, importData, exportRunEvidence, buildProviderStatus, encryptCredentialPayload, startOpenAIChatGptOAuth } = vi.hoisted(() => {
   const handlers = new Map<string, (_event: unknown, payload?: unknown) => Promise<unknown>>()
 
   return {
@@ -13,6 +13,7 @@ const { handlers, handle, openExternal, exportData, importData, buildProviderSta
     openExternal: vi.fn(async () => {}),
     exportData: vi.fn(async () => ({ exportedFilePath: '/tmp/export.db' })),
     importData: vi.fn(async () => ({ imported: true, backupFilePath: '/tmp/backup.db' })),
+    exportRunEvidence: vi.fn(async () => ({ exportedFilePath: '/tmp/run-evidence.json', changedFiles: [], validationOutputs: 0 })),
     buildProviderStatus: vi.fn(async () => ({
       providerId: 'openai-compatible',
       providerLabel: 'OpenRouter',
@@ -48,6 +49,7 @@ vi.mock('electron', () => ({
 }))
 
 vi.mock('../../src/main/data-transfer', () => ({ exportData, importData }))
+vi.mock('../../src/main/run-evidence-export', () => ({ exportRunEvidence }))
 vi.mock('../../src/main/openai-chatgpt-auth', () => ({ startOpenAIChatGptOAuth }))
 vi.mock('../../src/main/runtime', async () => {
   const actual = await vi.importActual<typeof import('../../src/main/runtime')>('../../src/main/runtime')
@@ -68,6 +70,7 @@ describe('setupIpcHandlers', () => {
     openExternal.mockClear()
     exportData.mockClear()
     importData.mockClear()
+    exportRunEvidence.mockClear()
     buildProviderStatus.mockClear()
     encryptCredentialPayload.mockClear()
     startOpenAIChatGptOAuth.mockClear()
@@ -132,6 +135,18 @@ describe('setupIpcHandlers', () => {
       approvalRequestId: 'approval-1',
       decision: 'granted',
     })
+  })
+
+  it('exports run evidence through the dedicated handler', async () => {
+    const runtime = createRuntime()
+    setupIpcHandlers(runtime)
+
+    await expect(invokeHandler(desktopBridgeChannels.exportRunEvidence, { runId: 'run-123' })).resolves.toEqual({
+      exportedFilePath: '/tmp/run-evidence.json',
+      changedFiles: [],
+      validationOutputs: 0,
+    })
+    expect(exportRunEvidence).toHaveBeenCalledWith(runtime, 'run-123')
   })
 
   it('encrypts trimmed provider api keys before saving', async () => {
@@ -251,6 +266,7 @@ function createRuntime() {
       getSettings: vi.fn(async () => settings),
       saveSettings: vi.fn(async () => {}),
       getConversation: vi.fn(async () => snapshot),
+      getRun: vi.fn(async () => null),
       backupToFile: vi.fn(async () => {}),
       sanitizeDatabaseFile: vi.fn(async () => {}),
       validateDatabaseFile: vi.fn(async () => {}),

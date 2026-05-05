@@ -37,6 +37,8 @@ function getActivityPhase(event: RunEvent): StreamingRunState['phase'] | null {
   switch (event.type) {
     case 'run.started':
       return 'started'
+    case 'run.dry_run_preview':
+      return 'queued'
     case 'provider.requested':
       return 'contacting_provider'
     case 'action.requested':
@@ -203,6 +205,11 @@ export function describeRunEvent(event: RunEvent) {
       return { title: 'Run created', detail: `Conversation ${event.payload.run.conversationId}` }
     case 'run.started':
       return { title: 'Run started', detail: `Execution began at ${formatTimestamp(event.payload.startedAt)}` }
+    case 'run.dry_run_preview':
+      return {
+        title: 'Dry-run preview captured',
+        detail: `${event.payload.provider.provider} · ${event.payload.provider.model} · ${event.payload.actions.length} actions available`,
+      }
     case 'run.waiting_approval':
       return { title: 'Waiting for approval', detail: `Approval request ${event.payload.approvalRequestId}` }
     case 'run.completed':

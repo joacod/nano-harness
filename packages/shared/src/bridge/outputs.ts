@@ -88,6 +88,14 @@ export const exportDataResultSchema = z.object({
 
 export type ExportDataResult = z.infer<typeof exportDataResultSchema>
 
+export const exportRunEvidenceResultSchema = z.object({
+  exportedFilePath: z.string().min(1),
+  changedFiles: z.array(z.string()),
+  validationOutputs: z.number().int().nonnegative(),
+})
+
+export type ExportRunEvidenceResult = z.infer<typeof exportRunEvidenceResultSchema>
+
 export const importDataResultSchema = z.object({
   imported: z.boolean(),
   backupFilePath: z.string().min(1).optional(),
