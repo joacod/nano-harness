@@ -183,6 +183,36 @@ describe('core helpers and policy', () => {
     })
   })
 
+  it('denies commands that are not on the local execution allow-list', async () => {
+    const policy = new StaticPolicy()
+    const commandAction = createActionDefinition({ id: 'run_command', title: 'Run Command' })
+
+    await expect(
+      policy.evaluateAction({
+        run: {
+          id: 'run-1',
+          conversationId: 'conversation-1',
+          status: 'started',
+          role: 'build',
+          createdAt: '2026-04-29T10:00:00.000Z',
+        },
+        action: commandAction,
+        actionCall: {
+          id: 'call-1',
+          runId: 'run-1',
+          actionId: 'run_command',
+          input: { command: 'python', args: ['script.py'] },
+          requestedAt: '2026-04-29T10:00:00.000Z',
+        },
+        settings: testSettings,
+      }),
+    ).resolves.toMatchObject({
+      effect: 'deny',
+      matchedRule: 'commands.deny_unlisted',
+      preview: { classification: 'denied' },
+    })
+  })
+
   it('returns the latest unresolved approval with its requested action', () => {
     const snapshot: ConversationSnapshot = {
       conversation: null,

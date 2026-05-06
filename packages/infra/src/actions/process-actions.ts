@@ -1,7 +1,7 @@
 import { spawn } from 'node:child_process'
 import path from 'node:path'
 
-import { normalizeWorkspaceRelativePath } from '@nano-harness/core'
+import { assertAllowedLocalCommand, normalizeWorkspaceRelativePath } from '@nano-harness/core'
 
 import { createActionResult, type BuiltInActionCommand } from './types'
 import { resolveWorkspacePath } from './workspace'
@@ -24,14 +24,6 @@ function parseRunCommandInput(value: Record<string, unknown>): { command: string
   }
 
   return { command: value.command, args, cwd, timeoutMs }
-}
-
-const allowedCommands = new Set(['pnpm', 'npm', 'node', 'git', 'tsc', 'vitest', 'ls', 'pwd'])
-
-function ensureAllowedCommand(command: string): void {
-  if (command.includes('/') || command.includes('\\') || !allowedCommands.has(command)) {
-    throw new Error(`Command ${command} is not in the allow-list`)
-  }
 }
 
 async function runProcess(input: {
@@ -95,7 +87,7 @@ export const processActionCommands: BuiltInActionCommand[] = [
     },
     async execute(input) {
       const parsedInput = parseRunCommandInput(input.call.input)
-      ensureAllowedCommand(parsedInput.command)
+      assertAllowedLocalCommand(parsedInput.command)
       const workspaceCwd = normalizeWorkspaceRelativePath(parsedInput.cwd)
       const cwd = resolveWorkspacePath(input.settings.workspace.rootPath, parsedInput.cwd)
       const result = await runProcess({ ...parsedInput, cwd, signal: input.signal })
