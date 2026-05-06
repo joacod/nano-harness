@@ -157,6 +157,8 @@ function filterActionsForRole(actions: ActionDefinition[], role: Run['role']): A
     'read_mcp_resource',
     'list_harness_components',
     'compare_benchmark_results',
+    'create_spec_artifact',
+    'create_draft_pr_artifact',
   ])
   const allowedReviewActions = new Set([
     'list_directory',
@@ -171,6 +173,8 @@ function filterActionsForRole(actions: ActionDefinition[], role: Run['role']): A
     'read_mcp_resource',
     'list_harness_components',
     'compare_benchmark_results',
+    'create_spec_artifact',
+    'create_draft_pr_artifact',
   ])
   const allowedActions = role === 'plan' ? allowedPlanActions : allowedReviewActions
 

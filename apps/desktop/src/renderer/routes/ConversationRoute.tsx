@@ -9,7 +9,7 @@ import { SessionTelemetry } from '../components/SessionTelemetry'
 import { Card, FeedbackText } from '../components/ui'
 import { conversationQueryOptions } from '../queries'
 import { useRuntimeUi, useTechnicalUi } from '../runtime-ui'
-import { getPendingApproval, mergeRunEvents } from '../utils/run-events'
+import { getLatestConversationPendingApproval, getPendingApproval, mergeRunEvents } from '../utils/run-events'
 
 export function ConversationRoute() {
   const { conversationId } = useParams({ from: '/conversations/$conversationId' })
@@ -100,6 +100,9 @@ export function ConversationRoute() {
   const pendingApproval = useMemo(() => {
     return getPendingApproval(snapshotQuery.data, selectedRunId, selectedRunEvents)
   }, [selectedRunEvents, selectedRunId, snapshotQuery.data])
+  const chatPendingApproval = useMemo(() => {
+    return getLatestConversationPendingApproval(snapshotQuery.data, liveRunEvents)
+  }, [liveRunEvents, snapshotQuery.data])
   const forkSessionMutation = useMutation({
     mutationFn: async () => window.desktop.forkSession({ sessionId: conversationId }),
     onSuccess: async (result) => {
@@ -166,7 +169,12 @@ export function ConversationRoute() {
         <>
           {snapshotQuery.isLoading ? <FeedbackText>Loading messages…</FeedbackText> : null}
           {!snapshotQuery.isLoading && snapshotQuery.data ? (
-            <ChatTranscript snapshot={snapshotQuery.data} streamingEntry={streamingEntry ?? null} endRef={transcriptEndRef} />
+            <ChatTranscript
+              snapshot={snapshotQuery.data}
+              streamingEntry={streamingEntry ?? null}
+              endRef={transcriptEndRef}
+              pendingApproval={chatPendingApproval}
+            />
           ) : null}
         </>
       )}

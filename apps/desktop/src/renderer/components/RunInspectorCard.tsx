@@ -46,24 +46,6 @@ export function RunInspectorCard({
       return await window.desktop.exportRunEvidence({ runId: run.id })
     },
   })
-  const approvalMutation = useMutation({
-    mutationFn: async (decision: 'granted' | 'rejected') => {
-      if (!run || !pendingApproval) {
-        throw new Error('No pending approval is available')
-      }
-
-      await window.desktop.resolveApproval({
-        runId: run.id,
-        approvalRequestId: pendingApproval.id,
-        decision,
-      })
-    },
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['conversation'] })
-      await queryClient.invalidateQueries({ queryKey: ['conversations'] })
-    },
-  })
-
   return (
     <Card className="inspector-card">
       <p className="eyebrow">Inspector</p>
@@ -153,42 +135,6 @@ export function RunInspectorCard({
             <FeedbackText variant="error" live>
               {runControlMutation.error.message}
             </FeedbackText>
-          ) : null}
-
-          {pendingApproval ? (
-            <section className="approval-card">
-              <div className="sidebar-header-row">
-                <div>
-                  <p className="eyebrow">Approval</p>
-                  <h3>Action requires confirmation</h3>
-                </div>
-                <StatusBadge status="waiting_approval">pending</StatusBadge>
-              </div>
-              <FeedbackText>{pendingApproval.reason}</FeedbackText>
-              <small className="muted-copy">Requested at {formatTimestamp(pendingApproval.requestedAt)}</small>
-              <div className="approval-actions">
-                <Button
-                  type="button"
-                  disabled={approvalMutation.isPending}
-                  onClick={() => approvalMutation.mutate('rejected')}
-                >
-                  Reject
-                </Button>
-                <Button
-                  type="button"
-                  variant="primary"
-                  disabled={approvalMutation.isPending}
-                  onClick={() => approvalMutation.mutate('granted')}
-                >
-                  {approvalMutation.isPending ? 'Submitting…' : 'Grant approval'}
-                </Button>
-              </div>
-              {approvalMutation.error instanceof Error ? (
-                <FeedbackText variant="error" live>
-                  {approvalMutation.error.message}
-                </FeedbackText>
-              ) : null}
-            </section>
           ) : null}
 
           {events.length === 0 ? <FeedbackText>No events captured for this run yet.</FeedbackText> : null}

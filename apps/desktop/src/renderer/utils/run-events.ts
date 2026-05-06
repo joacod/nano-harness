@@ -280,7 +280,12 @@ export function getEventFamily(eventType: RunEvent['type']) {
 }
 
 export function getEventTone(event: RunEvent) {
-  if (event.type === 'run.failed' || event.type === 'provider.error' || event.type === 'action.failed' || event.type === 'hook.error' || event.type === 'hook.denied') {
+  if (event.type === 'run.failed'
+    || event.type === 'provider.error'
+    || event.type === 'action.failed'
+    || event.type === 'hook.error'
+    || event.type === 'hook.denied'
+    || event.type === 'approval.rejected') {
     return 'failed'
   }
 
@@ -322,6 +327,33 @@ export function getPendingApproval(snapshot: ConversationSnapshot | undefined, r
   }
 
   return null
+}
+
+export function getLatestConversationPendingApproval(
+  snapshot: ConversationSnapshot | undefined,
+  liveEventsByRun: Record<string, RunEvent[]> = {},
+): ApprovalRequest | null {
+  if (!snapshot) {
+    return null
+  }
+
+  const resolvedRequestIds = new Set(snapshot.approvalResolutions.map((resolution) => resolution.approvalRequestId))
+  const persistedRequest = [...snapshot.approvalRequests]
+    .reverse()
+    .find((request) => !resolvedRequestIds.has(request.id))
+
+  if (persistedRequest) {
+    return persistedRequest
+  }
+
+  const liveApprovalRequests = Object.values(liveEventsByRun)
+    .flat()
+    .filter((event): event is Extract<RunEvent, { type: 'approval.required' }> => event.type === 'approval.required')
+    .map((event) => event.payload.approvalRequest)
+    .filter((request) => !resolvedRequestIds.has(request.id))
+    .sort((left, right) => left.requestedAt.localeCompare(right.requestedAt))
+
+  return liveApprovalRequests.at(-1) ?? null
 }
 
 export function getProviderRequestForRun(events: RunEvent[], runId: string) {
