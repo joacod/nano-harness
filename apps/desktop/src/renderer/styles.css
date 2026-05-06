@@ -723,6 +723,15 @@ a {
   justify-content: space-between;
   gap: 16px;
   min-width: 0;
+  margin-bottom: 12px;
+}
+
+.session-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(67, 231, 255, 0.1);
 }
 
 .conversation-hero-title {

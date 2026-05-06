@@ -284,18 +284,29 @@ export function getRecoverableRunAction(run: ConversationSnapshot['runs'][number
   return null
 }
 
-export function getPendingApproval(snapshot: ConversationSnapshot | undefined, runId: string | null): ApprovalRequest | null {
+export function getPendingApproval(snapshot: ConversationSnapshot | undefined, runId: string | null, events: RunEvent[] = []): ApprovalRequest | null {
   if (!snapshot || !runId) {
     return null
   }
 
   const resolvedRequestIds = new Set(snapshot.approvalResolutions.map((resolution) => resolution.approvalRequestId))
+  const persistedRequest = [...snapshot.approvalRequests]
+    .reverse()
+    .find((request) => request.runId === runId && !resolvedRequestIds.has(request.id))
 
-  return (
-    [...snapshot.approvalRequests]
-      .reverse()
-      .find((request) => request.runId === runId && !resolvedRequestIds.has(request.id)) ?? null
-  )
+  if (persistedRequest) {
+    return persistedRequest
+  }
+
+  for (const event of [...events].reverse()) {
+    if (event.type === 'approval.required'
+      && event.payload.approvalRequest.runId === runId
+      && !resolvedRequestIds.has(event.payload.approvalRequest.id)) {
+      return event.payload.approvalRequest
+    }
+  }
+
+  return null
 }
 
 export function getProviderRequestForRun(events: RunEvent[], runId: string) {

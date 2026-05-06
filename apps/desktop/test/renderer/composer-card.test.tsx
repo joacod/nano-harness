@@ -76,6 +76,7 @@ describe('ComposerCard', () => {
 
     await waitFor(() => {
       expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['conversations'] })
+      expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['sessions'] })
       expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['conversation', 'conversation-uuid-123'] })
       expect(navigateMock).toHaveBeenCalledWith({
         to: '/conversations/$conversationId',

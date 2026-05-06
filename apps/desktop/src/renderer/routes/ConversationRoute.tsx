@@ -98,8 +98,8 @@ export function ConversationRoute() {
   }, [liveRunEvents, selectedRunId, snapshotQuery.data?.events])
 
   const pendingApproval = useMemo(() => {
-    return getPendingApproval(snapshotQuery.data, selectedRunId)
-  }, [selectedRunId, snapshotQuery.data])
+    return getPendingApproval(snapshotQuery.data, selectedRunId, selectedRunEvents)
+  }, [selectedRunEvents, selectedRunId, snapshotQuery.data])
   const forkSessionMutation = useMutation({
     mutationFn: async () => window.desktop.forkSession({ sessionId: conversationId }),
     onSuccess: async (result) => {

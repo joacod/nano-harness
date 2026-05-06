@@ -57,10 +57,10 @@ export function SessionLayout({
               </div>
             ) : null}
           </div>
-          <div className="run-controls">
-            <Button type="button" disabled={isSessionActionPending || !onForkSession} onClick={onForkSession}>Fork</Button>
-            <Button type="button" disabled={isSessionActionPending || !onCloneSession} onClick={onCloneSession}>Clone</Button>
-            <Button type="button" disabled={isSessionActionPending || !onExportSession} onClick={onExportSession}>Export session</Button>
+          <div className="session-actions">
+            <Button type="button" size="sm" disabled={isSessionActionPending || !onForkSession} onClick={onForkSession}>Fork</Button>
+            <Button type="button" size="sm" disabled={isSessionActionPending || !onCloneSession} onClick={onCloneSession}>Clone</Button>
+            <Button type="button" size="sm" disabled={isSessionActionPending || !onExportSession} onClick={onExportSession}>Export session</Button>
           </div>
           {sessionExportPath ? <FeedbackText live>Exported session to {sessionExportPath}</FeedbackText> : null}
           {sessionActionError ? <FeedbackText variant="error" live>{sessionActionError}</FeedbackText> : null}

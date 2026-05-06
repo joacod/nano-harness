@@ -30,6 +30,7 @@ export function ComposerCard({ conversationId }: { conversationId: string | null
     onSuccess: async ({ conversationId: nextConversationId }) => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['conversations'] }),
+        queryClient.invalidateQueries({ queryKey: ['sessions'] }),
         queryClient.invalidateQueries({ queryKey: ['conversation', nextConversationId] }),
       ])
 
