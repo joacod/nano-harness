@@ -121,11 +121,6 @@ export function RunInspectorCard({
             </FeedbackText>
           ) : null}
 
-          {run.failureMessage ? (
-            <FeedbackText variant="error" live>
-              {run.failureMessage}
-            </FeedbackText>
-          ) : null}
           {!run.failureMessage && streamingState?.errorMessage ? (
             <FeedbackText variant="error" live>
               {streamingState.errorMessage}

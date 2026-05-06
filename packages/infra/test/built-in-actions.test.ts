@@ -85,6 +85,28 @@ describe('BuiltInActionExecutor', () => {
     })
   })
 
+  it('accepts backslash-separated relative tool paths and returns slash-normalized paths', async () => {
+    const rootPath = await createWorkspace()
+    await mkdir(path.join(rootPath, 'src'))
+    await writeFile(path.join(rootPath, 'src', 'notes.txt'), 'hello from nested notes', 'utf8')
+
+    const result = await createExecutor().execute(
+      createExecutionInput({
+        actionId: 'read_file',
+        settings: { ...workspaceSettings, workspace: { ...workspaceSettings.workspace, rootPath } },
+        input: { path: 'src\\notes.txt' },
+      }),
+    )
+
+    expect(result).toMatchObject({
+      status: 'completed',
+      output: {
+        path: 'src/notes.txt',
+        content: 'hello from nested notes',
+      },
+    })
+  })
+
   it('reads a bounded line range with line numbers', async () => {
     const rootPath = await createWorkspace()
     await writeFile(path.join(rootPath, 'notes.txt'), 'one\ntwo\nthree\nfour', 'utf8')
@@ -189,6 +211,23 @@ describe('BuiltInActionExecutor', () => {
     expect(result).toMatchObject({
       status: 'failed',
       errorMessage: 'Path ../outside.txt is outside the configured workspace root',
+    })
+  })
+
+  it('rejects Windows drive-absolute paths instead of resolving them under the workspace', async () => {
+    const rootPath = await createWorkspace()
+
+    const result = await createExecutor().execute(
+      createExecutionInput({
+        actionId: 'read_file',
+        settings: { ...workspaceSettings, workspace: { ...workspaceSettings.workspace, rootPath } },
+        input: { path: 'C:\\Users\\someone\\secret.txt' },
+      }),
+    )
+
+    expect(result).toMatchObject({
+      status: 'failed',
+      errorMessage: 'Path C:\\Users\\someone\\secret.txt is outside the configured workspace root',
     })
   })
 

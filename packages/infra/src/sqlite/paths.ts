@@ -1,4 +1,5 @@
 import path from 'node:path'
+import { pathToFileURL } from 'node:url'
 
 const DEFAULT_DATA_DIR_NAME = '.nano-harness'
 const DEFAULT_DATABASE_FILE_NAME = 'nano-harness.db'
@@ -16,7 +17,7 @@ export interface SqliteStorePaths {
 }
 
 export function toFileDatabaseUrl(databaseFilePath: string): string {
-  return `file:${databaseFilePath}`
+  return pathToFileURL(databaseFilePath).toString()
 }
 
 export function resolveSqliteStorePaths(options: SqliteStoreOptions = {}): SqliteStorePaths {

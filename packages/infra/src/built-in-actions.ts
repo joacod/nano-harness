@@ -2,7 +2,7 @@ import { spawn } from 'node:child_process'
 import { mkdir, readdir, readFile, stat, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 
-import type { ActionExecutionInput, ActionExecutor } from '@nano-harness/core'
+import { isWorkspaceRelativePathInsideRoot, normalizeWorkspaceRelativePath, toWorkspaceDisplayPath, type ActionExecutionInput, type ActionExecutor } from '@nano-harness/core'
 import { benchmarkRunSummarySchema, draftPrArtifactSchema, harnessChangeManifestSchema, harnessComponentRegistry, implementationSpecSchema, specEvidencePacketSchema } from '@nano-harness/shared'
 import type { ActionDefinition, ActionResult } from '@nano-harness/shared'
 
@@ -450,8 +450,13 @@ const actionDefinitions: Record<string, ActionDefinition> = {
 } satisfies Record<string, ActionDefinition>
 
 function resolveWorkspacePath(rootPath: string, targetPath: string): string {
+  if (!isWorkspaceRelativePathInsideRoot(targetPath)) {
+    throw new Error(`Path ${targetPath} is outside the configured workspace root`)
+  }
+
   const absoluteRoot = path.resolve(rootPath)
-  const absoluteTarget = path.resolve(absoluteRoot, targetPath)
+  const workspacePath = normalizeWorkspaceRelativePath(targetPath)
+  const absoluteTarget = path.resolve(absoluteRoot, workspacePath)
   const relativeTarget = path.relative(absoluteRoot, absoluteTarget)
 
   if (relativeTarget === '..' || relativeTarget.startsWith(`..${path.sep}`) || path.isAbsolute(relativeTarget)) {
@@ -462,7 +467,7 @@ function resolveWorkspacePath(rootPath: string, targetPath: string): string {
 }
 
 function toPosixPath(value: string): string {
-  return value.split(path.sep).join('/')
+  return toWorkspaceDisplayPath(value.split(path.sep).join('/'))
 }
 
 function escapeRegExp(value: string): string {
@@ -610,6 +615,7 @@ export class BuiltInActionExecutor implements ActionExecutor {
       switch (input.action.id) {
         case 'list_directory': {
           const parsedInput = parseListDirectoryInput(input.call.input)
+          const workspacePath = normalizeWorkspaceRelativePath(parsedInput.path)
           const resolvedPath = resolveWorkspacePath(input.settings.workspace.rootPath, parsedInput.path)
           const entries = await readdir(resolvedPath, { withFileTypes: true })
 
@@ -617,12 +623,12 @@ export class BuiltInActionExecutor implements ActionExecutor {
             actionCallId: input.call.id,
             status: 'completed',
             output: {
-              path: parsedInput.path,
+              path: workspacePath,
               entries: entries
                 .map((entry) => ({
                   name: entry.name,
                   type: entry.isDirectory() ? 'directory' : entry.isFile() ? 'file' : 'other',
-                  path: path.posix.join(parsedInput.path === '.' ? '' : parsedInput.path, entry.name),
+                  path: path.posix.join(workspacePath === '.' ? '' : workspacePath, entry.name),
                 }))
                 .sort((left, right) => left.type.localeCompare(right.type) || left.name.localeCompare(right.name)),
             },
@@ -630,6 +636,7 @@ export class BuiltInActionExecutor implements ActionExecutor {
         }
         case 'read_file': {
           const parsedInput = parseReadFileInput(input.call.input)
+          const workspacePath = normalizeWorkspaceRelativePath(parsedInput.path)
           const resolvedPath = resolveWorkspacePath(input.settings.workspace.rootPath, parsedInput.path)
           const content = await readFile(resolvedPath, 'utf8')
 
@@ -637,13 +644,14 @@ export class BuiltInActionExecutor implements ActionExecutor {
             actionCallId: input.call.id,
             status: 'completed',
             output: {
-              path: parsedInput.path,
+              path: workspacePath,
               content,
             },
           })
         }
         case 'read_range': {
           const parsedInput = parseReadRangeInput(input.call.input)
+          const workspacePath = normalizeWorkspaceRelativePath(parsedInput.path)
           const resolvedPath = resolveWorkspacePath(input.settings.workspace.rootPath, parsedInput.path)
           const content = await readFile(resolvedPath, 'utf8')
           const lines = content.split('\n')
@@ -653,7 +661,7 @@ export class BuiltInActionExecutor implements ActionExecutor {
             actionCallId: input.call.id,
             status: 'completed',
             output: {
-              path: parsedInput.path,
+              path: workspacePath,
               startLine: parsedInput.startLine,
               endLine: parsedInput.startLine + selectedLines.length - 1,
               totalLines: lines.length,
@@ -719,6 +727,7 @@ export class BuiltInActionExecutor implements ActionExecutor {
         }
         case 'apply_patch': {
           const parsedInput = parseApplyPatchInput(input.call.input)
+          const workspacePath = normalizeWorkspaceRelativePath(parsedInput.path)
           const resolvedPath = resolveWorkspacePath(input.settings.workspace.rootPath, parsedInput.path)
           const content = await readFile(resolvedPath, 'utf8')
           const occurrences = content.split(parsedInput.oldText).length - 1
@@ -734,13 +743,14 @@ export class BuiltInActionExecutor implements ActionExecutor {
             actionCallId: input.call.id,
             status: 'completed',
             output: {
-              path: parsedInput.path,
+              path: workspacePath,
               bytesChanged: Buffer.byteLength(parsedInput.newText, 'utf8') - Buffer.byteLength(parsedInput.oldText, 'utf8'),
             },
           })
         }
         case 'write_file': {
           const parsedInput = parseWriteFileInput(input.call.input)
+          const workspacePath = normalizeWorkspaceRelativePath(parsedInput.path)
           const resolvedPath = resolveWorkspacePath(input.settings.workspace.rootPath, parsedInput.path)
 
           await mkdir(path.dirname(resolvedPath), { recursive: true })
@@ -750,7 +760,7 @@ export class BuiltInActionExecutor implements ActionExecutor {
             actionCallId: input.call.id,
             status: 'completed',
             output: {
-              path: parsedInput.path,
+              path: workspacePath,
               bytesWritten: Buffer.byteLength(parsedInput.content, 'utf8'),
             },
           })
@@ -789,6 +799,7 @@ export class BuiltInActionExecutor implements ActionExecutor {
         case 'run_command': {
           const parsedInput = parseRunCommandInput(input.call.input)
           ensureAllowedCommand(parsedInput.command)
+          const workspaceCwd = normalizeWorkspaceRelativePath(parsedInput.cwd)
           const cwd = resolveWorkspacePath(input.settings.workspace.rootPath, parsedInput.cwd)
           const result = await runProcess({ ...parsedInput, cwd, signal: input.signal })
           const status = result.exitCode === 0 && !result.timedOut ? 'completed' : 'failed'
@@ -800,7 +811,7 @@ export class BuiltInActionExecutor implements ActionExecutor {
             output: {
               command: parsedInput.command,
               args: parsedInput.args,
-              cwd: parsedInput.cwd,
+              cwd: workspaceCwd,
               exitCode: result.exitCode,
               timedOut: result.timedOut,
               stdout: result.stdout,

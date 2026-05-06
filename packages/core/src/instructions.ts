@@ -8,7 +8,8 @@ export function createProviderInstructions(input: { workspaceRoot: string; role?
     `Current role: ${input.role ?? 'build'}.`,
     roleInstructions,
     `Workspace root: ${input.workspaceRoot}.`,
-    'All file action paths must be relative to that workspace root.',
+    'All file action paths must be relative to that workspace root. Use / separators in tool calls on every operating system, including Windows.',
+    'Do not pass absolute file paths unless a tool explicitly asks for one.',
     'Use list_directory before assuming project or file paths, especially when the user names a folder or project.',
     'If read_file fails because a path is missing, use list_directory to discover the correct path and continue.',
   ]

@@ -124,6 +124,35 @@ describe('core helpers and policy', () => {
     })
   })
 
+  it('denies absolute Windows-style paths before action execution', async () => {
+    const policy = new StaticPolicy()
+    const readAction = createActionDefinition({ id: 'read_file', title: 'Read File' })
+
+    await expect(
+      policy.evaluateAction({
+        run: {
+          id: 'run-1',
+          conversationId: 'conversation-1',
+          status: 'started',
+          role: 'build',
+          createdAt: '2026-04-29T10:00:00.000Z',
+        },
+        action: readAction,
+        actionCall: {
+          id: 'call-1',
+          runId: 'run-1',
+          actionId: 'read_file',
+          input: { path: 'C:\\Users\\someone\\secret.txt' },
+          requestedAt: '2026-04-29T10:00:00.000Z',
+        },
+        settings: testSettings,
+      }),
+    ).resolves.toMatchObject({
+      effect: 'deny',
+      matchedRule: 'workspace_boundary.reads_and_writes',
+    })
+  })
+
   it('requires approval for risky command mutations', async () => {
     const policy = new StaticPolicy()
     const commandAction = createActionDefinition({ id: 'run_command', title: 'Run Command' })

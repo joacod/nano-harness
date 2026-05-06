@@ -1,4 +1,4 @@
-import { createRootRoute, createRoute, createRouter } from '@tanstack/react-router'
+import { createHashHistory, createRootRoute, createRoute, createRouter } from '@tanstack/react-router'
 
 import { RootLayout } from './components/RootLayout'
 import { ConversationRoute } from './routes/ConversationRoute'
@@ -31,6 +31,7 @@ const routeTree = rootRoute.addChildren([homeRoute, conversationRoute, settingsR
 
 export const router = createRouter({
   routeTree,
+  history: createHashHistory(),
 })
 
 declare module '@tanstack/react-router' {

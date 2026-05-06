@@ -47,6 +47,7 @@ type PendingFunctionCall = {
   callId?: string
   name?: string
   argumentsText: string
+  receivedArgumentDeltas: boolean
 }
 
 const CHATGPT_CODEX_RESPONSES_URL = 'https://chatgpt.com/backend-api/codex/responses'
@@ -124,14 +125,20 @@ function updatePendingFunctionCalls(pendingFunctionCalls: Map<string, PendingFun
   }
 
   const key = getFunctionCallKey(event)
-  const existing = pendingFunctionCalls.get(key) ?? { argumentsText: '' }
+  const existing = pendingFunctionCalls.get(key) ?? { argumentsText: '', receivedArgumentDeltas: false }
   const item = event.item
-  const nextArguments = event.delta ?? event.arguments_delta ?? event.arguments ?? item?.arguments ?? ''
+  const argumentDelta = event.delta ?? event.arguments_delta
+  const argumentSnapshot = event.arguments ?? item?.arguments
 
   pendingFunctionCalls.set(key, {
     callId: event.call_id ?? item?.call_id ?? existing.callId,
     name: event.name ?? item?.name ?? existing.name,
-    argumentsText: `${existing.argumentsText}${nextArguments}`,
+    argumentsText: argumentDelta !== undefined
+      ? `${existing.argumentsText}${argumentDelta}`
+      : existing.receivedArgumentDeltas
+        ? existing.argumentsText
+        : argumentSnapshot ?? existing.argumentsText,
+    receivedArgumentDeltas: existing.receivedArgumentDeltas || argumentDelta !== undefined,
   })
 }
 

@@ -1,6 +1,6 @@
 # Nano Harness
 
-`nano-harness` is a local-first desktop app for experimenting with agent runs, provider streaming, events, and tool execution in a small inspectable workspace.
+`nano-harness` is a local-first desktop app for experimenting with agent runs, provider streaming, approvals, memory, events, and tool execution in a small inspectable workspace.
 
 ## Development
 
@@ -61,5 +61,6 @@ pnpm dist:linux
 
 - `apps/desktop`: Electron app shell and React renderer
 - `packages/core`: orchestration runtime
-- `packages/infra`: providers, persistence, and side effects
+- `packages/infra`: providers, persistence, MCP/skills adapters, and side effects
 - `packages/shared`: shared contracts and schemas
+- `benchmarks`: small tracked regression scenarios for agent behavior and evidence quality
