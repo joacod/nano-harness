@@ -16,6 +16,7 @@ type MockSettingsFormCardProps = {
   providerStatus: ProviderStatus | null
   skillsPanel: ReactNode
   mcpInventory: McpInventory | null
+  memoryPanel: ReactNode
   isSaving: boolean
   isSavingApiKey: boolean
   isStartingOauth: boolean
@@ -51,6 +52,7 @@ vi.mock('../../src/renderer/components/SettingsFormCard', () => ({
         <p>provider:{props.providerStatus?.providerLabel ?? 'none'}</p>
         {props.skillsPanel}
         <p>mcp:{props.mcpInventory?.servers.length ?? 0}</p>
+        {props.memoryPanel}
         <p>export:{props.exportDataResult ?? 'none'}</p>
         <p>import:{props.importDataResult ?? 'none'}</p>
         <p>saveError:{props.saveError ?? 'none'}</p>

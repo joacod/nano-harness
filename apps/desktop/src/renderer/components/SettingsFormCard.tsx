@@ -1,14 +1,13 @@
 import { type ReactNode, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 
-import { getProviderDefinition, type AppSettings, type McpInventory, type MemoryProposalList, type MemoryRecordList, type ProviderAuthMethod, type ProviderStatus } from '../../../../../packages/shared/src'
+import { getProviderDefinition, type AppSettings, type McpInventory, type ProviderAuthMethod, type ProviderStatus } from '../../../../../packages/shared/src'
 import { providerCredentialStatusQueryOptions } from '../queries'
 import { ApiKeySettingsForm } from './settings/ApiKeySettingsForm'
 import { DataBackupPanel } from './settings/DataBackupPanel'
 import { HarnessEngineeringCard } from './settings/HarnessEngineeringCard'
 import { OAuthSettingsForm } from './settings/OAuthSettingsForm'
 import { McpInspectorCard } from './settings/McpInspectorCard'
-import { MemoryInspectorCard } from './settings/MemoryInspectorCard'
 import { ProviderSettingsForm } from './settings/ProviderSettingsForm'
 import { ProviderStatusPanel } from './settings/ProviderStatusPanel'
 import { WorkspaceSettingsForm } from './settings/WorkspaceSettingsForm'
@@ -22,8 +21,7 @@ export function SettingsFormCard({
   providerStatus,
   skillsPanel,
   mcpInventory,
-  memoryRecords,
-  memoryProposals,
+  memoryPanel,
   selectedTab,
   isSaving,
   isSavingApiKey,
@@ -32,14 +30,12 @@ export function SettingsFormCard({
   isClearingOauth,
   isExportingData,
   isImportingData,
-  isResolvingMemoryProposal,
   saveError,
   apiKeyError,
   oauthError,
   exportDataResult,
   importDataResult,
   dataError,
-  memoryError,
   onSubmit,
   onSaveApiKey,
   onClearApiKey,
@@ -48,15 +44,13 @@ export function SettingsFormCard({
   onExportData,
   onImportData,
   onSelectedTabChange,
-  onResolveMemoryProposal,
 }: {
   initialSettings: AppSettings
   dataPath: string | null
   providerStatus: ProviderStatus | null
   skillsPanel: ReactNode
   mcpInventory: McpInventory | null
-  memoryRecords: MemoryRecordList | null
-  memoryProposals: MemoryProposalList | null
+  memoryPanel: ReactNode
   selectedTab: SettingsTab
   isSaving: boolean
   isSavingApiKey: boolean
@@ -65,14 +59,12 @@ export function SettingsFormCard({
   isClearingOauth: boolean
   isExportingData: boolean
   isImportingData: boolean
-  isResolvingMemoryProposal: boolean
   saveError: string | null
   apiKeyError: string | null
   oauthError: string | null
   exportDataResult: string | null
   importDataResult: string | null
   dataError: string | null
-  memoryError: string | null
   onSubmit: (settings: AppSettings) => Promise<void>
   onSaveApiKey: (input: { provider: AppSettings['provider']['provider']; apiKey: string }) => Promise<void>
   onClearApiKey: (input: { provider: AppSettings['provider']['provider'] }) => Promise<void>
@@ -81,7 +73,6 @@ export function SettingsFormCard({
   onExportData: () => Promise<void>
   onImportData: () => Promise<void>
   onSelectedTabChange: (tab: SettingsTab) => void
-  onResolveMemoryProposal: (input: { proposalId: string; decision: 'approved' | 'rejected' }) => Promise<void>
 }) {
   const [selectedProvider, setSelectedProvider] = useState(initialSettings.provider.provider)
   const selectedProviderDefinition = getProviderDefinition(selectedProvider)
@@ -162,15 +153,7 @@ export function SettingsFormCard({
           {
             value: 'memory',
             label: 'Memory',
-            panel: (
-              <MemoryInspectorCard
-                records={memoryRecords}
-                proposals={memoryProposals}
-                isResolving={isResolvingMemoryProposal}
-                error={memoryError}
-                onResolveProposal={onResolveMemoryProposal}
-              />
-            ),
+            panel: memoryPanel,
           },
           {
             value: 'harness',

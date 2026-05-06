@@ -8,6 +8,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createDefaultProviderSettings, providerDefaultModels, type AppSettings, type McpInventory, type ProviderStatus, type SkillInventory } from '@nano-harness/shared'
 
 import { SettingsFormCard, type SettingsTab } from '../../src/renderer/components/SettingsFormCard'
+import { MemoryInspectorCard } from '../../src/renderer/components/settings/MemoryInspectorCard'
 import { SkillsHubCard } from '../../src/renderer/components/settings/SkillsHubCard'
 import { createDesktopMock, renderWithQueryClient } from './test-utils'
 
@@ -125,8 +126,7 @@ function SettingsFormCardHarness() {
       providerStatus={createProviderStatus()}
       skillsPanel={<SkillsHubCard inventory={createSkillInventory()} isSaving={false} error={null} onToggleSkill={vi.fn(async () => undefined)} />}
       mcpInventory={createMcpInventory()}
-      memoryRecords={{ records: [] }}
-      memoryProposals={{ proposals: [] }}
+      memoryPanel={<MemoryInspectorCard records={{ records: [] }} proposals={{ proposals: [] }} isResolving={false} error={null} onResolveProposal={vi.fn(async () => undefined)} />}
       selectedTab={selectedTab}
       isSaving={false}
       isSavingApiKey={false}
@@ -135,14 +135,12 @@ function SettingsFormCardHarness() {
       isClearingOauth={false}
       isExportingData={false}
       isImportingData={false}
-      isResolvingMemoryProposal={false}
       saveError={null}
       apiKeyError={null}
       oauthError={null}
       exportDataResult={null}
       importDataResult={null}
       dataError={null}
-      memoryError={null}
       onSubmit={vi.fn(async () => undefined)}
       onSaveApiKey={vi.fn(async () => undefined)}
       onClearApiKey={vi.fn(async () => undefined)}
@@ -151,7 +149,6 @@ function SettingsFormCardHarness() {
       onExportData={vi.fn(async () => undefined)}
       onImportData={vi.fn(async () => undefined)}
       onSelectedTabChange={setSelectedTab}
-      onResolveMemoryProposal={vi.fn(async () => undefined)}
     />
   )
 }
