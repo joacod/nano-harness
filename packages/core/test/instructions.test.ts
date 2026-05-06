@@ -12,4 +12,9 @@ describe('provider instructions', () => {
     expect(instructions).toContain('Use list_directory before assuming project or file paths')
     expect(instructions).toContain('If read_file fails because a path is missing')
   })
+
+  it('adds role-specific instructions', () => {
+    expect(createProviderInstructions({ workspaceRoot: '/workspace', role: 'plan' })).toContain('Plan mode')
+    expect(createProviderInstructions({ workspaceRoot: '/workspace', role: 'review' })).toContain('Review mode')
+  })
 })

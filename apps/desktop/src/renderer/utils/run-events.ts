@@ -45,6 +45,10 @@ function getActivityPhase(event: RunEvent): StreamingRunState['phase'] | null {
     case 'action.started':
     case 'action.completed':
     case 'action.failed':
+    case 'hook.started':
+    case 'hook.completed':
+    case 'hook.denied':
+    case 'hook.error':
       return 'using_tools'
     case 'approval.required':
     case 'run.waiting_approval':
@@ -202,13 +206,13 @@ export function isTransientRunEvent(event: RunEvent): boolean {
 export function describeRunEvent(event: RunEvent) {
   switch (event.type) {
     case 'run.created':
-      return { title: 'Run created', detail: `Conversation ${event.payload.run.conversationId}` }
+      return { title: 'Run created', detail: `${event.payload.run.role ?? 'build'} role · Conversation ${event.payload.run.conversationId}` }
     case 'run.started':
       return { title: 'Run started', detail: `Execution began at ${formatTimestamp(event.payload.startedAt)}` }
     case 'run.dry_run_preview':
       return {
         title: 'Dry-run preview captured',
-        detail: `${event.payload.provider.provider} · ${event.payload.provider.model} · ${event.payload.actions.length} actions available`,
+        detail: `${event.payload.provider.provider} · ${event.payload.provider.model} · ${event.payload.actions.length} actions · ${event.payload.permissions.risky.length} risky · ${event.payload.permissions.denied.length} denied · ${event.payload.permissions.activeHooks.length} hooks`,
       }
     case 'run.waiting_approval':
       return { title: 'Waiting for approval', detail: `Approval request ${event.payload.approvalRequestId}` }
@@ -249,6 +253,14 @@ export function describeRunEvent(event: RunEvent) {
       return { title: 'Action completed', detail: previewText(JSON.stringify(event.payload.result.output)) }
     case 'action.failed':
       return { title: 'Action failed', detail: event.payload.result.errorMessage ?? 'Action returned a failed result.' }
+    case 'hook.started':
+      return { title: `Hook started: ${event.payload.hookId}`, detail: `${event.payload.phase} for call ${event.payload.actionCallId}` }
+    case 'hook.completed':
+      return { title: `Hook completed: ${event.payload.result.hookId}`, detail: event.payload.result.message }
+    case 'hook.denied':
+      return { title: `Hook denied: ${event.payload.result.hookId}`, detail: event.payload.result.message }
+    case 'hook.error':
+      return { title: `Hook failed: ${event.payload.result.hookId}`, detail: event.payload.result.message }
     case 'approval.required':
       return { title: 'Approval required', detail: event.payload.approvalRequest.reason }
     case 'approval.granted':
@@ -265,7 +277,7 @@ export function getEventFamily(eventType: RunEvent['type']) {
 }
 
 export function getEventTone(event: RunEvent) {
-  if (event.type === 'run.failed' || event.type === 'provider.error' || event.type === 'action.failed') {
+  if (event.type === 'run.failed' || event.type === 'provider.error' || event.type === 'action.failed' || event.type === 'hook.error' || event.type === 'hook.denied') {
     return 'failed'
   }
 
@@ -284,18 +296,29 @@ export function getRecoverableRunAction(run: ConversationSnapshot['runs'][number
   return null
 }
 
-export function getPendingApproval(snapshot: ConversationSnapshot | undefined, runId: string | null): ApprovalRequest | null {
+export function getPendingApproval(snapshot: ConversationSnapshot | undefined, runId: string | null, events: RunEvent[] = []): ApprovalRequest | null {
   if (!snapshot || !runId) {
     return null
   }
 
   const resolvedRequestIds = new Set(snapshot.approvalResolutions.map((resolution) => resolution.approvalRequestId))
+  const persistedRequest = [...snapshot.approvalRequests]
+    .reverse()
+    .find((request) => request.runId === runId && !resolvedRequestIds.has(request.id))
 
-  return (
-    [...snapshot.approvalRequests]
-      .reverse()
-      .find((request) => request.runId === runId && !resolvedRequestIds.has(request.id)) ?? null
-  )
+  if (persistedRequest) {
+    return persistedRequest
+  }
+
+  for (const event of [...events].reverse()) {
+    if (event.type === 'approval.required'
+      && event.payload.approvalRequest.runId === runId
+      && !resolvedRequestIds.has(event.payload.approvalRequest.id)) {
+      return event.payload.approvalRequest
+    }
+  }
+
+  return null
 }
 
 export function getProviderRequestForRun(events: RunEvent[], runId: string) {

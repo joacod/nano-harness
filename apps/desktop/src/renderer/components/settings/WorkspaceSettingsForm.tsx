@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { useForm } from '@tanstack/react-form'
 
 import type { AppSettings } from '../../../../../../packages/shared/src'
+import { createDefaultSafetySettings } from '../../../../../../packages/shared/src'
 import { FieldHint, LabeledField, TextField } from '../form-fields'
 import { Button, FeedbackText, Select } from '../ui'
 
@@ -35,6 +36,9 @@ export function WorkspaceSettingsForm({
           ...value.workspace,
           rootPath: value.workspace.rootPath.trim(),
         },
+        skills: value.skills,
+        mcp: value.mcp,
+        safety: normalizeSafetySettings(value.safety),
       }
 
       await onSubmit(normalizedSettings)
@@ -103,6 +107,101 @@ export function WorkspaceSettingsForm({
                 />
               </LabeledField>
             </div>
+          </div>
+        </section>
+
+        <section className="settings-section" aria-labelledby="personal-rules-heading">
+          <div className="settings-section-heading">
+            <p className="eyebrow" id="personal-rules-heading">
+              Personal Rules
+            </p>
+            <p>Hooks and policy rules that intercept tool use before Nano acts.</p>
+          </div>
+
+          <div className="settings-field-grid settings-field-grid-compact">
+            <label className="settings-checkbox-row">
+              <form.Field
+                name="safety.hooks.enabled"
+                children={(field) => (
+                  <input
+                    type="checkbox"
+                    name="safety-hooks-enabled"
+                    checked={field.state.value ?? true}
+                    onChange={(event) => {
+                      const enabled = event.target.checked
+                      field.handleChange(enabled)
+                      setDraftSettings((current) => ({
+                        ...current,
+                        safety: {
+                          ...normalizeSafetySettings(current.safety),
+                          hooks: { enabled },
+                        },
+                      }))
+                      setSaveMessage(null)
+                    }}
+                  />
+                )}
+              />
+              <span>Enable pre/post tool-use hooks</span>
+            </label>
+
+            <label className="settings-checkbox-row">
+              <form.Field
+                name="safety.personalRules.neverWriteOutsideWorkspace"
+                children={(field) => (
+                  <input
+                    type="checkbox"
+                    name="never-write-outside-workspace"
+                    checked={field.state.value ?? true}
+                    onChange={(event) => {
+                      const neverWriteOutsideWorkspace = event.target.checked
+                      field.handleChange(neverWriteOutsideWorkspace)
+                      setDraftSettings((current) => ({
+                        ...current,
+                        safety: {
+                          ...normalizeSafetySettings(current.safety),
+                          personalRules: {
+                            ...normalizeSafetySettings(current.safety).personalRules,
+                            neverWriteOutsideWorkspace,
+                          },
+                        },
+                      }))
+                      setSaveMessage(null)
+                    }}
+                  />
+                )}
+              />
+              <span>Never write outside the workspace</span>
+            </label>
+
+            <label className="settings-checkbox-row">
+              <form.Field
+                name="safety.personalRules.requireTestsAfterEdits"
+                children={(field) => (
+                  <input
+                    type="checkbox"
+                    name="require-tests-after-edits"
+                    checked={field.state.value ?? false}
+                    onChange={(event) => {
+                      const requireTestsAfterEdits = event.target.checked
+                      field.handleChange(requireTestsAfterEdits)
+                      setDraftSettings((current) => ({
+                        ...current,
+                        safety: {
+                          ...normalizeSafetySettings(current.safety),
+                          personalRules: {
+                            ...normalizeSafetySettings(current.safety).personalRules,
+                            requireTestsAfterEdits,
+                          },
+                        },
+                      }))
+                      setSaveMessage(null)
+                    }}
+                  />
+                )}
+              />
+              <span>Remind the run to validate after edits</span>
+            </label>
           </div>
         </section>
 
@@ -178,6 +277,24 @@ function normalizeWorkspaceSettings(settings: AppSettings): AppSettings {
     workspace: {
       ...settings.workspace,
       rootPath: settings.workspace.rootPath.trim(),
+    },
+    skills: settings.skills,
+    mcp: settings.mcp,
+    safety: normalizeSafetySettings(settings.safety),
+  }
+}
+
+function normalizeSafetySettings(settings: AppSettings['safety']) {
+  return {
+    ...createDefaultSafetySettings(),
+    ...settings,
+    personalRules: {
+      ...createDefaultSafetySettings().personalRules,
+      ...settings?.personalRules,
+    },
+    hooks: {
+      ...createDefaultSafetySettings().hooks,
+      ...settings?.hooks,
     },
   }
 }

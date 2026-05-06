@@ -73,7 +73,7 @@ describe('McpActionExecutor', () => {
     ])
 
     const result = await executor.execute({
-      run: { id: 'run-1', conversationId: 'conversation-1', status: 'started', createdAt: '2026-04-29T10:00:00.000Z' },
+      run: { id: 'run-1', conversationId: 'conversation-1', status: 'started', role: 'build', createdAt: '2026-04-29T10:00:00.000Z' },
       action: (await executor.getDefinition('read_mcp_resource'))!,
       call: {
         id: 'call-1',

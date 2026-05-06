@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 
-import { useQuery } from '@tanstack/react-query'
-import { useParams } from '@tanstack/react-router'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useNavigate, useParams } from '@tanstack/react-router'
 
 import { ChatTranscript } from '../components/ChatTranscript'
 import { SessionLayout } from '../components/SessionLayout'
@@ -13,6 +13,8 @@ import { getPendingApproval, mergeRunEvents } from '../utils/run-events'
 
 export function ConversationRoute() {
   const { conversationId } = useParams({ from: '/conversations/$conversationId' })
+  const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const { showTechnicalInfo } = useTechnicalUi()
   const snapshotQuery = useQuery(conversationQueryOptions(conversationId))
   const { liveRunEvents, streamingRuns } = useRuntimeUi()
@@ -96,8 +98,34 @@ export function ConversationRoute() {
   }, [liveRunEvents, selectedRunId, snapshotQuery.data?.events])
 
   const pendingApproval = useMemo(() => {
-    return getPendingApproval(snapshotQuery.data, selectedRunId)
-  }, [selectedRunId, snapshotQuery.data])
+    return getPendingApproval(snapshotQuery.data, selectedRunId, selectedRunEvents)
+  }, [selectedRunEvents, selectedRunId, snapshotQuery.data])
+  const forkSessionMutation = useMutation({
+    mutationFn: async () => window.desktop.forkSession({ sessionId: conversationId }),
+    onSuccess: async (result) => {
+      await queryClient.invalidateQueries({ queryKey: ['sessions'] })
+      await queryClient.invalidateQueries({ queryKey: ['conversations'] })
+      await navigate({ to: '/conversations/$conversationId', params: { conversationId: result.conversationId } })
+    },
+  })
+  const cloneSessionMutation = useMutation({
+    mutationFn: async () => window.desktop.cloneSession({ sessionId: conversationId }),
+    onSuccess: async (result) => {
+      await queryClient.invalidateQueries({ queryKey: ['sessions'] })
+      await queryClient.invalidateQueries({ queryKey: ['conversations'] })
+      await navigate({ to: '/conversations/$conversationId', params: { conversationId: result.conversationId } })
+    },
+  })
+  const exportSessionMutation = useMutation({
+    mutationFn: async () => window.desktop.exportSession({ sessionId: conversationId }),
+  })
+  const sessionActionError = forkSessionMutation.error instanceof Error
+    ? forkSessionMutation.error.message
+    : cloneSessionMutation.error instanceof Error
+      ? cloneSessionMutation.error.message
+      : exportSessionMutation.error instanceof Error
+        ? exportSessionMutation.error.message
+        : null
 
   if (snapshotQuery.isError) {
     return (
@@ -128,6 +156,12 @@ export function ConversationRoute() {
       title={snapshotQuery.data?.conversation?.title ?? 'Loading conversation…'}
       transcriptRef={transcriptPanelRef}
       onTranscriptScroll={handleTranscriptScroll}
+      isSessionActionPending={forkSessionMutation.isPending || cloneSessionMutation.isPending || exportSessionMutation.isPending}
+      sessionActionError={sessionActionError}
+      sessionExportPath={exportSessionMutation.data?.exportedFilePath ?? null}
+      onForkSession={() => forkSessionMutation.mutate()}
+      onCloneSession={() => cloneSessionMutation.mutate()}
+      onExportSession={() => exportSessionMutation.mutate()}
       transcriptChildren={(
         <>
           {snapshotQuery.isLoading ? <FeedbackText>Loading messages…</FeedbackText> : null}

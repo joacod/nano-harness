@@ -10,6 +10,8 @@ import type {
   RunCreateInput,
   RunEvent,
   RunStatus,
+  Session,
+  SessionExport,
 } from '@nano-harness/shared'
 import { createDefaultProviderSettings } from '@nano-harness/shared'
 
@@ -78,15 +80,88 @@ export class FakeStore implements Store {
   approvalRequests: ApprovalRequest[] = []
   approvalResolutions: ApprovalResolution[] = []
   settings: AppSettings | null = structuredClone(testSettings)
+  sessions: Session[] = []
 
   async initialize(): Promise<void> {}
 
   async saveConversation(conversation: Conversation): Promise<void> {
     this.conversations.set(conversation.id, conversation)
+    if (!this.sessions.some((session) => session.conversationId === conversation.id)) {
+      this.sessions.push({
+        id: conversation.id,
+        conversationId: conversation.id,
+        parentSessionId: null,
+        rootSessionId: conversation.id,
+        title: conversation.title,
+        createdAt: conversation.createdAt,
+        updatedAt: conversation.updatedAt,
+      })
+    }
   }
 
   async listConversations(): Promise<Conversation[]> {
     return [...this.conversations.values()].sort((left, right) => left.updatedAt.localeCompare(right.updatedAt))
+  }
+
+  async listSessions(): Promise<Session[]> {
+    return this.sessions
+  }
+
+  async forkSession(sessionId: string): Promise<Session> {
+    return this.createChildSession(sessionId, 'fork')
+  }
+
+  async cloneSession(sessionId: string): Promise<Session> {
+    return this.createChildSession(sessionId, 'clone')
+  }
+
+  async exportSession(sessionId: string): Promise<SessionExport> {
+    const session = this.sessions.find((item) => item.id === sessionId)
+
+    if (!session) {
+      throw new Error(`Session ${sessionId} not found`)
+    }
+
+    const snapshot = await this.getConversation(session.conversationId)
+    return {
+      session,
+      lineage: this.sessions.filter((item) => item.rootSessionId === session.rootSessionId),
+      runs: snapshot.runs,
+      messages: snapshot.messages,
+      events: snapshot.events,
+      approvals: {
+        requests: snapshot.approvalRequests,
+        resolutions: snapshot.approvalResolutions,
+      },
+    }
+  }
+
+  private createChildSession(sessionId: string, label: string): Session {
+    const parent = this.sessions.find((session) => session.id === sessionId)
+
+    if (!parent) {
+      throw new Error(`Session ${sessionId} not found`)
+    }
+
+    const now = '2026-04-29T10:00:00.000Z'
+    const child: Session = {
+      id: `${sessionId}-${label}`,
+      conversationId: `${sessionId}-${label}`,
+      parentSessionId: sessionId,
+      rootSessionId: parent.rootSessionId,
+      title: `${parent.title} (${label})`,
+      createdAt: now,
+      updatedAt: now,
+    }
+
+    this.sessions.push(child)
+    this.conversations.set(child.conversationId, {
+      id: child.conversationId,
+      title: child.title,
+      createdAt: now,
+      updatedAt: now,
+    })
+    return child
   }
 
   async listRuns(statuses?: RunStatus[]): Promise<Run[]> {
@@ -342,5 +417,6 @@ export function createRunInput(overrides: Partial<RunCreateInput> = {}): RunCrea
   return {
     conversationId: overrides.conversationId ?? 'conversation-1',
     prompt: overrides.prompt ?? 'Read notes.txt and summarize it.',
+    role: overrides.role,
   }
 }

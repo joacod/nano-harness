@@ -1,5 +1,7 @@
 import { z } from 'zod'
 
+import { agentRoleSchema } from './roles'
+
 export const runStatusSchema = z.enum([
   'created',
   'started',
@@ -15,9 +17,10 @@ export const runSchema = z.object({
   id: z.string().min(1),
   conversationId: z.string().min(1),
   status: runStatusSchema,
-  createdAt: z.string().datetime(),
-  startedAt: z.string().datetime().optional(),
-  finishedAt: z.string().datetime().optional(),
+  role: agentRoleSchema,
+  createdAt: z.iso.datetime(),
+  startedAt: z.iso.datetime().optional(),
+  finishedAt: z.iso.datetime().optional(),
   failureMessage: z.string().min(1).optional(),
 })
 
@@ -26,6 +29,7 @@ export type Run = z.infer<typeof runSchema>
 export const runCreateInputSchema = z.object({
   conversationId: z.string().min(1),
   prompt: z.string().min(1),
+  role: agentRoleSchema.optional(),
 })
 
 export type RunCreateInput = z.infer<typeof runCreateInputSchema>

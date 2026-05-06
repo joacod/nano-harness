@@ -29,7 +29,7 @@ export const actionCallSchema = z.object({
   runId: z.string().min(1),
   actionId: z.string().min(1),
   input: z.record(z.string(), jsonValueSchema),
-  requestedAt: z.string().datetime(),
+  requestedAt: z.iso.datetime(),
 })
 
 export type ActionCall = z.infer<typeof actionCallSchema>
@@ -44,7 +44,7 @@ export const actionResultSchema = z.object({
   status: actionResultStatusSchema,
   output: jsonValueSchema.optional(),
   errorMessage: z.string().min(1).optional(),
-  completedAt: z.string().datetime(),
+  completedAt: z.iso.datetime(),
 })
 
 export type ActionResult = z.infer<typeof actionResultSchema>

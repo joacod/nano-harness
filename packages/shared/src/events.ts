@@ -6,12 +6,13 @@ import { messageSchema } from './messages'
 import { mcpInventorySchema } from './mcp'
 import { providerReasoningDeltaSchema } from './reasoning'
 import { runSchema } from './runs'
+import { hookPhaseSchema, hookResultSchema, permissionDecisionSchema } from './safety'
 import { skillSummarySchema } from './skills'
 
 const eventBaseSchema = z.object({
   id: z.string().min(1),
   runId: z.string().min(1),
-  timestamp: z.string().datetime(),
+  timestamp: z.iso.datetime(),
 })
 
 export const runCreatedEventSchema = eventBaseSchema.extend({
@@ -24,7 +25,7 @@ export const runCreatedEventSchema = eventBaseSchema.extend({
 export const runStartedEventSchema = eventBaseSchema.extend({
   type: z.literal('run.started'),
   payload: z.object({
-    startedAt: z.string().datetime(),
+    startedAt: z.iso.datetime(),
   }),
 })
 
@@ -41,6 +42,12 @@ export const runDryRunPreviewEventSchema = eventBaseSchema.extend({
       approvalPolicy: z.string().min(1),
     }),
     actions: z.array(actionDefinitionSchema.pick({ id: true, title: true, requiresApproval: true })),
+    permissions: z.object({
+      denied: z.array(permissionDecisionSchema),
+      risky: z.array(permissionDecisionSchema),
+      activeRules: z.array(z.string().min(1)),
+      activeHooks: z.array(z.string().min(1)),
+    }),
     skills: z.object({
       available: z.array(skillSummarySchema),
       selected: z.array(skillSummarySchema),
@@ -59,7 +66,7 @@ export const runWaitingApprovalEventSchema = eventBaseSchema.extend({
 export const runCompletedEventSchema = eventBaseSchema.extend({
   type: z.literal('run.completed'),
   payload: z.object({
-    finishedAt: z.string().datetime(),
+    finishedAt: z.iso.datetime(),
   }),
 })
 
@@ -139,6 +146,36 @@ export const actionFailedEventSchema = eventBaseSchema.extend({
   }),
 })
 
+export const hookStartedEventSchema = eventBaseSchema.extend({
+  type: z.literal('hook.started'),
+  payload: z.object({
+    hookId: z.string().min(1),
+    phase: hookPhaseSchema,
+    actionCallId: z.string().min(1),
+  }),
+})
+
+export const hookCompletedEventSchema = eventBaseSchema.extend({
+  type: z.literal('hook.completed'),
+  payload: z.object({
+    result: hookResultSchema.refine((value) => value.status === 'completed', 'hook.completed must carry a completed hook result'),
+  }),
+})
+
+export const hookDeniedEventSchema = eventBaseSchema.extend({
+  type: z.literal('hook.denied'),
+  payload: z.object({
+    result: hookResultSchema.refine((value) => value.status === 'denied', 'hook.denied must carry a denied hook result'),
+  }),
+})
+
+export const hookErrorEventSchema = eventBaseSchema.extend({
+  type: z.literal('hook.error'),
+  payload: z.object({
+    result: hookResultSchema.refine((value) => value.status === 'failed', 'hook.error must carry a failed hook result'),
+  }),
+})
+
 export const approvalRequiredEventSchema = eventBaseSchema.extend({
   type: z.literal('approval.required'),
   payload: z.object({
@@ -190,6 +227,10 @@ export const runEventSchema = z.discriminatedUnion('type', [
   actionStartedEventSchema,
   actionCompletedEventSchema,
   actionFailedEventSchema,
+  hookStartedEventSchema,
+  hookCompletedEventSchema,
+  hookDeniedEventSchema,
+  hookErrorEventSchema,
   approvalRequiredEventSchema,
   approvalGrantedEventSchema,
   approvalRejectedEventSchema,

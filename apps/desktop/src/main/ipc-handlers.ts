@@ -5,6 +5,7 @@ import {
   desktopBridgeChannels,
   desktopContextSchema,
   exportRunEvidenceInputSchema,
+  sessionInputSchema,
   getConversationInputSchema,
   getProviderDefinition,
   openExternalUrlInputSchema,
@@ -24,6 +25,7 @@ import { startOpenAIChatGptOAuth } from './openai-chatgpt-auth'
 import type { DesktopRuntime } from './runtime'
 import { buildProviderStatus } from './runtime'
 import { exportRunEvidence } from './run-evidence-export'
+import { exportSession } from './session-export'
 import { encryptCredentialPayload } from './secure-credentials'
 
 type IpcRuntime = {
@@ -33,6 +35,7 @@ type IpcRuntime = {
       databaseFilePath: string
     }
     listConversations: DesktopRuntime['store']['listConversations']
+    listSessions: DesktopRuntime['store']['listSessions']
     listRuns: DesktopRuntime['store']['listRuns']
     getProviderCredentialStatus: DesktopRuntime['store']['getProviderCredentialStatus']
     getEncryptedProviderCredentialPayload: DesktopRuntime['store']['getEncryptedProviderCredentialPayload']
@@ -42,6 +45,9 @@ type IpcRuntime = {
     saveSettings: DesktopRuntime['store']['saveSettings']
     getConversation: DesktopRuntime['store']['getConversation']
     getRun: DesktopRuntime['store']['getRun']
+    forkSession: DesktopRuntime['store']['forkSession']
+    cloneSession: DesktopRuntime['store']['cloneSession']
+    exportSession: DesktopRuntime['store']['exportSession']
     backupToFile: DesktopRuntime['store']['backupToFile']
     sanitizeDatabaseFile: DesktopRuntime['store']['sanitizeDatabaseFile']
     validateDatabaseFile: DesktopRuntime['store']['validateDatabaseFile']
@@ -84,6 +90,10 @@ export function setupIpcHandlers(runtime: IpcRuntime): void {
 
   ipcMain.handle(desktopBridgeChannels.listConversations, async () => {
     return await runtime.store.listConversations()
+  })
+
+  ipcMain.handle(desktopBridgeChannels.listSessions, async () => {
+    return await runtime.store.listSessions()
   })
 
   ipcMain.handle(desktopBridgeChannels.getProviderStatus, async () => {
@@ -197,6 +207,23 @@ export function setupIpcHandlers(runtime: IpcRuntime): void {
   ipcMain.handle(desktopBridgeChannels.getConversation, async (_event, payload) => {
     const input = getConversationInputSchema.parse(payload)
     return await runtime.store.getConversation(input.conversationId)
+  })
+
+  ipcMain.handle(desktopBridgeChannels.forkSession, async (_event, payload) => {
+    const input = sessionInputSchema.parse(payload)
+    const session = await runtime.store.forkSession(input.sessionId)
+    return { sessionId: session.id, conversationId: session.conversationId }
+  })
+
+  ipcMain.handle(desktopBridgeChannels.cloneSession, async (_event, payload) => {
+    const input = sessionInputSchema.parse(payload)
+    const session = await runtime.store.cloneSession(input.sessionId)
+    return { sessionId: session.id, conversationId: session.conversationId }
+  })
+
+  ipcMain.handle(desktopBridgeChannels.exportSession, async (_event, payload) => {
+    const input = sessionInputSchema.parse(payload)
+    return await exportSession(runtime, input.sessionId)
   })
 
   ipcMain.handle(desktopBridgeChannels.startRun, async (_event, payload) => {

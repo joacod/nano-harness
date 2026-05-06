@@ -14,6 +14,7 @@ import {
   startProviderOauthResultSchema,
   runEventSchema,
   exportRunEvidenceResultSchema,
+  runCreateInputSchema,
   startProviderOauthInputSchema,
 } from '../src'
 
@@ -163,6 +164,12 @@ describe('shared contracts', () => {
           provider: { provider: 'openrouter', model: providerDefaultModels.openrouter, baseUrl: 'https://openrouter.ai/api/v1' },
           workspace: { rootPath: '/workspace', approvalPolicy: 'on-request' },
           actions: [{ id: 'read_file', title: 'Read File', requiresApproval: false }],
+          permissions: {
+            denied: [],
+            risky: [],
+            activeRules: ['workspace_boundary.reads_and_writes'],
+            activeHooks: ['personal_rules.pre_tool_use'],
+          },
           skills: {
             available: [{
               id: 'repo-onboarding',
@@ -191,6 +198,8 @@ describe('shared contracts', () => {
   })
 
   it('validates bridge payloads for approval resolution and external urls', () => {
+    expect(runCreateInputSchema.parse({ conversationId: 'conversation-1', prompt: '/plan test', role: 'plan' })).toMatchObject({ role: 'plan' })
+
     expect(
       resolveApprovalInputSchema.parse({
         runId: 'run-1',

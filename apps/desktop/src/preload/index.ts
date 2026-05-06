@@ -22,6 +22,9 @@ import {
   runCreateInputSchema,
   runEventSchema,
   runIdInputSchema,
+  sessionExportResultSchema,
+  sessionInputSchema,
+  sessionListSchema,
   saveProviderAuthInputSchema,
   startProviderOauthInputSchema,
   startProviderOauthResultSchema,
@@ -35,6 +38,9 @@ const desktopApi: DesktopApi = {
   },
   async listConversations() {
     return conversationListSchema.parse(await ipcRenderer.invoke(desktopBridgeChannels.listConversations))
+  },
+  async listSessions() {
+    return sessionListSchema.parse(await ipcRenderer.invoke(desktopBridgeChannels.listSessions))
   },
   async getProviderStatus() {
     return providerStatusSchema.nullable().parse(await ipcRenderer.invoke(desktopBridgeChannels.getProviderStatus))
@@ -85,6 +91,18 @@ const desktopApi: DesktopApi = {
   async getConversation(input) {
     const payload = getConversationInputSchema.parse(input)
     return conversationSnapshotSchema.parse(await ipcRenderer.invoke(desktopBridgeChannels.getConversation, payload))
+  },
+  async forkSession(input) {
+    const payload = sessionInputSchema.parse(input)
+    return await ipcRenderer.invoke(desktopBridgeChannels.forkSession, payload) as { sessionId: string; conversationId: string }
+  },
+  async cloneSession(input) {
+    const payload = sessionInputSchema.parse(input)
+    return await ipcRenderer.invoke(desktopBridgeChannels.cloneSession, payload) as { sessionId: string; conversationId: string }
+  },
+  async exportSession(input) {
+    const payload = sessionInputSchema.parse(input)
+    return sessionExportResultSchema.parse(await ipcRenderer.invoke(desktopBridgeChannels.exportSession, payload))
   },
   async startRun(input) {
     const payload = runCreateInputSchema.parse(input)

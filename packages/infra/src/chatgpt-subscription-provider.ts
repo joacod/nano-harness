@@ -200,7 +200,7 @@ export class ChatGptSubscriptionProvider implements Provider {
       headers,
       body: JSON.stringify({
         model: input.settings.provider.model,
-        instructions: createProviderInstructions({ workspaceRoot: input.settings.workspace.rootPath, skills: input.skills }),
+        instructions: createProviderInstructions({ workspaceRoot: input.settings.workspace.rootPath, role: input.run.role, skills: input.skills }),
         store: false,
         stream: true,
         input: toResponsesInput(input.messages),

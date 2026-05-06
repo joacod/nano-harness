@@ -106,6 +106,10 @@ export function RunInspectorCard({
         <>
           <div className="inspector-summary">
             <div>
+              <span className="field-label">Role</span>
+              <p>{run.role ?? 'build'}</p>
+            </div>
+            <div>
               <span className="field-label">Created</span>
               <p>{formatTimestamp(run.createdAt)}</p>
             </div>

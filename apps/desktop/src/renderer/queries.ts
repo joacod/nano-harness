@@ -42,6 +42,11 @@ export const conversationsQueryOptions = queryOptions({
   queryFn: () => window.desktop.listConversations(),
 })
 
+export const sessionsQueryOptions = queryOptions({
+  queryKey: ['sessions'],
+  queryFn: () => window.desktop.listSessions(),
+})
+
 export function conversationQueryOptions(conversationId: string): ReturnType<typeof queryOptions<ConversationSnapshot, Error, ConversationSnapshot, ConversationQueryKey>> {
   return queryOptions({
     queryKey: ['conversation', conversationId] as const,

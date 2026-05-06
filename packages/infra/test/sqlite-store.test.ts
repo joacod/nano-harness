@@ -97,12 +97,14 @@ describe('SqliteStore', () => {
         id: 'run-1',
         conversationId: 'conversation-1',
         status: 'created',
+        role: 'build',
         createdAt: '2026-04-29T10:00:00.000Z',
       })
       await store.createRun({
         id: 'run-2',
         conversationId: 'conversation-1',
         status: 'started',
+        role: 'build',
         createdAt: '2026-04-29T10:00:05.000Z',
         startedAt: '2026-04-29T10:00:06.000Z',
       })
@@ -159,6 +161,7 @@ describe('SqliteStore', () => {
             id: 'run-2',
             conversationId: 'conversation-1',
             status: 'started',
+            role: 'build',
             createdAt: '2026-04-29T10:00:05.000Z',
             startedAt: '2026-04-29T10:00:06.000Z',
           },
@@ -194,6 +197,7 @@ describe('SqliteStore', () => {
         'conversation-2',
         'conversation-1',
       ])
+      expect((await store.listSessions()).map((session) => session.id)).toEqual(['conversation-1', 'conversation-2'])
       expect((await store.listRuns()).map((storedRun) => storedRun.id)).toEqual(['run-1', 'run-2'])
       expect((await store.listRuns(['started'])).map((storedRun) => storedRun.id)).toEqual(['run-2'])
       expect(await store.listRunEvents('run-2')).toEqual([createdEvent, providerEvent])
@@ -205,7 +209,9 @@ describe('SqliteStore', () => {
           id: 'run-1',
           conversationId: 'conversation-1',
           status: 'failed',
+          role: 'build',
           createdAt: '2026-04-29T10:00:00.000Z',
+          startedAt: undefined,
           finishedAt: '2026-04-29T10:00:09.000Z',
           failureMessage: 'provider failed',
         },
@@ -213,8 +219,11 @@ describe('SqliteStore', () => {
           id: 'run-2',
           conversationId: 'conversation-1',
           status: 'started',
+          role: 'build',
           createdAt: '2026-04-29T10:00:05.000Z',
           startedAt: '2026-04-29T10:00:06.000Z',
+          finishedAt: undefined,
+          failureMessage: undefined,
         },
       ])
       expect(snapshot.messages).toEqual([assistantMessage, toolMessage])
@@ -235,6 +244,15 @@ describe('SqliteStore', () => {
           decidedAt: '2026-04-29T10:00:09.500Z',
         },
       ])
+
+      const forkedSession = await store.forkSession('conversation-1')
+      expect(forkedSession).toMatchObject({ parentSessionId: 'conversation-1', rootSessionId: 'conversation-1' })
+      const exportedSession = await store.exportSession('conversation-1')
+      expect(exportedSession).toMatchObject({
+        session: { id: 'conversation-1' },
+        runs: [{ id: 'run-1' }, { id: 'run-2' }],
+      })
+      expect(exportedSession.lineage.map((session) => session.id)).toContain(forkedSession.id)
     } finally {
       await store.close()
     }

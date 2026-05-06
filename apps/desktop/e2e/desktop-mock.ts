@@ -148,6 +148,7 @@ export async function installDesktopMock(page: Page, setup: MockSetup): Promise<
             id: input.runId,
             conversationId: input.conversationId,
             status: 'created',
+            role: 'build',
             createdAt: input.timestamp,
           },
         ],

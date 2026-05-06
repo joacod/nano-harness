@@ -20,6 +20,7 @@ describe('renderer run-events utilities', () => {
         id: 'run-1',
         conversationId: 'conversation-1',
         status: 'created',
+        role: 'build',
         createdAt: '2026-04-29T10:00:00.000Z',
       },
     })
@@ -86,6 +87,7 @@ describe('renderer run-events utilities', () => {
           id: 'run-1',
           conversationId: 'conversation-1',
           status: 'created',
+          role: 'build',
           createdAt: '2026-04-29T10:00:00.000Z',
         },
       }),
@@ -177,6 +179,7 @@ describe('renderer run-events utilities', () => {
           id: 'run-1',
           conversationId: 'conversation-1',
           status: 'waiting_approval',
+          role: 'build',
           createdAt: '2026-04-29T10:00:00.000Z',
         },
       ],
@@ -196,6 +199,15 @@ describe('renderer run-events utilities', () => {
 
     expect(getPendingApproval(snapshot, 'run-1')).toMatchObject({ id: 'approval-1' })
     expect(getPendingApproval(snapshot, null)).toBeNull()
+    expect(getPendingApproval({ ...snapshot, approvalRequests: [] }, 'run-1', [event('approval.required', {
+      approvalRequest: {
+        id: 'approval-live',
+        runId: 'run-1',
+        actionCallId: 'call-live',
+        reason: 'Live approval',
+        requestedAt: '2026-04-29T10:00:02.000Z',
+      },
+    })])).toMatchObject({ id: 'approval-live' })
     expect(getRecoverableRunAction(snapshot.runs[0], snapshot.approvalRequests[0])).toBeNull()
     expect(getRecoverableRunAction({ ...snapshot.runs[0], status: 'started' }, null)).toBe('resume')
     expect(getProviderRequestForRun(snapshot.events, 'run-1')).toMatchObject({ type: 'provider.requested' })

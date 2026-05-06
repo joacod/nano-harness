@@ -723,6 +723,15 @@ a {
   justify-content: space-between;
   gap: 16px;
   min-width: 0;
+  margin-bottom: 12px;
+}
+
+.session-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(67, 231, 255, 0.1);
 }
 
 .conversation-hero-title {
@@ -1218,6 +1227,19 @@ a {
   display: flex;
   align-items: flex-end;
   min-height: 42px;
+}
+
+.settings-checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 38px;
+  color: var(--foreground);
+  font-size: 0.86rem;
+}
+
+.settings-checkbox-row input {
+  accent-color: #43ff9d;
 }
 
 .settings-save-row {

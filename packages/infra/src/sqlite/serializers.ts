@@ -36,6 +36,7 @@ export function normalizeNullableRunRow(row: {
   id: string
   conversationId: string
   status: string
+  role: string
   createdAt: string
   startedAt: string | null
   finishedAt: string | null
@@ -45,6 +46,7 @@ export function normalizeNullableRunRow(row: {
     id: row.id,
     conversationId: row.conversationId,
     status: row.status,
+    role: row.role,
     createdAt: row.createdAt,
     startedAt: row.startedAt ?? undefined,
     finishedAt: row.finishedAt ?? undefined,
@@ -69,5 +71,25 @@ export function normalizeNullableMessageRow(row: {
     content: row.content,
     metadata: row.metadata ?? undefined,
     createdAt: row.createdAt,
+  }
+}
+
+export function normalizeNullableSessionRow(row: {
+  id: string
+  conversationId: string
+  parentSessionId: string | null
+  rootSessionId: string
+  title: string
+  createdAt: string
+  updatedAt: string
+}) {
+  return {
+    id: row.id,
+    conversationId: row.conversationId,
+    parentSessionId: row.parentSessionId,
+    rootSessionId: row.rootSessionId,
+    title: row.title,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
   }
 }

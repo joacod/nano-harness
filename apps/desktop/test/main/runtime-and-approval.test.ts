@@ -185,6 +185,7 @@ describe('DesktopApprovalCoordinator', () => {
         id: 'run-1',
         conversationId: 'conversation-1',
         status: 'waiting_approval',
+        role: 'build',
         createdAt: '2026-04-29T10:00:00.000Z',
       },
       settings: {
@@ -223,6 +224,7 @@ describe('DesktopApprovalCoordinator', () => {
         id: 'run-1',
         conversationId: 'conversation-1',
         status: 'waiting_approval',
+        role: 'build',
         createdAt: '2026-04-29T10:00:00.000Z',
       },
       settings: {

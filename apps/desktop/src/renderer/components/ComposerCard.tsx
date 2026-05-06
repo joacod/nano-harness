@@ -6,6 +6,7 @@ import { useNavigate } from '@tanstack/react-router'
 
 import { createConversationId, providerStatusQueryOptions } from '../queries'
 import { Button, Card, FeedbackText, RuntimePill, TextArea } from './ui'
+import type { AgentRole } from '../../../../../packages/shared/src'
 
 export function ComposerCard({ conversationId }: { conversationId: string | null }) {
   const navigate = useNavigate()
@@ -13,11 +14,12 @@ export function ComposerCard({ conversationId }: { conversationId: string | null
   const providerStatusQuery = useQuery(providerStatusQueryOptions)
   const [submitError, setSubmitError] = useState<string | null>(null)
   const startRunMutation = useMutation({
-    mutationFn: async (prompt: string) => {
+    mutationFn: async (input: { prompt: string; role: AgentRole }) => {
       const nextConversationId = conversationId ?? createConversationId()
       const result = await window.desktop.startRun({
         conversationId: nextConversationId,
-        prompt,
+        prompt: input.prompt,
+        role: input.role,
       })
 
       return {
@@ -28,6 +30,7 @@ export function ComposerCard({ conversationId }: { conversationId: string | null
     onSuccess: async ({ conversationId: nextConversationId }) => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['conversations'] }),
+        queryClient.invalidateQueries({ queryKey: ['sessions'] }),
         queryClient.invalidateQueries({ queryKey: ['conversation', nextConversationId] }),
       ])
 
@@ -43,7 +46,8 @@ export function ComposerCard({ conversationId }: { conversationId: string | null
       prompt: '',
     },
     onSubmit: async ({ value }) => {
-      const prompt = value.prompt.trim()
+      const parsedCommand = parseRoleCommand(value.prompt)
+      const prompt = parsedCommand.prompt
 
       if (!prompt) {
         setSubmitError('Enter a prompt before sending.')
@@ -52,7 +56,7 @@ export function ComposerCard({ conversationId }: { conversationId: string | null
 
       setSubmitError(null)
       try {
-        await startRunMutation.mutateAsync(prompt)
+        await startRunMutation.mutateAsync(parsedCommand)
       } catch {
         return
       }
@@ -133,4 +137,18 @@ export function ComposerCard({ conversationId }: { conversationId: string | null
       ) : null}
     </Card>
   )
+}
+
+function parseRoleCommand(value: string): { prompt: string; role: AgentRole } {
+  const trimmed = value.trim()
+  const match = /^\/(plan|build|review)(?:\s+([\s\S]*))?$/u.exec(trimmed)
+
+  if (!match) {
+    return { prompt: trimmed, role: 'build' }
+  }
+
+  return {
+    role: match[1] as AgentRole,
+    prompt: match[2]?.trim() || trimmed,
+  }
 }

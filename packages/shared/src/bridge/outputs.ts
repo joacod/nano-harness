@@ -5,6 +5,7 @@ import { runEventSchema } from '../events'
 import { conversationSchema, messageSchema } from '../messages'
 import { runSchema } from '../runs'
 import { providerAuthMethodSchema } from '../settings'
+import { sessionExportResultSchema, sessionListSchema } from '../sessions'
 
 export const desktopPlatformSchema = z.enum(['darwin', 'linux', 'win32'])
 
@@ -32,6 +33,8 @@ export type ConversationSnapshot = z.infer<typeof conversationSnapshotSchema>
 export const conversationListSchema = z.array(conversationSchema)
 
 export type ConversationList = z.infer<typeof conversationListSchema>
+
+export { sessionExportResultSchema, sessionListSchema }
 
 export const providerStatusSchema = z.object({
   providerId: z.string().min(1),

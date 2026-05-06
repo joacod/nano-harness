@@ -9,7 +9,7 @@ export const approvalRequestSchema = z.object({
   runId: z.string().min(1),
   actionCallId: z.string().min(1),
   reason: z.string().min(1),
-  requestedAt: z.string().datetime(),
+  requestedAt: z.iso.datetime(),
 })
 
 export type ApprovalRequest = z.infer<typeof approvalRequestSchema>
@@ -17,7 +17,7 @@ export type ApprovalRequest = z.infer<typeof approvalRequestSchema>
 export const approvalResolutionSchema = z.object({
   approvalRequestId: z.string().min(1),
   decision: approvalDecisionSchema,
-  decidedAt: z.string().datetime(),
+  decidedAt: z.iso.datetime(),
 })
 
 export type ApprovalResolution = z.infer<typeof approvalResolutionSchema>

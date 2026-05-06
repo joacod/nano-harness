@@ -1,9 +1,12 @@
 import type {
   ActionCall,
+  ActionDefinition,
   ActionResult,
   AppSettings,
   ApprovalRequest,
   ApprovalResolution,
+  HookPhase,
+  HookResult,
   JsonValue,
   Message,
   Run,
@@ -18,7 +21,10 @@ import type { ApprovalCoordinator, PendingApprovalContext } from './approvals'
 import { getLatestPendingApproval } from './approvals'
 import type { EventBus } from './event-bus'
 import { noopEventBus } from './event-bus'
+import type { HookRunner } from './hooks'
+import { PersonalRulesHookRunner } from './hooks'
 import type { Policy } from './policy'
+import { listActiveSafetyRules } from './policy'
 import type { McpRegistry } from './mcp'
 import { EmptyMcpRegistry } from './mcp'
 import type { Provider, ProviderActionRequest, ProviderCredentialResolver, ProviderGenerateResult, SkillResolver } from './provider'
@@ -36,6 +42,7 @@ export interface RunEngineDependencies {
   policy: Policy
   eventBus?: EventBus
   approvalCoordinator?: ApprovalCoordinator
+  hookRunner?: HookRunner
   now?: () => string
   createId?: () => string
   maxProviderTurns?: number
@@ -131,6 +138,40 @@ function isAbortError(error: unknown): boolean {
   return error instanceof Error && error.name === 'AbortError'
 }
 
+function filterActionsForRole(actions: ActionDefinition[], role: Run['role']): ActionDefinition[] {
+  if (!role || role === 'build') {
+    return actions
+  }
+
+  const allowedPlanActions = new Set([
+    'list_directory',
+    'read_file',
+    'read_range',
+    'glob',
+    'grep',
+    'git_status',
+    'git_diff',
+    'fetch_url',
+    'list_mcp_resources',
+    'read_mcp_resource',
+  ])
+  const allowedReviewActions = new Set([
+    'list_directory',
+    'read_file',
+    'read_range',
+    'glob',
+    'grep',
+    'git_status',
+    'git_diff',
+    'run_command',
+    'list_mcp_resources',
+    'read_mcp_resource',
+  ])
+  const allowedActions = role === 'plan' ? allowedPlanActions : allowedReviewActions
+
+  return actions.filter((action) => allowedActions.has(action.id))
+}
+
 export class CoreRunEngine implements RunEngine {
   private readonly store: Store
   private readonly provider: Provider
@@ -141,6 +182,7 @@ export class CoreRunEngine implements RunEngine {
   private readonly policy: Policy
   private readonly eventBus: EventBus
   private readonly approvalCoordinator?: ApprovalCoordinator
+  private readonly hookRunner: HookRunner
   private readonly now: () => string
   private readonly createId: () => string
   private readonly maxProviderTurns: number
@@ -156,6 +198,7 @@ export class CoreRunEngine implements RunEngine {
     this.policy = dependencies.policy
     this.eventBus = dependencies.eventBus ?? noopEventBus
     this.approvalCoordinator = dependencies.approvalCoordinator
+    this.hookRunner = dependencies.hookRunner ?? new PersonalRulesHookRunner()
     this.now = dependencies.now ?? defaultNow
     this.createId = dependencies.createId ?? defaultCreateId
     this.maxProviderTurns = dependencies.maxProviderTurns ?? 8
@@ -184,6 +227,7 @@ export class CoreRunEngine implements RunEngine {
       id: this.createId(),
       conversationId: input.conversationId,
       status: 'created',
+      role: input.role ?? 'build',
       createdAt: now,
     }
 
@@ -450,7 +494,7 @@ export class CoreRunEngine implements RunEngine {
     })
 
     let streamedMessage = ''
-    const actions = await this.actionExecutor.listDefinitions()
+    const actions = filterActionsForRole(await this.actionExecutor.listDefinitions(), input.run.role)
     const skills = await this.skillResolver.resolveForRun({
       settings: input.settings,
       run: input.run,
@@ -567,9 +611,21 @@ export class CoreRunEngine implements RunEngine {
   }
 
   private async createDryRunPreview(settings: AppSettings, run: Run, messages: Message[]): Promise<DryRunPreviewPayload> {
-    const actions = await this.actionExecutor.listDefinitions()
+    const actions = filterActionsForRole(await this.actionExecutor.listDefinitions(), run.role)
     const skills = await this.skillResolver.resolveForRun({ settings, run, messages })
     const mcp = await this.mcpRegistry.getInventory(settings)
+    const permissionDecisions = await Promise.all(actions.map((action) => this.policy.evaluateAction({
+      run,
+      action,
+      actionCall: {
+        id: `dry-run-${action.id}`,
+        runId: run.id,
+        actionId: action.id,
+        input: {},
+        requestedAt: this.now(),
+      },
+      settings,
+    })))
 
     return {
       provider: {
@@ -586,6 +642,12 @@ export class CoreRunEngine implements RunEngine {
         title: action.title,
         requiresApproval: action.requiresApproval,
       })),
+      permissions: {
+        denied: permissionDecisions.filter((decision) => decision.effect === 'deny'),
+        risky: permissionDecisions.filter((decision) => decision.effect === 'require_approval'),
+        activeRules: listActiveSafetyRules(settings),
+        activeHooks: await this.hookRunner.listHooks(settings),
+      },
       skills: {
         available: skills.available,
         selected: skills.selected.map((skill) => ({
@@ -680,6 +742,12 @@ export class CoreRunEngine implements RunEngine {
       }
     }
 
+    const preHookStopped = await this.runToolHooks('pre_tool_use', run, actionDefinition, actionCall, settings)
+
+    if (preHookStopped) {
+      throw new Error(preHookStopped.message)
+    }
+
     await this.emitEvent({
       id: this.createId(),
       runId: run.id,
@@ -704,6 +772,12 @@ export class CoreRunEngine implements RunEngine {
       payload: { result },
     })
 
+    const postHookStopped = await this.runToolHooks('post_tool_use', run, actionDefinition, actionCall, settings, result)
+
+    if (postHookStopped) {
+      throw new Error(postHookStopped.message)
+    }
+
     const toolMessage: Message = {
       id: this.createId(),
       conversationId: run.conversationId,
@@ -725,6 +799,65 @@ export class CoreRunEngine implements RunEngine {
     })
 
     return toolMessage
+  }
+
+  private async runToolHooks(
+    phase: HookPhase,
+    run: Run,
+    action: ActionDefinition,
+    actionCall: ActionCall,
+    settings: AppSettings,
+    result?: ActionResult,
+  ): Promise<HookResult | null> {
+    let results: HookResult[]
+
+    try {
+      const hookIds = await this.hookRunner.listHooks(settings)
+
+      for (const hookId of hookIds.filter((hookId) => hookId.includes(phase))) {
+        await this.emitEvent({
+          id: this.createId(),
+          runId: run.id,
+          timestamp: this.now(),
+          type: 'hook.started',
+          payload: { hookId, phase, actionCallId: actionCall.id },
+        })
+      }
+
+      results = await this.hookRunner.runHooks({ phase, run, action, actionCall, settings, result })
+    } catch (error) {
+      const failedResult: HookResult = {
+        hookId: 'hook_runner',
+        phase,
+        status: 'failed',
+        message: error instanceof Error ? error.message : 'Hook failed',
+      }
+
+      await this.emitEvent({
+        id: this.createId(),
+        runId: run.id,
+        timestamp: this.now(),
+        type: 'hook.error',
+        payload: { result: failedResult },
+      })
+      return failedResult
+    }
+
+    for (const hookResult of results) {
+      await this.emitEvent({
+        id: this.createId(),
+        runId: run.id,
+        timestamp: this.now(),
+        type: hookResult.status === 'denied' ? 'hook.denied' : hookResult.status === 'failed' ? 'hook.error' : 'hook.completed',
+        payload: { result: hookResult },
+      } as Extract<RunEvent, { type: 'hook.completed' | 'hook.denied' | 'hook.error' }>)
+
+      if (hookResult.status !== 'completed') {
+        return hookResult
+      }
+    }
+
+    return null
   }
 
   private async requireApproval(input: {
