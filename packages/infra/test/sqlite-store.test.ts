@@ -97,12 +97,14 @@ describe('SqliteStore', () => {
         id: 'run-1',
         conversationId: 'conversation-1',
         status: 'created',
+        role: 'build',
         createdAt: '2026-04-29T10:00:00.000Z',
       })
       await store.createRun({
         id: 'run-2',
         conversationId: 'conversation-1',
         status: 'started',
+        role: 'build',
         createdAt: '2026-04-29T10:00:05.000Z',
         startedAt: '2026-04-29T10:00:06.000Z',
       })
@@ -159,6 +161,7 @@ describe('SqliteStore', () => {
             id: 'run-2',
             conversationId: 'conversation-1',
             status: 'started',
+            role: 'build',
             createdAt: '2026-04-29T10:00:05.000Z',
             startedAt: '2026-04-29T10:00:06.000Z',
           },

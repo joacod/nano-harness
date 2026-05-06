@@ -75,13 +75,7 @@ export class SqliteStore implements Store {
     await mkdir(this.paths.dataDir, { recursive: true })
 
     for (const statement of initializationStatements) {
-      try {
-        await this.client.execute(statement)
-      } catch (error) {
-        if (!isIgnorableMigrationError(error)) {
-          throw error
-        }
-      }
+      await this.client.execute(statement)
     }
   }
 
@@ -408,9 +402,6 @@ export class SqliteStore implements Store {
   }
 }
 
-function isIgnorableMigrationError(error: unknown): boolean {
-  return error instanceof Error && error.message.toLowerCase().includes('duplicate column name')
-}
 
 export async function createSqliteStore(options: SqliteStoreOptions = {}): Promise<SqliteStore> {
   const store = new SqliteStore(options)

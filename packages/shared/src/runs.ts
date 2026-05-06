@@ -17,10 +17,10 @@ export const runSchema = z.object({
   id: z.string().min(1),
   conversationId: z.string().min(1),
   status: runStatusSchema,
-  role: agentRoleSchema.optional(),
-  createdAt: z.string().datetime(),
-  startedAt: z.string().datetime().optional(),
-  finishedAt: z.string().datetime().optional(),
+  role: agentRoleSchema,
+  createdAt: z.iso.datetime(),
+  startedAt: z.iso.datetime().optional(),
+  finishedAt: z.iso.datetime().optional(),
   failureMessage: z.string().min(1).optional(),
 })
 

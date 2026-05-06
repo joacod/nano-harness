@@ -11,7 +11,7 @@ import { skillSummarySchema } from './skills'
 const eventBaseSchema = z.object({
   id: z.string().min(1),
   runId: z.string().min(1),
-  timestamp: z.string().datetime(),
+  timestamp: z.iso.datetime(),
 })
 
 export const runCreatedEventSchema = eventBaseSchema.extend({
@@ -24,7 +24,7 @@ export const runCreatedEventSchema = eventBaseSchema.extend({
 export const runStartedEventSchema = eventBaseSchema.extend({
   type: z.literal('run.started'),
   payload: z.object({
-    startedAt: z.string().datetime(),
+    startedAt: z.iso.datetime(),
   }),
 })
 
@@ -59,7 +59,7 @@ export const runWaitingApprovalEventSchema = eventBaseSchema.extend({
 export const runCompletedEventSchema = eventBaseSchema.extend({
   type: z.literal('run.completed'),
   payload: z.object({
-    finishedAt: z.string().datetime(),
+    finishedAt: z.iso.datetime(),
   }),
 })
 

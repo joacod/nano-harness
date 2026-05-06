@@ -94,6 +94,7 @@ test('shows an approval request and lets the user grant it', async ({ page }) =>
             id: 'run-approval',
             conversationId: 'conversation-approval',
             status: 'waiting_approval',
+            role: 'build',
             createdAt: '2026-04-29T10:00:01.000Z',
             startedAt: '2026-04-29T10:00:02.000Z',
           },

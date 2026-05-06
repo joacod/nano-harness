@@ -20,6 +20,7 @@ describe('renderer run-events utilities', () => {
         id: 'run-1',
         conversationId: 'conversation-1',
         status: 'created',
+        role: 'build',
         createdAt: '2026-04-29T10:00:00.000Z',
       },
     })
@@ -86,6 +87,7 @@ describe('renderer run-events utilities', () => {
           id: 'run-1',
           conversationId: 'conversation-1',
           status: 'created',
+          role: 'build',
           createdAt: '2026-04-29T10:00:00.000Z',
         },
       }),
@@ -177,6 +179,7 @@ describe('renderer run-events utilities', () => {
           id: 'run-1',
           conversationId: 'conversation-1',
           status: 'waiting_approval',
+          role: 'build',
           createdAt: '2026-04-29T10:00:00.000Z',
         },
       ],

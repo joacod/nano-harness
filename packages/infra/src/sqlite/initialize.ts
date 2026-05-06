@@ -27,7 +27,6 @@ export const initializationStatements = [
     failure_message TEXT
   )`,
   `CREATE INDEX IF NOT EXISTS runs_conversation_id_idx ON runs (conversation_id, created_at)`,
-  `ALTER TABLE runs ADD COLUMN role TEXT NOT NULL DEFAULT 'build'`,
   `CREATE TABLE IF NOT EXISTS messages (
     id TEXT PRIMARY KEY NOT NULL,
     conversation_id TEXT NOT NULL,

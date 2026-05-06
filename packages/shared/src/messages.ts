@@ -12,7 +12,7 @@ const messageBaseSchema = z.object({
   conversationId: z.string().min(1),
   runId: z.string().min(1).optional(),
   content: z.string(),
-  createdAt: z.string().datetime(),
+  createdAt: z.iso.datetime(),
 })
 
 export const assistantToolCallSchema = z.object({
@@ -56,8 +56,8 @@ export type Message = z.infer<typeof messageSchema>
 export const conversationSchema = z.object({
   id: z.string().min(1),
   title: z.string().min(1),
-  createdAt: z.string().datetime(),
-  updatedAt: z.string().datetime(),
+  createdAt: z.iso.datetime(),
+  updatedAt: z.iso.datetime(),
 })
 
 export type Conversation = z.infer<typeof conversationSchema>

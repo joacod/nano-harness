@@ -36,7 +36,7 @@ export function normalizeNullableRunRow(row: {
   id: string
   conversationId: string
   status: string
-  role?: string | null
+  role: string
   createdAt: string
   startedAt: string | null
   finishedAt: string | null
@@ -46,7 +46,7 @@ export function normalizeNullableRunRow(row: {
     id: row.id,
     conversationId: row.conversationId,
     status: row.status,
-    role: row.role ?? undefined,
+    role: row.role,
     createdAt: row.createdAt,
     startedAt: row.startedAt ?? undefined,
     finishedAt: row.finishedAt ?? undefined,

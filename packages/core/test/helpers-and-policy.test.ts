@@ -31,6 +31,7 @@ describe('core helpers and policy', () => {
         id: 'run-1',
         conversationId: 'conversation-1',
         status: 'started' as const,
+        role: 'build' as const,
         createdAt: '2026-04-29T10:00:00.000Z',
       },
       actionCall: {
@@ -202,6 +203,7 @@ describe('core helpers and policy', () => {
           id: 'run-1',
           conversationId: 'conversation-1',
           status: 'created',
+          role: 'build',
           createdAt: '2026-04-29T10:00:00.000Z',
         },
       },
