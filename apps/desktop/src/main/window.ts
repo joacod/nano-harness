@@ -1,5 +1,6 @@
 import { app, BrowserWindow, shell } from 'electron'
 import { join } from 'node:path'
+import { pathToFileURL } from 'node:url'
 
 function getAppIconPath(): string {
   return join(app.getAppPath(), 'resources', 'icon.png')
@@ -45,5 +46,5 @@ export function createWindow(): void {
   })
 
   window.maximize()
-  void window.loadURL(process.env['ELECTRON_RENDERER_URL'] ?? `file://${join(__dirname, '../renderer/index.html')}`)
+  void window.loadURL(process.env['ELECTRON_RENDERER_URL'] ?? pathToFileURL(join(__dirname, '../renderer/index.html')).toString())
 }

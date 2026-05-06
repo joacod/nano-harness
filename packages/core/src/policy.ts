@@ -1,5 +1,7 @@
 import { createDefaultSafetySettings, type ActionCall, type ActionDefinition, type AppSettings, type PermissionDecision, type PermissionPreview, type Run } from '@nano-harness/shared'
 
+import { isWorkspaceRelativePathInsideRoot } from './workspace-paths'
+
 export interface PolicyInput {
   run: Run
   action: ActionDefinition
@@ -122,7 +124,7 @@ function evaluateWorkspaceBoundary(input: PolicyInput, preview: PermissionPrevie
     return null
   }
 
-  if (!isInsideWorkspace(input.settings.workspace.rootPath, pathValue)) {
+  if (!isWorkspaceRelativePathInsideRoot(pathValue)) {
     return {
       effect: 'deny',
       reason: `${input.action.title} target is outside the configured workspace root`,
@@ -230,32 +232,6 @@ function getPathInput(actionId: string, input: ActionCall['input']): string | un
   }
 
   return undefined
-}
-
-function isInsideWorkspace(rootPath: string, targetPath: string): boolean {
-  const normalizedTarget = targetPath.replace(/\\/g, '/')
-  const normalizedRoot = rootPath.replace(/\\/g, '/')
-
-  if (normalizedTarget.startsWith('/')) {
-    return normalizedTarget === normalizedRoot || normalizedTarget.startsWith(`${normalizedRoot}/`)
-  }
-
-  const segments = normalizedTarget.split('/').filter((segment) => segment && segment !== '.')
-  let depth = 0
-
-  for (const segment of segments) {
-    if (segment === '..') {
-      depth -= 1
-    } else {
-      depth += 1
-    }
-
-    if (depth < 0) {
-      return false
-    }
-  }
-
-  return true
 }
 
 function evaluateRolePolicy(role: Run['role'], action: ActionDefinition): PolicyDecision | null {
