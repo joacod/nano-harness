@@ -224,6 +224,46 @@ describe('ChatGptSubscriptionProvider', () => {
     ])
   })
 
+  it('does not append final function call argument snapshots after deltas', async () => {
+    const provider = new ChatGptSubscriptionProvider({
+      fetch: vi.fn<FetchLike>(async () =>
+        createSseResponse([
+          toDataLine({
+            type: 'response.output_item.added',
+            item: { id: 'item-1', type: 'function_call', call_id: 'call-1', name: 'read_file' },
+          }),
+          toDataLine({ type: 'response.function_call_arguments.delta', item_id: 'item-1', delta: '{"path":"' }),
+          toDataLine({ type: 'response.function_call_arguments.delta', item_id: 'item-1', delta: '."}' }),
+          toDataLine({ type: 'response.function_call_arguments.done', item_id: 'item-1', arguments: '{"path":"."}' }),
+          toDataLine({ type: 'response.output_item.done', item: { id: 'item-1', type: 'function_call', call_id: 'call-1', name: 'read_file', arguments: '{"path":"."}' } }),
+          toDataLine({ type: 'response.completed' }),
+        ]),
+      ),
+    })
+
+    const result = await provider.generate({
+      run,
+      messages: [messages[0]],
+      actions,
+      settings,
+      providerAuth: {
+        authMethod: 'oauth',
+        accessToken: 'access-token',
+        refreshToken: 'refresh-token',
+        expiresAt: Date.now() + 60_000,
+      },
+      signal: new AbortController().signal,
+    })
+
+    expect(result.actionCalls).toEqual([
+      {
+        toolCallId: 'call-1',
+        actionId: 'read_file',
+        input: { path: '.' },
+      },
+    ])
+  })
+
   it('throws when OAuth auth is missing', async () => {
     const provider = new ChatGptSubscriptionProvider()
 
