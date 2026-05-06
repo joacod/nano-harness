@@ -3,6 +3,7 @@ import { mkdir, readdir, readFile, stat, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 
 import type { ActionExecutionInput, ActionExecutor } from '@nano-harness/core'
+import { benchmarkRunSummarySchema, harnessChangeManifestSchema, harnessComponentRegistry } from '@nano-harness/shared'
 import type { ActionDefinition, ActionResult } from '@nano-harness/shared'
 
 function parseReadFileInput(value: Record<string, unknown>): { path: string } {
@@ -141,6 +142,17 @@ function parseFetchUrlInput(value: Record<string, unknown>): { url: string } {
     throw new Error(error instanceof Error ? error.message : 'fetch_url requires a valid URL', {
       cause: error,
     })
+  }
+}
+
+function parseHarnessChangeManifestInput(value: Record<string, unknown>) {
+  return harnessChangeManifestSchema.parse(value.manifest)
+}
+
+function parseBenchmarkComparisonInput(value: Record<string, unknown>) {
+  return {
+    before: benchmarkRunSummarySchema.parse(value.before),
+    after: benchmarkRunSummarySchema.parse(value.after),
   }
 }
 
@@ -313,6 +325,46 @@ const actionDefinitions: Record<string, ActionDefinition> = {
       properties: {
         staged: { type: 'boolean' },
       },
+      additionalProperties: false,
+    },
+  },
+  list_harness_components: {
+    id: 'list_harness_components',
+    title: 'List Harness Components',
+    description: 'List versioned Nano Harness components that may receive isolated improvement proposals',
+    requiresApproval: false,
+    inputSchema: {
+      type: 'object',
+      properties: {},
+      additionalProperties: false,
+    },
+  },
+  propose_harness_change: {
+    id: 'propose_harness_change',
+    title: 'Propose Harness Change',
+    description: 'Validate and return a reversible, evidence-backed harness change manifest without mutating live files',
+    requiresApproval: true,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        manifest: { type: 'object' },
+      },
+      required: ['manifest'],
+      additionalProperties: false,
+    },
+  },
+  compare_benchmark_results: {
+    id: 'compare_benchmark_results',
+    title: 'Compare Benchmark Results',
+    description: 'Compare before and after benchmark summaries to determine whether a harness proposal helped',
+    requiresApproval: false,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        before: { type: 'object' },
+        after: { type: 'object' },
+      },
+      required: ['before', 'after'],
       additionalProperties: false,
     },
   },
@@ -708,6 +760,49 @@ export class BuiltInActionExecutor implements ActionExecutor {
             status: result.exitCode === 0 ? 'completed' : 'failed',
             errorMessage: result.exitCode === 0 ? undefined : `git diff exited with ${result.exitCode}`,
             output: { ...result, staged },
+          })
+        }
+        case 'list_harness_components': {
+          return createActionResult({
+            actionCallId: input.call.id,
+            status: 'completed',
+            output: harnessComponentRegistry,
+          })
+        }
+        case 'propose_harness_change': {
+          const manifest = parseHarnessChangeManifestInput(input.call.input)
+          const registeredComponentIds = new Set(harnessComponentRegistry.components.map((component) => component.id))
+          const unknownComponents = manifest.affectedComponents.filter((componentId) => !registeredComponentIds.has(componentId))
+
+          if (unknownComponents.length > 0) {
+            throw new Error(`Unknown harness components: ${unknownComponents.join(', ')}`)
+          }
+
+          return createActionResult({
+            actionCallId: input.call.id,
+            status: 'completed',
+            output: {
+              manifest,
+              liveMutationApplied: false,
+              approvalRequiredForPromotion: true,
+            },
+          })
+        }
+        case 'compare_benchmark_results': {
+          const parsedInput = parseBenchmarkComparisonInput(input.call.input)
+          const comparison = {
+            before: parsedInput.before,
+            after: parsedInput.after,
+            passedDelta: parsedInput.after.passed - parsedInput.before.passed,
+            failedDelta: parsedInput.after.failed - parsedInput.before.failed,
+            scoreDelta: parsedInput.after.score - parsedInput.before.score,
+            improved: parsedInput.after.score > parsedInput.before.score && parsedInput.after.failed <= parsedInput.before.failed,
+          }
+
+          return createActionResult({
+            actionCallId: input.call.id,
+            status: 'completed',
+            output: comparison,
           })
         }
         default:

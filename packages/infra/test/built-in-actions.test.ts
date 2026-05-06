@@ -320,6 +320,63 @@ describe('BuiltInActionExecutor', () => {
       errorMessage: 'Command rm is not in the allow-list',
     })
   })
+
+  it('validates harness manifests and compares benchmark results without live mutation', async () => {
+    const rootPath = await createWorkspace()
+    const executor = createExecutor()
+    const componentsResult = await executor.execute(
+      createExecutionInput({
+        actionId: 'list_harness_components',
+        settings: { ...workspaceSettings, workspace: { ...workspaceSettings.workspace, rootPath } },
+        input: {},
+      }),
+    )
+    const proposalResult = await executor.execute(
+      createExecutionInput({
+        actionId: 'propose_harness_change',
+        settings: { ...workspaceSettings, workspace: { ...workspaceSettings.workspace, rootPath } },
+        input: {
+          manifest: {
+            id: 'change-1',
+            title: 'Tighten provider instructions',
+            rootCause: 'Benchmark evidence shows missing validation reminders.',
+            proposedFix: 'Add a concise validation reminder to build mode.',
+            predictedEffect: 'More runs will validate edits before completion.',
+            affectedComponents: ['core.instructions'],
+            evidence: ['benchmark local-edit failed validation'],
+            benchmarkSuites: ['benchmarks/cases/local-edit.json'],
+            tests: ['pnpm test'],
+            rollbackPlan: 'Revert the instruction text change in packages/core/src/instructions.ts.',
+            patchPreview: 'diff --git a/packages/core/src/instructions.ts b/packages/core/src/instructions.ts',
+            createdAt: '2026-04-29T10:00:00.000Z',
+          },
+        },
+      }),
+    )
+    const comparisonResult = await executor.execute(
+      createExecutionInput({
+        actionId: 'compare_benchmark_results',
+        settings: { ...workspaceSettings, workspace: { ...workspaceSettings.workspace, rootPath } },
+        input: {
+          before: { suite: 'local', passed: 2, failed: 1, score: 0.66 },
+          after: { suite: 'local', passed: 3, failed: 0, score: 1 },
+        },
+      }),
+    )
+
+    expect(componentsResult).toMatchObject({ status: 'completed' })
+    expect(componentsResult.output).toMatchObject({
+      components: expect.arrayContaining([expect.objectContaining({ id: 'core.instructions' })]),
+    })
+    expect(proposalResult).toMatchObject({
+      status: 'completed',
+      output: { liveMutationApplied: false, approvalRequiredForPromotion: true },
+    })
+    expect(comparisonResult).toMatchObject({
+      status: 'completed',
+      output: { passedDelta: 1, failedDelta: -1, scoreDelta: 0.33999999999999997, improved: true },
+    })
+  })
 })
 
 function createExecutor() {
@@ -334,7 +391,7 @@ function createExecutionInput(input: {
   const action: ActionDefinition = {
     id: input.actionId,
     title: input.actionId,
-    requiresApproval: input.actionId === 'write_file' || input.actionId === 'apply_patch' || input.actionId === 'run_command',
+    requiresApproval: input.actionId === 'write_file' || input.actionId === 'apply_patch' || input.actionId === 'run_command' || input.actionId === 'propose_harness_change',
     inputSchema: {
       type: 'object',
       properties: {},

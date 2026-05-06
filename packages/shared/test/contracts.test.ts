@@ -4,6 +4,8 @@ import {
   appSettingsSchema,
   clearProviderAuthInputSchema,
   getProviderDefinition,
+  harnessChangeManifestSchema,
+  harnessComponentRegistrySchema,
   messageSchema,
   providerAdapterIdSchema,
   providerDefaultModels,
@@ -86,6 +88,34 @@ describe('shared contracts', () => {
 
   it('keeps provider adapter ids explicit', () => {
     expect(providerAdapterIdSchema.options).toEqual(['openai-compatible', 'chatgpt-subscription'])
+  })
+
+  it('validates harness component registry and change manifests', () => {
+    expect(harnessComponentRegistrySchema.parse({
+      components: [{
+        id: 'core.instructions',
+        kind: 'prompt',
+        title: 'Provider Instructions',
+        version: '1.0.0',
+        path: 'packages/core/src/instructions.ts',
+        mutable: true,
+      }],
+    })).toMatchObject({ components: [{ id: 'core.instructions' }] })
+
+    expect(harnessChangeManifestSchema.parse({
+      id: 'change-1',
+      title: 'Improve validation reminder',
+      rootCause: 'Benchmark runs completed edits without validation.',
+      proposedFix: 'Update build instructions to require targeted validation after edits.',
+      predictedEffect: 'Higher benchmark validation pass rate.',
+      affectedComponents: ['core.instructions'],
+      evidence: ['run evidence export: validation missing'],
+      benchmarkSuites: ['benchmarks/cases/local-edit.json'],
+      tests: ['pnpm test'],
+      rollbackPlan: 'Revert the instruction text change.',
+      patchPreview: 'diff --git a/packages/core/src/instructions.ts b/packages/core/src/instructions.ts',
+      createdAt: '2026-04-29T10:00:00.000Z',
+    })).toMatchObject({ id: 'change-1' })
   })
 
   it('parses assistant and tool messages with tool metadata', () => {

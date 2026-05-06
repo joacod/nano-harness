@@ -5,6 +5,7 @@ import { getProviderDefinition, type AppSettings, type McpInventory, type Memory
 import { providerCredentialStatusQueryOptions } from '../queries'
 import { ApiKeySettingsForm } from './settings/ApiKeySettingsForm'
 import { DataBackupPanel } from './settings/DataBackupPanel'
+import { HarnessEngineeringCard } from './settings/HarnessEngineeringCard'
 import { OAuthSettingsForm } from './settings/OAuthSettingsForm'
 import { McpInspectorCard } from './settings/McpInspectorCard'
 import { MemoryInspectorCard } from './settings/MemoryInspectorCard'
@@ -14,7 +15,7 @@ import { SkillsHubCard } from './settings/SkillsHubCard'
 import { WorkspaceSettingsForm } from './settings/WorkspaceSettingsForm'
 import { Card, Tabs } from './ui'
 
-type SettingsTab = 'providers' | 'workspace' | 'skills' | 'mcp' | 'memory' | 'data'
+type SettingsTab = 'providers' | 'workspace' | 'skills' | 'mcp' | 'memory' | 'harness' | 'data'
 
 export function SettingsFormCard({
   initialSettings,
@@ -181,6 +182,11 @@ export function SettingsFormCard({
                 onResolveProposal={onResolveMemoryProposal}
               />
             ),
+          },
+          {
+            value: 'harness',
+            label: 'Harness',
+            panel: <HarnessEngineeringCard />,
           },
           {
             value: 'data',
