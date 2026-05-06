@@ -6,6 +6,7 @@ import { benchmarkRunSummarySchema, draftPrArtifactSchema, harnessChangeManifest
 import type { ActionDefinition, ActionResult } from '@nano-harness/shared'
 
 import { fileActionCommands } from './actions/file-actions'
+import { networkActionCommands } from './actions/network-actions'
 import { searchActionCommands } from './actions/search-actions'
 import { createActionResult, type BuiltInActionCommand } from './actions/types'
 import { resolveWorkspacePath } from './actions/workspace'
@@ -28,26 +29,6 @@ function parseRunCommandInput(value: Record<string, unknown>): { command: string
   }
 
   return { command: value.command, args, cwd, timeoutMs }
-}
-
-function parseFetchUrlInput(value: Record<string, unknown>): { url: string } {
-  if (typeof value.url !== 'string' || !value.url.trim()) {
-    throw new Error('fetch_url requires a non-empty string url')
-  }
-
-  try {
-    const url = new URL(value.url)
-
-    if (url.protocol !== 'http:' && url.protocol !== 'https:') {
-      throw new Error('fetch_url only supports http and https URLs')
-    }
-
-    return { url: url.toString() }
-  } catch (error) {
-    throw new Error(error instanceof Error ? error.message : 'fetch_url requires a valid URL', {
-      cause: error,
-    })
-  }
 }
 
 function parseHarnessChangeManifestInput(value: Record<string, unknown>) {
@@ -108,22 +89,7 @@ function slugifyBranchName(value: string): string {
 const actionDefinitions: Record<string, ActionDefinition> = {
   ...Object.fromEntries(fileActionCommands.map((command) => [command.definition.id, command.definition])),
   ...Object.fromEntries(searchActionCommands.map((command) => [command.definition.id, command.definition])),
-  fetch_url: {
-    id: 'fetch_url',
-    title: 'Fetch URL',
-    description: 'Fetch a URL over HTTP or HTTPS',
-    requiresApproval: false,
-    inputSchema: {
-      type: 'object',
-      properties: {
-        url: {
-          type: 'string',
-        },
-      },
-      required: ['url'],
-      additionalProperties: false,
-    },
-  },
+  ...Object.fromEntries(networkActionCommands.map((command) => [command.definition.id, command.definition])),
   run_command: {
     id: 'run_command',
     title: 'Run Command',
@@ -290,7 +256,7 @@ async function runProcess(input: {
   })
 }
 
-const commandRegistry = new Map<string, BuiltInActionCommand>([...fileActionCommands, ...searchActionCommands].map((command) => [command.definition.id, command]))
+const commandRegistry = new Map<string, BuiltInActionCommand>([...fileActionCommands, ...searchActionCommands, ...networkActionCommands].map((command) => [command.definition.id, command]))
 
 export class BuiltInActionExecutor implements ActionExecutor {
   async listDefinitions(): Promise<ActionDefinition[]> {
@@ -310,37 +276,6 @@ export class BuiltInActionExecutor implements ActionExecutor {
       }
 
       switch (input.action.id) {
-        case 'fetch_url': {
-          const parsedInput = parseFetchUrlInput(input.call.input)
-          const response = await fetch(parsedInput.url, {
-            signal: input.signal,
-          })
-          const body = await response.text()
-
-          if (!response.ok) {
-            return createActionResult({
-              actionCallId: input.call.id,
-              status: 'failed',
-              errorMessage: `Fetch failed with ${response.status} ${response.statusText}`,
-              output: {
-                url: parsedInput.url,
-                status: response.status,
-                body: body.slice(0, 12000),
-              },
-            })
-          }
-
-          return createActionResult({
-            actionCallId: input.call.id,
-            status: 'completed',
-            output: {
-              url: parsedInput.url,
-              status: response.status,
-              contentType: response.headers.get('content-type') ?? '',
-              body: body.slice(0, 12000),
-            },
-          })
-        }
         case 'run_command': {
           const parsedInput = parseRunCommandInput(input.call.input)
           ensureAllowedCommand(parsedInput.command)
