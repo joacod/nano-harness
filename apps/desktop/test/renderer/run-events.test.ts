@@ -5,6 +5,7 @@ import { providerDefaultModels, type AppSettings, type ConversationSnapshot, typ
 import {
   applyProviderDefaults,
   getEventFamily,
+  getLatestConversationPendingApproval,
   getPendingApproval,
   getProviderRequestForRun,
   getRecoverableRunAction,
@@ -198,6 +199,7 @@ describe('renderer run-events utilities', () => {
     }
 
     expect(getPendingApproval(snapshot, 'run-1')).toMatchObject({ id: 'approval-1' })
+    expect(getLatestConversationPendingApproval(snapshot)).toMatchObject({ id: 'approval-1' })
     expect(getPendingApproval(snapshot, null)).toBeNull()
     expect(getPendingApproval({ ...snapshot, approvalRequests: [] }, 'run-1', [event('approval.required', {
       approvalRequest: {

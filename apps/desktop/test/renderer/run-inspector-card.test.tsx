@@ -54,8 +54,7 @@ describe('RunInspectorCard', () => {
     })
   })
 
-  it('resolves pending approvals from the inspector', async () => {
-    const user = userEvent.setup()
+  it('shows waiting approval status without approval actions', () => {
     const resolveApproval = vi.fn(async () => undefined)
     const pendingApproval = createApprovalRequest()
 
@@ -70,18 +69,12 @@ describe('RunInspectorCard', () => {
       />,
     )
 
-    expect(screen.getByText('Action requires confirmation')).toBeTruthy()
-    expect(screen.getAllByText('Need approval to read notes.txt')).toHaveLength(2)
-
-    await user.click(screen.getByRole('button', { name: 'Grant approval' }))
-
-    await waitFor(() => {
-      expect(resolveApproval).toHaveBeenCalledWith({
-        runId: 'run-1',
-        approvalRequestId: 'approval-1',
-        decision: 'granted',
-      })
-    })
+    expect(screen.getByText('waiting_approval')).toBeTruthy()
+    expect(screen.getByText('Approval required')).toBeTruthy()
+    expect(screen.getByText('Need approval to read notes.txt')).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'Grant approval' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Reject' })).toBeNull()
+    expect(resolveApproval).not.toHaveBeenCalled()
   })
 
   it('shows signal trace events latest first', () => {

@@ -74,6 +74,12 @@
   animation: signal-pulse 1.8s ease-in-out infinite;
 }
 
+.chat-approval-card {
+  align-self: stretch;
+  max-width: min(88%, 860px);
+  overflow-wrap: anywhere;
+}
+
 .message-meta-row {
   display: flex;
   flex-wrap: wrap;
