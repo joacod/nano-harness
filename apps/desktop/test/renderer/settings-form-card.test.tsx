@@ -8,6 +8,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createDefaultProviderSettings, providerDefaultModels, type AppSettings, type McpInventory, type ProviderStatus, type SkillInventory } from '@nano-harness/shared'
 
 import { SettingsFormCard, type SettingsTab } from '../../src/renderer/components/SettingsFormCard'
+import { SkillsHubCard } from '../../src/renderer/components/settings/SkillsHubCard'
 import { createDesktopMock, renderWithQueryClient } from './test-utils'
 
 describe('SettingsFormCard', () => {
@@ -122,7 +123,7 @@ function SettingsFormCardHarness() {
       initialSettings={createSettings()}
       dataPath="/tmp/nano-harness.db"
       providerStatus={createProviderStatus()}
-      skillInventory={createSkillInventory()}
+      skillsPanel={<SkillsHubCard inventory={createSkillInventory()} isSaving={false} error={null} onToggleSkill={vi.fn(async () => undefined)} />}
       mcpInventory={createMcpInventory()}
       memoryRecords={{ records: [] }}
       memoryProposals={{ proposals: [] }}
@@ -134,7 +135,6 @@ function SettingsFormCardHarness() {
       isClearingOauth={false}
       isExportingData={false}
       isImportingData={false}
-      isSavingSkills={false}
       isResolvingMemoryProposal={false}
       saveError={null}
       apiKeyError={null}
@@ -142,7 +142,6 @@ function SettingsFormCardHarness() {
       exportDataResult={null}
       importDataResult={null}
       dataError={null}
-      skillsError={null}
       memoryError={null}
       onSubmit={vi.fn(async () => undefined)}
       onSaveApiKey={vi.fn(async () => undefined)}
@@ -151,7 +150,6 @@ function SettingsFormCardHarness() {
       onClearOauth={vi.fn(async () => undefined)}
       onExportData={vi.fn(async () => undefined)}
       onImportData={vi.fn(async () => undefined)}
-      onToggleSkill={vi.fn(async () => undefined)}
       onSelectedTabChange={setSelectedTab}
       onResolveMemoryProposal={vi.fn(async () => undefined)}
     />

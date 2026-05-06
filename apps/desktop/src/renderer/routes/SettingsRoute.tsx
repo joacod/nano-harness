@@ -3,8 +3,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import type { AppSettings } from '../../../../../packages/shared/src'
 import { SettingsFormCard, type SettingsTab } from '../components/SettingsFormCard'
+import { SkillsSettingsTabContainer } from '../components/settings/SkillsSettingsTabContainer'
 import { Card } from '../components/ui'
-import { contextQueryOptions, mcpInventoryQueryOptions, memoryProposalsQueryOptions, memoryRecordsQueryOptions, providerStatusQueryOptions, settingsQueryOptions, skillsQueryOptions } from '../queries'
+import { contextQueryOptions, mcpInventoryQueryOptions, memoryProposalsQueryOptions, memoryRecordsQueryOptions, providerStatusQueryOptions, settingsQueryOptions } from '../queries'
 
 export function SettingsRoute() {
   const [selectedTab, setSelectedTab] = useState<SettingsTab>('providers')
@@ -12,7 +13,6 @@ export function SettingsRoute() {
   const contextQuery = useQuery(contextQueryOptions)
   const settingsQuery = useQuery(settingsQueryOptions)
   const providerStatusQuery = useQuery(providerStatusQueryOptions)
-  const skillsQuery = useQuery(skillsQueryOptions)
   const mcpInventoryQuery = useQuery(mcpInventoryQueryOptions)
   const memoryRecordsQuery = useQuery(memoryRecordsQueryOptions)
   const memoryProposalsQuery = useQuery(memoryProposalsQueryOptions)
@@ -62,32 +62,6 @@ export function SettingsRoute() {
   const importDataMutation = useMutation({
     mutationFn: async () => window.desktop.importData(),
   })
-  const toggleSkillMutation = useMutation({
-    mutationFn: async (input: { skillId: string; enabled: boolean }) => {
-      if (!settingsQuery.data) {
-        throw new Error('Settings are not loaded')
-      }
-
-      const disabledSkillIds = new Set(settingsQuery.data.skills?.disabledSkillIds ?? [])
-
-      if (input.enabled) {
-        disabledSkillIds.delete(input.skillId)
-      } else {
-        disabledSkillIds.add(input.skillId)
-      }
-
-      return await window.desktop.saveSettings({
-        ...settingsQuery.data,
-        skills: {
-          disabledSkillIds: [...disabledSkillIds].sort((left, right) => left.localeCompare(right)),
-        },
-      })
-    },
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['settings'] })
-      await queryClient.invalidateQueries({ queryKey: ['skills'] })
-    },
-  })
   const resolveMemoryProposalMutation = useMutation({
     mutationFn: async (input: { proposalId: string; decision: 'approved' | 'rejected' }) => window.desktop.resolveMemoryProposal(input),
     onSuccess: async () => {
@@ -111,7 +85,7 @@ export function SettingsRoute() {
         initialSettings={settingsQuery.data}
         dataPath={contextQuery.data?.dataPath ?? null}
         providerStatus={providerStatusQuery.data ?? null}
-        skillInventory={skillsQuery.data ?? null}
+        skillsPanel={<SkillsSettingsTabContainer settings={settingsQuery.data} />}
         mcpInventory={mcpInventoryQuery.data ?? null}
         memoryRecords={memoryRecordsQuery.data ?? null}
         memoryProposals={memoryProposalsQuery.data ?? null}
@@ -123,7 +97,6 @@ export function SettingsRoute() {
         isClearingOauth={clearOauthMutation.isPending}
         isExportingData={exportDataMutation.isPending}
         isImportingData={importDataMutation.isPending}
-        isSavingSkills={toggleSkillMutation.isPending}
         isResolvingMemoryProposal={resolveMemoryProposalMutation.isPending}
         saveError={mutation.error instanceof Error ? mutation.error.message : null}
         apiKeyError={saveApiKeyMutation.error instanceof Error ? saveApiKeyMutation.error.message : clearApiKeyMutation.error instanceof Error ? clearApiKeyMutation.error.message : null}
@@ -131,7 +104,6 @@ export function SettingsRoute() {
         exportDataResult={exportDataMutation.data?.exportedFilePath ?? null}
         importDataResult={importDataMutation.data?.backupFilePath ?? null}
         dataError={exportDataMutation.error instanceof Error ? exportDataMutation.error.message : importDataMutation.error instanceof Error ? importDataMutation.error.message : null}
-        skillsError={toggleSkillMutation.error instanceof Error ? toggleSkillMutation.error.message : null}
         memoryError={resolveMemoryProposalMutation.error instanceof Error ? resolveMemoryProposalMutation.error.message : null}
         onSubmit={async (settings) => {
           await mutation.mutateAsync(settings)
@@ -153,9 +125,6 @@ export function SettingsRoute() {
         }}
         onImportData={async () => {
           await importDataMutation.mutateAsync()
-        }}
-        onToggleSkill={async (input) => {
-          await toggleSkillMutation.mutateAsync(input)
         }}
         onSelectedTabChange={setSelectedTab}
         onResolveMemoryProposal={async (input) => {

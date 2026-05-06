@@ -2,9 +2,10 @@
 
 import { cleanup, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import type { ReactNode } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { createDefaultProviderSettings, providerDefaultModels, type AppSettings, type McpInventory, type ProviderStatus, type SkillInventory } from '@nano-harness/shared'
+import { createDefaultProviderSettings, providerDefaultModels, type AppSettings, type McpInventory, type ProviderStatus } from '@nano-harness/shared'
 
 import { SettingsRoute } from '../../src/renderer/routes/SettingsRoute'
 import { createDesktopMock, renderWithQueryClient } from './test-utils'
@@ -13,7 +14,7 @@ type MockSettingsFormCardProps = {
   initialSettings: AppSettings
   dataPath: string | null
   providerStatus: ProviderStatus | null
-  skillInventory: SkillInventory | null
+  skillsPanel: ReactNode
   mcpInventory: McpInventory | null
   isSaving: boolean
   isSavingApiKey: boolean
@@ -22,14 +23,12 @@ type MockSettingsFormCardProps = {
   isClearingOauth: boolean
   isExportingData: boolean
   isImportingData: boolean
-  isSavingSkills: boolean
   saveError: string | null
   apiKeyError: string | null
   oauthError: string | null
   exportDataResult: string | null
   importDataResult: string | null
   dataError: string | null
-  skillsError: string | null
   onSubmit: (settings: AppSettings) => Promise<void>
   onSaveApiKey: (input: { provider: AppSettings['provider']['provider']; apiKey: string }) => Promise<void>
   onClearApiKey: (input: { provider: AppSettings['provider']['provider'] }) => Promise<void>
@@ -37,7 +36,6 @@ type MockSettingsFormCardProps = {
   onClearOauth: (input: { provider: AppSettings['provider']['provider'] }) => Promise<void>
   onExportData: () => Promise<void>
   onImportData: () => Promise<void>
-  onToggleSkill: (input: { skillId: string; enabled: boolean }) => Promise<void>
 }
 
 let latestSettingsFormCardProps: MockSettingsFormCardProps | null = null
@@ -51,7 +49,7 @@ vi.mock('../../src/renderer/components/SettingsFormCard', () => ({
         <p>Mock settings form</p>
         <p>dataPath:{props.dataPath ?? 'null'}</p>
         <p>provider:{props.providerStatus?.providerLabel ?? 'none'}</p>
-        <p>skills:{props.skillInventory?.skills.length ?? 0}</p>
+        {props.skillsPanel}
         <p>mcp:{props.mcpInventory?.servers.length ?? 0}</p>
         <p>export:{props.exportDataResult ?? 'none'}</p>
         <p>import:{props.importDataResult ?? 'none'}</p>
@@ -79,9 +77,6 @@ vi.mock('../../src/renderer/components/SettingsFormCard', () => ({
         </button>
         <button type="button" onClick={() => void props.onImportData()}>
           Import action
-        </button>
-        <button type="button" onClick={() => void props.onToggleSkill({ skillId: 'repo-onboarding', enabled: false })}>
-          Disable skill action
         </button>
       </section>
     )
@@ -148,7 +143,7 @@ describe('SettingsRoute', () => {
     expect(await screen.findByText('Mock settings form')).toBeTruthy()
     expect(screen.getByText('dataPath:/tmp/nano-harness.db')).toBeTruthy()
     expect(screen.getByText('provider:OpenRouter')).toBeTruthy()
-    expect(screen.getByText('skills:1')).toBeTruthy()
+    expect(await screen.findByText('Repo Onboarding')).toBeTruthy()
     expect(screen.getByText('mcp:0')).toBeTruthy()
     expect(latestSettingsFormCardProps?.initialSettings.provider.model).toBe(providerDefaultModels.openrouter)
 
@@ -159,7 +154,7 @@ describe('SettingsRoute', () => {
     await user.click(screen.getByRole('button', { name: 'Clear oauth action' }))
     await user.click(screen.getByRole('button', { name: 'Export action' }))
     await user.click(screen.getByRole('button', { name: 'Import action' }))
-    await user.click(screen.getByRole('button', { name: 'Disable skill action' }))
+    await user.click(screen.getByRole('switch', { name: 'enabled' }))
 
     await waitFor(() => {
       expect(saveSettings).toHaveBeenCalledWith(createSettings({ provider: { model: 'next/model' } }))

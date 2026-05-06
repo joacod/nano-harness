@@ -1,7 +1,7 @@
-import { useState } from 'react'
+import { type ReactNode, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 
-import { getProviderDefinition, type AppSettings, type McpInventory, type MemoryProposalList, type MemoryRecordList, type ProviderAuthMethod, type ProviderStatus, type SkillInventory } from '../../../../../packages/shared/src'
+import { getProviderDefinition, type AppSettings, type McpInventory, type MemoryProposalList, type MemoryRecordList, type ProviderAuthMethod, type ProviderStatus } from '../../../../../packages/shared/src'
 import { providerCredentialStatusQueryOptions } from '../queries'
 import { ApiKeySettingsForm } from './settings/ApiKeySettingsForm'
 import { DataBackupPanel } from './settings/DataBackupPanel'
@@ -11,7 +11,6 @@ import { McpInspectorCard } from './settings/McpInspectorCard'
 import { MemoryInspectorCard } from './settings/MemoryInspectorCard'
 import { ProviderSettingsForm } from './settings/ProviderSettingsForm'
 import { ProviderStatusPanel } from './settings/ProviderStatusPanel'
-import { SkillsHubCard } from './settings/SkillsHubCard'
 import { WorkspaceSettingsForm } from './settings/WorkspaceSettingsForm'
 import { Card, Tabs } from './ui'
 
@@ -21,7 +20,7 @@ export function SettingsFormCard({
   initialSettings,
   dataPath,
   providerStatus,
-  skillInventory,
+  skillsPanel,
   mcpInventory,
   memoryRecords,
   memoryProposals,
@@ -33,7 +32,6 @@ export function SettingsFormCard({
   isClearingOauth,
   isExportingData,
   isImportingData,
-  isSavingSkills,
   isResolvingMemoryProposal,
   saveError,
   apiKeyError,
@@ -41,7 +39,6 @@ export function SettingsFormCard({
   exportDataResult,
   importDataResult,
   dataError,
-  skillsError,
   memoryError,
   onSubmit,
   onSaveApiKey,
@@ -50,14 +47,13 @@ export function SettingsFormCard({
   onClearOauth,
   onExportData,
   onImportData,
-  onToggleSkill,
   onSelectedTabChange,
   onResolveMemoryProposal,
 }: {
   initialSettings: AppSettings
   dataPath: string | null
   providerStatus: ProviderStatus | null
-  skillInventory: SkillInventory | null
+  skillsPanel: ReactNode
   mcpInventory: McpInventory | null
   memoryRecords: MemoryRecordList | null
   memoryProposals: MemoryProposalList | null
@@ -69,7 +65,6 @@ export function SettingsFormCard({
   isClearingOauth: boolean
   isExportingData: boolean
   isImportingData: boolean
-  isSavingSkills: boolean
   isResolvingMemoryProposal: boolean
   saveError: string | null
   apiKeyError: string | null
@@ -77,7 +72,6 @@ export function SettingsFormCard({
   exportDataResult: string | null
   importDataResult: string | null
   dataError: string | null
-  skillsError: string | null
   memoryError: string | null
   onSubmit: (settings: AppSettings) => Promise<void>
   onSaveApiKey: (input: { provider: AppSettings['provider']['provider']; apiKey: string }) => Promise<void>
@@ -86,7 +80,6 @@ export function SettingsFormCard({
   onClearOauth: (input: { provider: AppSettings['provider']['provider'] }) => Promise<void>
   onExportData: () => Promise<void>
   onImportData: () => Promise<void>
-  onToggleSkill: (input: { skillId: string; enabled: boolean }) => Promise<void>
   onSelectedTabChange: (tab: SettingsTab) => void
   onResolveMemoryProposal: (input: { proposalId: string; decision: 'approved' | 'rejected' }) => Promise<void>
 }) {
@@ -159,14 +152,7 @@ export function SettingsFormCard({
           {
             value: 'skills',
             label: 'Skills',
-            panel: (
-              <SkillsHubCard
-                inventory={skillInventory}
-                isSaving={isSavingSkills}
-                error={skillsError}
-                onToggleSkill={onToggleSkill}
-              />
-            ),
+            panel: skillsPanel,
           },
           {
             value: 'mcp',
