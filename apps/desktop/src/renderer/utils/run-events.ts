@@ -280,7 +280,12 @@ export function getEventFamily(eventType: RunEvent['type']) {
 }
 
 export function getEventTone(event: RunEvent) {
-  if (event.type === 'run.failed' || event.type === 'provider.error' || event.type === 'action.failed' || event.type === 'hook.error' || event.type === 'hook.denied') {
+  if (event.type === 'run.failed'
+    || event.type === 'provider.error'
+    || event.type === 'action.failed'
+    || event.type === 'hook.error'
+    || event.type === 'hook.denied'
+    || event.type === 'approval.rejected') {
     return 'failed'
   }
 

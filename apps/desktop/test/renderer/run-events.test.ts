@@ -5,6 +5,7 @@ import { providerDefaultModels, type AppSettings, type ConversationSnapshot, typ
 import {
   applyProviderDefaults,
   getEventFamily,
+  getEventTone,
   getLatestConversationPendingApproval,
   getPendingApproval,
   getProviderRequestForRun,
@@ -214,6 +215,13 @@ describe('renderer run-events utilities', () => {
     expect(getRecoverableRunAction({ ...snapshot.runs[0], status: 'started' }, null)).toBe('resume')
     expect(getProviderRequestForRun(snapshot.events, 'run-1')).toMatchObject({ type: 'provider.requested' })
     expect(getEventFamily('provider.reasoning_delta')).toBe('provider')
+    expect(getEventTone(event('approval.rejected', {
+      resolution: {
+        approvalRequestId: 'approval-1',
+        decision: 'rejected',
+        decidedAt: '2026-04-29T10:00:03.000Z',
+      },
+    }))).toBe('failed')
   })
 
   it('applies provider defaults without changing workspace settings', () => {
