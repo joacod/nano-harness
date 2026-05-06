@@ -84,6 +84,75 @@ describe('BuiltInActionExecutor', () => {
     })
   })
 
+  it('reads a bounded line range with line numbers', async () => {
+    const rootPath = await createWorkspace()
+    await writeFile(path.join(rootPath, 'notes.txt'), 'one\ntwo\nthree\nfour', 'utf8')
+
+    const result = await createExecutor().execute(
+      createExecutionInput({
+        actionId: 'read_range',
+        settings: { ...workspaceSettings, workspace: { ...workspaceSettings.workspace, rootPath } },
+        input: { path: 'notes.txt', startLine: 2, maxLines: 2 },
+      }),
+    )
+
+    expect(result).toMatchObject({
+      status: 'completed',
+      output: {
+        path: 'notes.txt',
+        startLine: 2,
+        endLine: 3,
+        content: '2: two\n3: three',
+      },
+    })
+  })
+
+  it('finds files with glob and searches files with grep', async () => {
+    const rootPath = await createWorkspace()
+    await mkdir(path.join(rootPath, 'src'))
+    await writeFile(path.join(rootPath, 'src', 'main.ts'), 'export const answer = 42\n', 'utf8')
+    await writeFile(path.join(rootPath, 'README.md'), 'answer docs\n', 'utf8')
+
+    const globResult = await createExecutor().execute(
+      createExecutionInput({
+        actionId: 'glob',
+        settings: { ...workspaceSettings, workspace: { ...workspaceSettings.workspace, rootPath } },
+        input: { pattern: '**/*.ts' },
+      }),
+    )
+    const grepResult = await createExecutor().execute(
+      createExecutionInput({
+        actionId: 'grep',
+        settings: { ...workspaceSettings, workspace: { ...workspaceSettings.workspace, rootPath } },
+        input: { pattern: 'answer', include: '**/*.ts' },
+      }),
+    )
+
+    expect(globResult).toMatchObject({ status: 'completed', output: { matches: ['src/main.ts'] } })
+    expect(grepResult).toMatchObject({
+      status: 'completed',
+      output: {
+        matches: [{ path: 'src/main.ts', line: 1, text: 'export const answer = 42' }],
+      },
+    })
+  })
+
+  it('applies exact text patches without rewriting through write_file', async () => {
+    const rootPath = await createWorkspace()
+    await writeFile(path.join(rootPath, 'notes.txt'), 'hello old world', 'utf8')
+
+    const result = await createExecutor().execute(
+      createExecutionInput({
+        actionId: 'apply_patch',
+        settings: { ...workspaceSettings, workspace: { ...workspaceSettings.workspace, rootPath } },
+        input: { path: 'notes.txt', oldText: 'old', newText: 'new' },
+      }),
+    )
+
+    expect(result).toMatchObject({ status: 'completed', output: { path: 'notes.txt' } })
+    await expect(readFile(path.join(rootPath, 'notes.txt'), 'utf8')).resolves.toBe('hello new world')
+  })
+
   it('writes a file, creates parent directories, and reports bytes written', async () => {
     const rootPath = await createWorkspace()
 
@@ -223,6 +292,33 @@ describe('BuiltInActionExecutor', () => {
       errorMessage: 'fetch_url only supports http and https URLs',
     })
   })
+
+  it('runs only allow-listed commands without shell expansion', async () => {
+    const rootPath = await createWorkspace()
+
+    const result = await createExecutor().execute(
+      createExecutionInput({
+        actionId: 'run_command',
+        settings: { ...workspaceSettings, workspace: { ...workspaceSettings.workspace, rootPath } },
+        input: { command: 'node', args: ['--version'] },
+      }),
+    )
+
+    expect(result).toMatchObject({ status: 'completed' })
+
+    const deniedResult = await createExecutor().execute(
+      createExecutionInput({
+        actionId: 'run_command',
+        settings: { ...workspaceSettings, workspace: { ...workspaceSettings.workspace, rootPath } },
+        input: { command: 'rm', args: ['-rf', '.'] },
+      }),
+    )
+
+    expect(deniedResult).toMatchObject({
+      status: 'failed',
+      errorMessage: 'Command rm is not in the allow-list',
+    })
+  })
 })
 
 function createExecutor() {
@@ -237,7 +333,7 @@ function createExecutionInput(input: {
   const action: ActionDefinition = {
     id: input.actionId,
     title: input.actionId,
-    requiresApproval: input.actionId === 'write_file',
+    requiresApproval: input.actionId === 'write_file' || input.actionId === 'apply_patch' || input.actionId === 'run_command',
     inputSchema: {
       type: 'object',
       properties: {},

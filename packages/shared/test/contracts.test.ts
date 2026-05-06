@@ -13,6 +13,7 @@ import {
   saveProviderAuthInputSchema,
   startProviderOauthResultSchema,
   runEventSchema,
+  exportRunEvidenceResultSchema,
   startProviderOauthInputSchema,
 } from '../src'
 
@@ -149,6 +150,44 @@ describe('shared contracts', () => {
         },
       }),
     ).toThrow('approval.granted must carry a granted resolution')
+  })
+
+  it('validates dry-run preview events and run evidence export output', () => {
+    expect(
+      runEventSchema.parse({
+        id: 'event-1',
+        runId: 'run-1',
+        timestamp: '2026-04-29T10:00:00.000Z',
+        type: 'run.dry_run_preview',
+        payload: {
+          provider: { provider: 'openrouter', model: providerDefaultModels.openrouter, baseUrl: 'https://openrouter.ai/api/v1' },
+          workspace: { rootPath: '/workspace', approvalPolicy: 'on-request' },
+          actions: [{ id: 'read_file', title: 'Read File', requiresApproval: false }],
+          skills: {
+            available: [{
+              id: 'repo-onboarding',
+              name: 'Repo Onboarding',
+              description: 'Survey repositories.',
+              triggers: ['repo'],
+              tools: ['grep'],
+              safetyNotes: ['Read first.'],
+              source: 'bundled',
+              enabled: true,
+            }],
+            selected: [],
+          },
+          mcp: { servers: [], tools: [], resources: [] },
+        },
+      }),
+    ).toMatchObject({ type: 'run.dry_run_preview' })
+
+    expect(
+      exportRunEvidenceResultSchema.parse({
+        exportedFilePath: '/tmp/run-evidence.json',
+        changedFiles: ['README.md'],
+        validationOutputs: 1,
+      }),
+    ).toMatchObject({ validationOutputs: 1 })
   })
 
   it('validates bridge payloads for approval resolution and external urls', () => {

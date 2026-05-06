@@ -19,7 +19,10 @@ import { getLatestPendingApproval } from './approvals'
 import type { EventBus } from './event-bus'
 import { noopEventBus } from './event-bus'
 import type { Policy } from './policy'
-import type { Provider, ProviderActionRequest, ProviderCredentialResolver, ProviderGenerateResult } from './provider'
+import type { McpRegistry } from './mcp'
+import { EmptyMcpRegistry } from './mcp'
+import type { Provider, ProviderActionRequest, ProviderCredentialResolver, ProviderGenerateResult, SkillResolver } from './provider'
+import { EmptySkillResolver } from './provider'
 import { assertStatusTransition, isTerminalStatus } from './run-status'
 import type { ConversationSnapshot, Store } from './store'
 
@@ -27,6 +30,8 @@ export interface RunEngineDependencies {
   store: Store
   provider: Provider
   providerCredentialResolver: ProviderCredentialResolver
+  skillResolver?: SkillResolver
+  mcpRegistry?: McpRegistry
   actionExecutor: ActionExecutor
   policy: Policy
   eventBus?: EventBus
@@ -78,6 +83,8 @@ type ExecuteActionRequestsOutput = {
   stopped: boolean
 }
 
+type DryRunPreviewPayload = Extract<RunEvent, { type: 'run.dry_run_preview' }>['payload']
+
 class RunAbortError extends Error {
   constructor() {
     super('Run cancelled')
@@ -128,6 +135,8 @@ export class CoreRunEngine implements RunEngine {
   private readonly store: Store
   private readonly provider: Provider
   private readonly providerCredentialResolver: ProviderCredentialResolver
+  private readonly skillResolver: SkillResolver
+  private readonly mcpRegistry: McpRegistry
   private readonly actionExecutor: ActionExecutor
   private readonly policy: Policy
   private readonly eventBus: EventBus
@@ -141,6 +150,8 @@ export class CoreRunEngine implements RunEngine {
     this.store = dependencies.store
     this.provider = dependencies.provider
     this.providerCredentialResolver = dependencies.providerCredentialResolver
+    this.skillResolver = dependencies.skillResolver ?? new EmptySkillResolver()
+    this.mcpRegistry = dependencies.mcpRegistry ?? new EmptyMcpRegistry()
     this.actionExecutor = dependencies.actionExecutor
     this.policy = dependencies.policy
     this.eventBus = dependencies.eventBus ?? noopEventBus
@@ -192,6 +203,13 @@ export class CoreRunEngine implements RunEngine {
       timestamp: now,
       type: 'run.created',
       payload: { run },
+    })
+    await this.emitEvent({
+      id: this.createId(),
+      runId: run.id,
+      timestamp: now,
+      type: 'run.dry_run_preview',
+      payload: await this.createDryRunPreview(settings, run, [userMessage]),
     })
     await this.store.saveMessage(userMessage)
     await this.emitEvent({
@@ -433,6 +451,11 @@ export class CoreRunEngine implements RunEngine {
 
     let streamedMessage = ''
     const actions = await this.actionExecutor.listDefinitions()
+    const skills = await this.skillResolver.resolveForRun({
+      settings: input.settings,
+      run: input.run,
+      messages: input.messages,
+    })
     const providerDefinition = getProviderDefinition(input.settings.provider.provider)
     const providerAuth = await this.providerCredentialResolver.getProviderAuth({
       provider: input.settings.provider.provider,
@@ -448,6 +471,7 @@ export class CoreRunEngine implements RunEngine {
       actions,
       settings: input.settings,
       providerAuth,
+      skills,
       signal: input.signal,
       onDelta: async (delta) => {
         streamedMessage += delta
@@ -540,6 +564,44 @@ export class CoreRunEngine implements RunEngine {
   private async startLifecycle(run: Run): Promise<Run> {
     const startedAt = this.now()
     return this.transitionRun(run, 'started', { startedAt }, 'run.started', { startedAt })
+  }
+
+  private async createDryRunPreview(settings: AppSettings, run: Run, messages: Message[]): Promise<DryRunPreviewPayload> {
+    const actions = await this.actionExecutor.listDefinitions()
+    const skills = await this.skillResolver.resolveForRun({ settings, run, messages })
+    const mcp = await this.mcpRegistry.getInventory(settings)
+
+    return {
+      provider: {
+        provider: settings.provider.provider,
+        model: settings.provider.model,
+        baseUrl: settings.provider.baseUrl ?? getProviderDefinition(settings.provider.provider).baseUrl,
+      },
+      workspace: {
+        rootPath: settings.workspace.rootPath,
+        approvalPolicy: settings.workspace.approvalPolicy,
+      },
+      actions: actions.map((action) => ({
+        id: action.id,
+        title: action.title,
+        requiresApproval: action.requiresApproval,
+      })),
+      skills: {
+        available: skills.available,
+        selected: skills.selected.map((skill) => ({
+          id: skill.id,
+          name: skill.name,
+          description: skill.description,
+          triggers: skill.triggers,
+          tools: skill.tools,
+          safetyNotes: skill.safetyNotes,
+          source: skill.source,
+          path: skill.path,
+          enabled: skill.enabled,
+        })),
+      },
+      mcp,
+    }
   }
 
   private async completeRun(run: Run): Promise<void> {
@@ -814,10 +876,7 @@ export class CoreRunEngine implements RunEngine {
   }
 
   private async emitEvent(event: RunEvent): Promise<void> {
-    if (event.type !== 'provider.delta' && event.type !== 'provider.reasoning_delta') {
-      await this.store.appendEvent(event)
-    }
-
+    await this.store.appendEvent(event)
     await this.eventBus.publish(event)
   }
 

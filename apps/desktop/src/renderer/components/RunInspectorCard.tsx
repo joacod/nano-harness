@@ -37,6 +37,15 @@ export function RunInspectorCard({
       await queryClient.invalidateQueries({ queryKey: ['conversations'] })
     },
   })
+  const exportEvidenceMutation = useMutation({
+    mutationFn: async () => {
+      if (!run) {
+        throw new Error('No run is selected')
+      }
+
+      return await window.desktop.exportRunEvidence({ runId: run.id })
+    },
+  })
   const approvalMutation = useMutation({
     mutationFn: async (decision: 'granted' | 'rejected') => {
       if (!run || !pendingApproval) {
@@ -109,6 +118,22 @@ export function RunInspectorCard({
               <p>{run.finishedAt ? formatTimestamp(run.finishedAt) : 'Still active'}</p>
             </div>
           </div>
+
+          <div className="run-controls">
+            <Button type="button" disabled={exportEvidenceMutation.isPending} onClick={() => exportEvidenceMutation.mutate()}>
+              {exportEvidenceMutation.isPending ? 'Exporting...' : 'Export evidence'}
+            </Button>
+          </div>
+          {exportEvidenceMutation.data ? (
+            <FeedbackText live>
+              Exported evidence to {exportEvidenceMutation.data.exportedFilePath}
+            </FeedbackText>
+          ) : null}
+          {exportEvidenceMutation.error instanceof Error ? (
+            <FeedbackText variant="error" live>
+              {exportEvidenceMutation.error.message}
+            </FeedbackText>
+          ) : null}
 
           {run.failureMessage ? (
             <FeedbackText variant="error" live>

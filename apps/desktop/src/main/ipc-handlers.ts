@@ -4,6 +4,7 @@ import {
   appSettingsSchema,
   desktopBridgeChannels,
   desktopContextSchema,
+  exportRunEvidenceInputSchema,
   getConversationInputSchema,
   getProviderDefinition,
   openExternalUrlInputSchema,
@@ -22,6 +23,7 @@ import { exportData, importData } from './data-transfer'
 import { startOpenAIChatGptOAuth } from './openai-chatgpt-auth'
 import type { DesktopRuntime } from './runtime'
 import { buildProviderStatus } from './runtime'
+import { exportRunEvidence } from './run-evidence-export'
 import { encryptCredentialPayload } from './secure-credentials'
 
 type IpcRuntime = {
@@ -39,11 +41,18 @@ type IpcRuntime = {
     getSettings: DesktopRuntime['store']['getSettings']
     saveSettings: DesktopRuntime['store']['saveSettings']
     getConversation: DesktopRuntime['store']['getConversation']
+    getRun: DesktopRuntime['store']['getRun']
     backupToFile: DesktopRuntime['store']['backupToFile']
     sanitizeDatabaseFile: DesktopRuntime['store']['sanitizeDatabaseFile']
     validateDatabaseFile: DesktopRuntime['store']['validateDatabaseFile']
     createStagedImportCopy: DesktopRuntime['store']['createStagedImportCopy']
     close: DesktopRuntime['store']['close']
+  }
+  skillResolver: {
+    listSkills: DesktopRuntime['skillResolver']['listSkills']
+  }
+  mcpRegistry: {
+    getInventory: DesktopRuntime['mcpRegistry']['getInventory']
   }
   runEngine: {
     startRun: DesktopRuntime['runEngine']['startRun']
@@ -79,6 +88,37 @@ export function setupIpcHandlers(runtime: IpcRuntime): void {
 
   ipcMain.handle(desktopBridgeChannels.getProviderStatus, async () => {
     return await buildProviderStatus(runtime, await runtime.store.getSettings())
+  })
+
+  ipcMain.handle(desktopBridgeChannels.listSkills, async () => {
+    const settings = await runtime.store.getSettings()
+
+    if (!settings) {
+      return { skills: [] }
+    }
+
+    const skills = await runtime.skillResolver.listSkills(settings)
+    return { skills: skills.map((skill) => ({
+      id: skill.id,
+      name: skill.name,
+      description: skill.description,
+      triggers: skill.triggers,
+      tools: skill.tools,
+      safetyNotes: skill.safetyNotes,
+      source: skill.source,
+      path: skill.path,
+      enabled: skill.enabled,
+    })) }
+  })
+
+  ipcMain.handle(desktopBridgeChannels.listMcpInventory, async () => {
+    const settings = await runtime.store.getSettings()
+
+    if (!settings) {
+      return { servers: [], tools: [], resources: [] }
+    }
+
+    return await runtime.mcpRegistry.getInventory(settings)
   })
 
   ipcMain.handle(desktopBridgeChannels.getProviderCredentialStatus, async (_event, payload) => {
@@ -137,6 +177,11 @@ export function setupIpcHandlers(runtime: IpcRuntime): void {
 
   ipcMain.handle(desktopBridgeChannels.importData, async () => {
     return await importData(runtime)
+  })
+
+  ipcMain.handle(desktopBridgeChannels.exportRunEvidence, async (_event, payload) => {
+    const input = exportRunEvidenceInputSchema.parse(payload)
+    return await exportRunEvidence(runtime, input.runId)
   })
 
   ipcMain.handle(desktopBridgeChannels.getSettings, async () => {

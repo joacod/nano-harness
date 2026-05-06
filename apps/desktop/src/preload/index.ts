@@ -8,12 +8,16 @@ import {
   desktopBridgeChannels,
   desktopContextSchema,
   exportDataResultSchema,
+  exportRunEvidenceInputSchema,
+  exportRunEvidenceResultSchema,
   getConversationInputSchema,
   importDataResultSchema,
   providerCredentialInputSchema,
   providerCredentialStatusSchema,
   providerStatusSchema,
+  skillInventorySchema,
   openExternalUrlInputSchema,
+  mcpInventorySchema,
   resolveApprovalInputSchema,
   runCreateInputSchema,
   runEventSchema,
@@ -34,6 +38,12 @@ const desktopApi: DesktopApi = {
   },
   async getProviderStatus() {
     return providerStatusSchema.nullable().parse(await ipcRenderer.invoke(desktopBridgeChannels.getProviderStatus))
+  },
+  async listSkills() {
+    return skillInventorySchema.parse(await ipcRenderer.invoke(desktopBridgeChannels.listSkills))
+  },
+  async listMcpInventory() {
+    return mcpInventorySchema.parse(await ipcRenderer.invoke(desktopBridgeChannels.listMcpInventory))
   },
   async getProviderCredentialStatus(input) {
     const payload = providerCredentialInputSchema.parse(input)
@@ -57,6 +67,10 @@ const desktopApi: DesktopApi = {
   },
   async exportData() {
     return exportDataResultSchema.parse(await ipcRenderer.invoke(desktopBridgeChannels.exportData))
+  },
+  async exportRunEvidence(input) {
+    const payload = exportRunEvidenceInputSchema.parse(input)
+    return exportRunEvidenceResultSchema.parse(await ipcRenderer.invoke(desktopBridgeChannels.exportRunEvidence, payload))
   },
   async importData() {
     return importDataResultSchema.parse(await ipcRenderer.invoke(desktopBridgeChannels.importData))

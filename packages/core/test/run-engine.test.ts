@@ -45,6 +45,7 @@ describe('CoreRunEngine', () => {
     expect(store.messages[1]).toMatchObject({ content: 'Summary ready.' })
     expect(store.events.map((event) => event.type)).toEqual([
       'run.created',
+      'run.dry_run_preview',
       'message.created',
       'run.started',
       'provider.requested',
@@ -55,7 +56,7 @@ describe('CoreRunEngine', () => {
     expect(eventBus.published.map((event) => event.type)).toEqual(store.events.map((event) => event.type))
   })
 
-  it('publishes provider stream events without persisting them', async () => {
+  it('publishes and persists provider stream events for replayable traces', async () => {
     const store = new FakeStore()
     const provider = new FakeProvider([
       async (input) => {
@@ -86,8 +87,8 @@ describe('CoreRunEngine', () => {
     expect(store.messages.at(-1)).toMatchObject({ role: 'assistant', content: 'Hello world' })
     expect(eventBus.published.map((event) => event.type)).toContain('provider.reasoning_delta')
     expect(eventBus.published.map((event) => event.type).filter((type) => type === 'provider.delta')).toHaveLength(2)
-    expect(store.events.map((event) => event.type)).not.toContain('provider.delta')
-    expect(store.events.map((event) => event.type)).not.toContain('provider.reasoning_delta')
+    expect(store.events.map((event) => event.type)).toContain('provider.delta')
+    expect(store.events.map((event) => event.type)).toContain('provider.reasoning_delta')
   })
 
   it('fails a run when the provider api key is missing', async () => {

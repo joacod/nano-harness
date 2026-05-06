@@ -1,4 +1,4 @@
-import { getProviderDefinition, reasoningDetailSchema, type ActionDefinition, type AssistantToolCall, type JsonValue, type Message, type ProviderReasoningDelta, type ReasoningDetail } from '@nano-harness/shared'
+import { getProviderDefinition, reasoningDetailSchema, type ActionDefinition, type AssistantToolCall, type JsonValue, type ProviderReasoningDelta, type ReasoningDetail } from '@nano-harness/shared'
 import { createProviderInstructions, type Provider, type ProviderActionRequest, type ProviderGenerateInput, type ProviderGenerateResult } from '@nano-harness/core'
 
 import { parseSseData, splitSseEvents } from './sse'
@@ -96,13 +96,13 @@ function toOpenAICompatibleAssistantToolCalls(toolCalls: AssistantToolCall[]) {
   }))
 }
 
-function toOpenAICompatibleMessages(messages: Message[], settings: ProviderGenerateInput['settings']): OpenAICompatibleMessage[] {
+function toOpenAICompatibleMessages(input: Pick<ProviderGenerateInput, 'messages' | 'settings' | 'skills'>): OpenAICompatibleMessage[] {
   return [
     {
       role: 'system' as const,
-      content: createProviderInstructions({ workspaceRoot: settings.workspace.rootPath }),
+      content: createProviderInstructions({ workspaceRoot: input.settings.workspace.rootPath, skills: input.skills }),
     },
-    ...messages.map((message): OpenAICompatibleMessage => {
+    ...input.messages.map((message): OpenAICompatibleMessage => {
       if (message.role === 'tool') {
         return {
           role: 'tool',
@@ -299,7 +299,7 @@ export class OpenAICompatibleProvider implements Provider {
         body: JSON.stringify({
           model: input.settings.provider.model,
           stream: true,
-          messages: toOpenAICompatibleMessages(input.messages, input.settings),
+          messages: toOpenAICompatibleMessages(input),
           tools: toOpenAICompatibleTools(input.actions),
           reasoning: toOpenAICompatibleReasoning(input.settings),
           parallel_tool_calls: false,

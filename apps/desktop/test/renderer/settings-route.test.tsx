@@ -4,7 +4,7 @@ import { cleanup, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { createDefaultProviderSettings, providerDefaultModels, type AppSettings, type ProviderStatus } from '@nano-harness/shared'
+import { createDefaultProviderSettings, providerDefaultModels, type AppSettings, type McpInventory, type ProviderStatus, type SkillInventory } from '@nano-harness/shared'
 
 import { SettingsRoute } from '../../src/renderer/routes/SettingsRoute'
 import { createDesktopMock, renderWithQueryClient } from './test-utils'
@@ -13,6 +13,8 @@ type MockSettingsFormCardProps = {
   initialSettings: AppSettings
   dataPath: string | null
   providerStatus: ProviderStatus | null
+  skillInventory: SkillInventory | null
+  mcpInventory: McpInventory | null
   isSaving: boolean
   isSavingApiKey: boolean
   isStartingOauth: boolean
@@ -20,12 +22,14 @@ type MockSettingsFormCardProps = {
   isClearingOauth: boolean
   isExportingData: boolean
   isImportingData: boolean
+  isSavingSkills: boolean
   saveError: string | null
   apiKeyError: string | null
   oauthError: string | null
   exportDataResult: string | null
   importDataResult: string | null
   dataError: string | null
+  skillsError: string | null
   onSubmit: (settings: AppSettings) => Promise<void>
   onSaveApiKey: (input: { provider: AppSettings['provider']['provider']; apiKey: string }) => Promise<void>
   onClearApiKey: (input: { provider: AppSettings['provider']['provider'] }) => Promise<void>
@@ -33,6 +37,7 @@ type MockSettingsFormCardProps = {
   onClearOauth: (input: { provider: AppSettings['provider']['provider'] }) => Promise<void>
   onExportData: () => Promise<void>
   onImportData: () => Promise<void>
+  onToggleSkill: (input: { skillId: string; enabled: boolean }) => Promise<void>
 }
 
 let latestSettingsFormCardProps: MockSettingsFormCardProps | null = null
@@ -46,6 +51,8 @@ vi.mock('../../src/renderer/components/SettingsFormCard', () => ({
         <p>Mock settings form</p>
         <p>dataPath:{props.dataPath ?? 'null'}</p>
         <p>provider:{props.providerStatus?.providerLabel ?? 'none'}</p>
+        <p>skills:{props.skillInventory?.skills.length ?? 0}</p>
+        <p>mcp:{props.mcpInventory?.servers.length ?? 0}</p>
         <p>export:{props.exportDataResult ?? 'none'}</p>
         <p>import:{props.importDataResult ?? 'none'}</p>
         <p>saveError:{props.saveError ?? 'none'}</p>
@@ -72,6 +79,9 @@ vi.mock('../../src/renderer/components/SettingsFormCard', () => ({
         </button>
         <button type="button" onClick={() => void props.onImportData()}>
           Import action
+        </button>
+        <button type="button" onClick={() => void props.onToggleSkill({ skillId: 'repo-onboarding', enabled: false })}>
+          Disable skill action
         </button>
       </section>
     )
@@ -111,6 +121,19 @@ describe('SettingsRoute', () => {
       getContext: async () => ({ platform: 'darwin', version: '0.0.1', dataPath: '/tmp/nano-harness.db' }),
       getSettings: async () => createSettings(),
       getProviderStatus: async () => createProviderStatus(),
+      listSkills: async () => ({
+        skills: [{
+          id: 'repo-onboarding',
+          name: 'Repo Onboarding',
+          description: 'Survey repositories.',
+          triggers: ['repo'],
+          tools: ['grep'],
+          safetyNotes: [],
+          source: 'bundled',
+          enabled: true,
+        }],
+      }),
+      listMcpInventory: async () => ({ servers: [], tools: [], resources: [] }),
       saveSettings,
       saveProviderAuth,
       startProviderOauth,
@@ -125,6 +148,8 @@ describe('SettingsRoute', () => {
     expect(await screen.findByText('Mock settings form')).toBeTruthy()
     expect(screen.getByText('dataPath:/tmp/nano-harness.db')).toBeTruthy()
     expect(screen.getByText('provider:OpenRouter')).toBeTruthy()
+    expect(screen.getByText('skills:1')).toBeTruthy()
+    expect(screen.getByText('mcp:0')).toBeTruthy()
     expect(latestSettingsFormCardProps?.initialSettings.provider.model).toBe(providerDefaultModels.openrouter)
 
     await user.click(screen.getByRole('button', { name: 'Save settings action' }))
@@ -134,9 +159,11 @@ describe('SettingsRoute', () => {
     await user.click(screen.getByRole('button', { name: 'Clear oauth action' }))
     await user.click(screen.getByRole('button', { name: 'Export action' }))
     await user.click(screen.getByRole('button', { name: 'Import action' }))
+    await user.click(screen.getByRole('button', { name: 'Disable skill action' }))
 
     await waitFor(() => {
       expect(saveSettings).toHaveBeenCalledWith(createSettings({ provider: { model: 'next/model' } }))
+      expect(saveSettings).toHaveBeenCalledWith(createSettings({ skills: { disabledSkillIds: ['repo-onboarding'] } }))
       expect(saveProviderAuth).toHaveBeenCalledWith({ provider: 'openrouter', authMethod: 'api-key', apiKey: 'secret-key' })
       expect(clearProviderAuth).toHaveBeenCalledWith({ provider: 'openrouter', authMethod: 'api-key' })
       expect(startProviderOauth).toHaveBeenCalledWith({ provider: 'openai', authMethod: 'oauth' })
@@ -157,6 +184,7 @@ describe('SettingsRoute', () => {
 function createSettings(overrides?: {
   provider?: Partial<AppSettings['provider']>
   workspace?: Partial<AppSettings['workspace']>
+  skills?: AppSettings['skills']
 }): AppSettings {
   return {
     provider: {
@@ -169,6 +197,7 @@ function createSettings(overrides?: {
       approvalPolicy: 'always',
       ...overrides?.workspace,
     },
+    ...(overrides?.skills ? { skills: overrides.skills } : {}),
   }
 }
 

@@ -62,13 +62,18 @@ describe('desktop preload bridge', () => {
   })
 
   it('passes validated payloads for mutating commands', async () => {
-    invoke.mockResolvedValue(undefined)
+    invoke.mockImplementation(async (channel) =>
+      channel === desktopBridgeChannels.exportRunEvidence
+        ? { exportedFilePath: '/tmp/run-evidence.json', changedFiles: [], validationOutputs: 0 }
+        : undefined,
+    )
     const desktop = await loadDesktopApi()
 
     await desktop.saveProviderAuth({ provider: 'openrouter', authMethod: 'api-key', apiKey: 'secret' })
     await desktop.clearProviderAuth({ provider: 'openrouter', authMethod: 'api-key' })
     await desktop.openExternalUrl({ url: 'https://example.com' })
     await desktop.cancelRun({ runId: 'run-1' })
+    await desktop.exportRunEvidence({ runId: 'run-1' })
     await desktop.resolveApproval({ runId: 'run-1', approvalRequestId: 'approval-1', decision: 'granted' })
 
     expect(invoke).toHaveBeenNthCalledWith(1, desktopBridgeChannels.saveProviderAuth, {
@@ -82,7 +87,8 @@ describe('desktop preload bridge', () => {
     })
     expect(invoke).toHaveBeenNthCalledWith(3, desktopBridgeChannels.openExternalUrl, { url: 'https://example.com' })
     expect(invoke).toHaveBeenNthCalledWith(4, desktopBridgeChannels.cancelRun, { runId: 'run-1' })
-    expect(invoke).toHaveBeenNthCalledWith(5, desktopBridgeChannels.resolveApproval, {
+    expect(invoke).toHaveBeenNthCalledWith(5, desktopBridgeChannels.exportRunEvidence, { runId: 'run-1' })
+    expect(invoke).toHaveBeenNthCalledWith(6, desktopBridgeChannels.resolveApproval, {
       runId: 'run-1',
       approvalRequestId: 'approval-1',
       decision: 'granted',
