@@ -202,7 +202,7 @@ export function isTransientRunEvent(event: RunEvent): boolean {
 export function describeRunEvent(event: RunEvent) {
   switch (event.type) {
     case 'run.created':
-      return { title: 'Run created', detail: `Conversation ${event.payload.run.conversationId}` }
+      return { title: 'Run created', detail: `${event.payload.run.role ?? 'build'} role · Conversation ${event.payload.run.conversationId}` }
     case 'run.started':
       return { title: 'Run started', detail: `Execution began at ${formatTimestamp(event.payload.startedAt)}` }
     case 'run.dry_run_preview':

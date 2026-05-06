@@ -68,6 +68,32 @@ describe('core helpers and policy', () => {
     ).resolves.toMatchObject({ effect: 'deny' })
   })
 
+  it('denies write actions in plan mode before approval policy evaluation', async () => {
+    const policy = new StaticPolicy()
+    const writeAction = createActionDefinition({ id: 'write_file', title: 'Write File', requiresApproval: true })
+
+    await expect(
+      policy.evaluateAction({
+        run: {
+          id: 'run-1',
+          conversationId: 'conversation-1',
+          status: 'started',
+          role: 'plan',
+          createdAt: '2026-04-29T10:00:00.000Z',
+        },
+        action: writeAction,
+        actionCall: {
+          id: 'call-1',
+          runId: 'run-1',
+          actionId: 'write_file',
+          input: {},
+          requestedAt: '2026-04-29T10:00:00.000Z',
+        },
+        settings: { ...testSettings, workspace: { ...testSettings.workspace, approvalPolicy: 'always' } },
+      }),
+    ).resolves.toMatchObject({ effect: 'deny', reason: 'Write File is not allowed in plan mode' })
+  })
+
   it('returns the latest unresolved approval with its requested action', () => {
     const snapshot: ConversationSnapshot = {
       conversation: null,

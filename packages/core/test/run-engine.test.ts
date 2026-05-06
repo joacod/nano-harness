@@ -236,6 +236,35 @@ describe('CoreRunEngine', () => {
     })
   })
 
+  it('filters available actions for plan role runs', async () => {
+    const store = new FakeStore()
+    const provider = new FakeProvider([
+      async (input) => {
+        expect(input.run.role).toBe('plan')
+        expect(input.actions.map((action) => action.id)).toEqual(['read_file'])
+        return { content: 'Plan only.' }
+      },
+    ])
+    const engine = new CoreRunEngine({
+      store,
+      provider,
+      providerCredentialResolver: defaultCredentialResolver,
+      actionExecutor: new FakeActionExecutor([
+        createActionDefinition({ id: 'read_file', title: 'Read File' }),
+        createActionDefinition({ id: 'write_file', title: 'Write File', requiresApproval: true }),
+      ], async (input) => createActionResult({ actionCallId: input.call.id })),
+      policy: new FakePolicy(() => ({ effect: 'allow' })),
+      now: () => '2026-04-29T10:00:00.000Z',
+      createId: createSequentialId(),
+    })
+
+    const handle = await engine.startRun(createRunInput({ prompt: 'Plan this change', role: 'plan' }))
+
+    await waitForCondition(() => store.runs.get(handle.runId)?.status === 'completed')
+
+    expect(store.runs.get(handle.runId)).toMatchObject({ role: 'plan' })
+  })
+
   it('returns failed tool results to the provider so the run can recover', async () => {
     const store = new FakeStore()
     const readFileAction = createActionDefinition({ id: 'read_file', title: 'Read File' })

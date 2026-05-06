@@ -20,12 +20,14 @@ export const initializationStatements = [
     id TEXT PRIMARY KEY NOT NULL,
     conversation_id TEXT NOT NULL,
     status TEXT NOT NULL,
+    role TEXT NOT NULL DEFAULT 'build',
     created_at TEXT NOT NULL,
     started_at TEXT,
     finished_at TEXT,
     failure_message TEXT
   )`,
   `CREATE INDEX IF NOT EXISTS runs_conversation_id_idx ON runs (conversation_id, created_at)`,
+  `ALTER TABLE runs ADD COLUMN role TEXT NOT NULL DEFAULT 'build'`,
   `CREATE TABLE IF NOT EXISTS messages (
     id TEXT PRIMARY KEY NOT NULL,
     conversation_id TEXT NOT NULL,

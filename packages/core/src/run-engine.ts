@@ -1,5 +1,6 @@
 import type {
   ActionCall,
+  ActionDefinition,
   ActionResult,
   AppSettings,
   ApprovalRequest,
@@ -131,6 +132,40 @@ function isAbortError(error: unknown): boolean {
   return error instanceof Error && error.name === 'AbortError'
 }
 
+function filterActionsForRole(actions: ActionDefinition[], role: Run['role']): ActionDefinition[] {
+  if (!role || role === 'build') {
+    return actions
+  }
+
+  const allowedPlanActions = new Set([
+    'list_directory',
+    'read_file',
+    'read_range',
+    'glob',
+    'grep',
+    'git_status',
+    'git_diff',
+    'fetch_url',
+    'list_mcp_resources',
+    'read_mcp_resource',
+  ])
+  const allowedReviewActions = new Set([
+    'list_directory',
+    'read_file',
+    'read_range',
+    'glob',
+    'grep',
+    'git_status',
+    'git_diff',
+    'run_command',
+    'list_mcp_resources',
+    'read_mcp_resource',
+  ])
+  const allowedActions = role === 'plan' ? allowedPlanActions : allowedReviewActions
+
+  return actions.filter((action) => allowedActions.has(action.id))
+}
+
 export class CoreRunEngine implements RunEngine {
   private readonly store: Store
   private readonly provider: Provider
@@ -184,6 +219,7 @@ export class CoreRunEngine implements RunEngine {
       id: this.createId(),
       conversationId: input.conversationId,
       status: 'created',
+      role: input.role ?? 'build',
       createdAt: now,
     }
 
@@ -450,7 +486,7 @@ export class CoreRunEngine implements RunEngine {
     })
 
     let streamedMessage = ''
-    const actions = await this.actionExecutor.listDefinitions()
+    const actions = filterActionsForRole(await this.actionExecutor.listDefinitions(), input.run.role)
     const skills = await this.skillResolver.resolveForRun({
       settings: input.settings,
       run: input.run,
@@ -567,7 +603,7 @@ export class CoreRunEngine implements RunEngine {
   }
 
   private async createDryRunPreview(settings: AppSettings, run: Run, messages: Message[]): Promise<DryRunPreviewPayload> {
-    const actions = await this.actionExecutor.listDefinitions()
+    const actions = filterActionsForRole(await this.actionExecutor.listDefinitions(), run.role)
     const skills = await this.skillResolver.resolveForRun({ settings, run, messages })
     const mcp = await this.mcpRegistry.getInventory(settings)
 

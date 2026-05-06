@@ -13,6 +13,7 @@ export const runsTable = sqliteTable(
     id: text('id').primaryKey(),
     conversationId: text('conversation_id').notNull(),
     status: text('status').notNull(),
+    role: text('role').notNull().default('build'),
     createdAt: text('created_at').notNull(),
     startedAt: text('started_at'),
     finishedAt: text('finished_at'),

@@ -205,7 +205,9 @@ describe('SqliteStore', () => {
           id: 'run-1',
           conversationId: 'conversation-1',
           status: 'failed',
+          role: 'build',
           createdAt: '2026-04-29T10:00:00.000Z',
+          startedAt: undefined,
           finishedAt: '2026-04-29T10:00:09.000Z',
           failureMessage: 'provider failed',
         },
@@ -213,8 +215,11 @@ describe('SqliteStore', () => {
           id: 'run-2',
           conversationId: 'conversation-1',
           status: 'started',
+          role: 'build',
           createdAt: '2026-04-29T10:00:05.000Z',
           startedAt: '2026-04-29T10:00:06.000Z',
+          finishedAt: undefined,
+          failureMessage: undefined,
         },
       ])
       expect(snapshot.messages).toEqual([assistantMessage, toolMessage])

@@ -342,5 +342,6 @@ export function createRunInput(overrides: Partial<RunCreateInput> = {}): RunCrea
   return {
     conversationId: overrides.conversationId ?? 'conversation-1',
     prompt: overrides.prompt ?? 'Read notes.txt and summarize it.',
+    role: overrides.role,
   }
 }

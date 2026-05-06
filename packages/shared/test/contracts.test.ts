@@ -14,6 +14,7 @@ import {
   startProviderOauthResultSchema,
   runEventSchema,
   exportRunEvidenceResultSchema,
+  runCreateInputSchema,
   startProviderOauthInputSchema,
 } from '../src'
 
@@ -191,6 +192,8 @@ describe('shared contracts', () => {
   })
 
   it('validates bridge payloads for approval resolution and external urls', () => {
+    expect(runCreateInputSchema.parse({ conversationId: 'conversation-1', prompt: '/plan test', role: 'plan' })).toMatchObject({ role: 'plan' })
+
     expect(
       resolveApprovalInputSchema.parse({
         runId: 'run-1',

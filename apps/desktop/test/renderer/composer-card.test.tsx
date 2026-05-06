@@ -70,6 +70,7 @@ describe('ComposerCard', () => {
       expect(startRun).toHaveBeenCalledWith({
         conversationId: 'conversation-uuid-123',
         prompt: 'ship tests',
+        role: 'build',
       })
     })
 
@@ -83,6 +84,30 @@ describe('ComposerCard', () => {
     })
 
     expect(promptInput.value).toBe('')
+  })
+
+  it('routes /plan slash commands to plan role runs', async () => {
+    const user = userEvent.setup()
+    const startRun = vi.fn(async () => ({ runId: 'run-1' }))
+    vi.stubGlobal('crypto', { randomUUID: () => 'uuid-123' })
+    window.desktop = createDesktopMock({
+      getProviderStatus: async () => createProviderStatus(),
+      startRun,
+    })
+
+    const { container } = renderWithQueryClient(<ComposerCard conversationId={null} />)
+    const promptInput = getRequiredElement<HTMLTextAreaElement>(container, 'textarea[name="prompt"]')
+
+    await user.type(promptInput, '/plan add MCP support')
+    await user.click(screen.getByRole('button', { name: 'Send prompt' }))
+
+    await waitFor(() => {
+      expect(startRun).toHaveBeenCalledWith({
+        conversationId: 'conversation-uuid-123',
+        prompt: 'add MCP support',
+        role: 'plan',
+      })
+    })
   })
 
   it('surfaces start-run failures', async () => {
