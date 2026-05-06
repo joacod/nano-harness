@@ -1229,6 +1229,19 @@ a {
   min-height: 42px;
 }
 
+.settings-checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 38px;
+  color: var(--foreground);
+  font-size: 0.86rem;
+}
+
+.settings-checkbox-row input {
+  accent-color: #43ff9d;
+}
+
 .settings-save-row {
   padding-top: 2px;
 }

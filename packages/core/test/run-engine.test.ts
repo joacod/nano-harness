@@ -234,6 +234,39 @@ describe('CoreRunEngine', () => {
       toolCallId: 'tool-call-1',
       toolName: 'read_file',
     })
+    expect(store.events.map((event) => event.type)).toContain('hook.started')
+    expect(store.events.map((event) => event.type)).toContain('hook.completed')
+  })
+
+  it('emits hook denials and stops before action execution', async () => {
+    const store = new FakeStore()
+    const readFileAction = createActionDefinition({ id: 'read_file', title: 'Read File' })
+    const actionExecutor = new FakeActionExecutor([readFileAction], async (input) => createActionResult({ actionCallId: input.call.id }))
+    const engine = new CoreRunEngine({
+      store,
+      provider: new FakeProvider([{ actionCalls: [createToolRequest('read_file')] }]),
+      providerCredentialResolver: defaultCredentialResolver,
+      actionExecutor,
+      policy: new FakePolicy(() => ({ effect: 'allow' })),
+      hookRunner: {
+        async listHooks() {
+          return ['test.pre_tool_use']
+        },
+        async runHooks() {
+          return [{ hookId: 'test.pre_tool_use', phase: 'pre_tool_use', status: 'denied', message: 'Personal hook denied read_file' }]
+        },
+      },
+      now: () => '2026-04-29T10:00:00.000Z',
+      createId: createSequentialId(),
+    })
+
+    const handle = await engine.startRun(createRunInput())
+
+    await waitForCondition(() => store.runs.get(handle.runId)?.status === 'failed')
+
+    expect(actionExecutor.executions).toHaveLength(0)
+    expect(store.runs.get(handle.runId)?.failureMessage).toBe('Personal hook denied read_file')
+    expect(store.events.map((event) => event.type)).toContain('hook.denied')
   })
 
   it('filters available actions for plan role runs', async () => {

@@ -45,6 +45,10 @@ function getActivityPhase(event: RunEvent): StreamingRunState['phase'] | null {
     case 'action.started':
     case 'action.completed':
     case 'action.failed':
+    case 'hook.started':
+    case 'hook.completed':
+    case 'hook.denied':
+    case 'hook.error':
       return 'using_tools'
     case 'approval.required':
     case 'run.waiting_approval':
@@ -208,7 +212,7 @@ export function describeRunEvent(event: RunEvent) {
     case 'run.dry_run_preview':
       return {
         title: 'Dry-run preview captured',
-        detail: `${event.payload.provider.provider} · ${event.payload.provider.model} · ${event.payload.actions.length} actions available`,
+        detail: `${event.payload.provider.provider} · ${event.payload.provider.model} · ${event.payload.actions.length} actions · ${event.payload.permissions.risky.length} risky · ${event.payload.permissions.denied.length} denied · ${event.payload.permissions.activeHooks.length} hooks`,
       }
     case 'run.waiting_approval':
       return { title: 'Waiting for approval', detail: `Approval request ${event.payload.approvalRequestId}` }
@@ -249,6 +253,14 @@ export function describeRunEvent(event: RunEvent) {
       return { title: 'Action completed', detail: previewText(JSON.stringify(event.payload.result.output)) }
     case 'action.failed':
       return { title: 'Action failed', detail: event.payload.result.errorMessage ?? 'Action returned a failed result.' }
+    case 'hook.started':
+      return { title: `Hook started: ${event.payload.hookId}`, detail: `${event.payload.phase} for call ${event.payload.actionCallId}` }
+    case 'hook.completed':
+      return { title: `Hook completed: ${event.payload.result.hookId}`, detail: event.payload.result.message }
+    case 'hook.denied':
+      return { title: `Hook denied: ${event.payload.result.hookId}`, detail: event.payload.result.message }
+    case 'hook.error':
+      return { title: `Hook failed: ${event.payload.result.hookId}`, detail: event.payload.result.message }
     case 'approval.required':
       return { title: 'Approval required', detail: event.payload.approvalRequest.reason }
     case 'approval.granted':
@@ -265,7 +277,7 @@ export function getEventFamily(eventType: RunEvent['type']) {
 }
 
 export function getEventTone(event: RunEvent) {
-  if (event.type === 'run.failed' || event.type === 'provider.error' || event.type === 'action.failed') {
+  if (event.type === 'run.failed' || event.type === 'provider.error' || event.type === 'action.failed' || event.type === 'hook.error' || event.type === 'hook.denied') {
     return 'failed'
   }
 

@@ -164,6 +164,12 @@ describe('shared contracts', () => {
           provider: { provider: 'openrouter', model: providerDefaultModels.openrouter, baseUrl: 'https://openrouter.ai/api/v1' },
           workspace: { rootPath: '/workspace', approvalPolicy: 'on-request' },
           actions: [{ id: 'read_file', title: 'Read File', requiresApproval: false }],
+          permissions: {
+            denied: [],
+            risky: [],
+            activeRules: ['workspace_boundary.reads_and_writes'],
+            activeHooks: ['personal_rules.pre_tool_use'],
+          },
           skills: {
             available: [{
               id: 'repo-onboarding',

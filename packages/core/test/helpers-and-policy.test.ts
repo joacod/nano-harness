@@ -95,6 +95,65 @@ describe('core helpers and policy', () => {
     ).resolves.toMatchObject({ effect: 'deny', reason: 'Write File is not allowed in plan mode' })
   })
 
+  it('denies paths outside the workspace before action execution', async () => {
+    const policy = new StaticPolicy()
+    const readAction = createActionDefinition({ id: 'read_file', title: 'Read File' })
+
+    await expect(
+      policy.evaluateAction({
+        run: {
+          id: 'run-1',
+          conversationId: 'conversation-1',
+          status: 'started',
+          role: 'build',
+          createdAt: '2026-04-29T10:00:00.000Z',
+        },
+        action: readAction,
+        actionCall: {
+          id: 'call-1',
+          runId: 'run-1',
+          actionId: 'read_file',
+          input: { path: '../secrets.txt' },
+          requestedAt: '2026-04-29T10:00:00.000Z',
+        },
+        settings: testSettings,
+      }),
+    ).resolves.toMatchObject({
+      effect: 'deny',
+      matchedRule: 'workspace_boundary.reads_and_writes',
+    })
+  })
+
+  it('requires approval for risky command mutations', async () => {
+    const policy = new StaticPolicy()
+    const commandAction = createActionDefinition({ id: 'run_command', title: 'Run Command' })
+
+    await expect(
+      policy.evaluateAction({
+        run: {
+          id: 'run-1',
+          conversationId: 'conversation-1',
+          status: 'started',
+          role: 'build',
+          createdAt: '2026-04-29T10:00:00.000Z',
+        },
+        action: commandAction,
+        actionCall: {
+          id: 'call-1',
+          runId: 'run-1',
+          actionId: 'run_command',
+          input: { command: 'git', args: ['commit', '-m', 'test'] },
+          requestedAt: '2026-04-29T10:00:00.000Z',
+        },
+        settings: testSettings,
+      }),
+    ).resolves.toMatchObject({
+      effect: 'require_approval',
+      matchedRule: 'commands.classify_risky_mutation',
+      preview: { classification: 'risky_mutation' },
+    })
+  })
+
   it('returns the latest unresolved approval with its requested action', () => {
     const snapshot: ConversationSnapshot = {
       conversation: null,
