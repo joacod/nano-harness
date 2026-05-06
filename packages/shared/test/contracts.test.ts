@@ -6,6 +6,8 @@ import {
   getProviderDefinition,
   harnessChangeManifestSchema,
   harnessComponentRegistrySchema,
+  implementationSpecSchema,
+  parseSpecCommand,
   messageSchema,
   providerAdapterIdSchema,
   providerDefaultModels,
@@ -116,6 +118,26 @@ describe('shared contracts', () => {
       patchPreview: 'diff --git a/packages/core/src/instructions.ts b/packages/core/src/instructions.ts',
       createdAt: '2026-04-29T10:00:00.000Z',
     })).toMatchObject({ id: 'change-1' })
+  })
+
+  it('validates spec artifacts and parses /spec commands', () => {
+    expect(parseSpecCommand('/spec fix the settings crash')).toMatchObject({
+      isSpec: true,
+      prompt: expect.stringContaining('fix the settings crash'),
+    })
+    expect(implementationSpecSchema.parse({
+      id: 'spec-1',
+      source: { type: 'local_text', value: 'fix bug' },
+      problem: 'fix bug',
+      constraints: ['Keep scope bounded.'],
+      implementationPlan: ['Plan', 'Build', 'Review'],
+      validationPlan: ['pnpm test'],
+      risks: ['Missing coverage.'],
+      acceptanceCriteria: ['Bug is fixed.'],
+      requiredRoles: ['plan', 'build', 'review'],
+      branchName: 'spec/fix-bug',
+      createdAt: '2026-04-29T10:00:00.000Z',
+    })).toMatchObject({ id: 'spec-1' })
   })
 
   it('parses assistant and tool messages with tool metadata', () => {

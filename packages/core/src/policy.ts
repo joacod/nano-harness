@@ -276,6 +276,8 @@ function evaluateRolePolicy(role: Run['role'], action: ActionDefinition): Policy
     'read_mcp_resource',
     'list_harness_components',
     'compare_benchmark_results',
+    'create_spec_artifact',
+    'create_draft_pr_artifact',
   ])
   const reviewAllowed = new Set([
     'list_directory',
@@ -290,6 +292,8 @@ function evaluateRolePolicy(role: Run['role'], action: ActionDefinition): Policy
     'read_mcp_resource',
     'list_harness_components',
     'compare_benchmark_results',
+    'create_spec_artifact',
+    'create_draft_pr_artifact',
   ])
   const allowed = role === 'plan' ? planAllowed : reviewAllowed
 

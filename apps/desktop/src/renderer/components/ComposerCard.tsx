@@ -6,7 +6,7 @@ import { useNavigate } from '@tanstack/react-router'
 
 import { createConversationId, providerStatusQueryOptions } from '../queries'
 import { Button, Card, FeedbackText, RuntimePill, TextArea } from './ui'
-import type { AgentRole } from '../../../../../packages/shared/src'
+import { parseSpecCommand, type AgentRole } from '../../../../../packages/shared/src'
 
 export function ComposerCard({ conversationId }: { conversationId: string | null }) {
   const navigate = useNavigate()
@@ -141,6 +141,12 @@ export function ComposerCard({ conversationId }: { conversationId: string | null
 
 function parseRoleCommand(value: string): { prompt: string; role: AgentRole } {
   const trimmed = value.trim()
+  const specCommand = parseSpecCommand(trimmed)
+
+  if (specCommand.isSpec) {
+    return { prompt: specCommand.prompt, role: 'plan' }
+  }
+
   const match = /^\/(plan|build|review)(?:\s+([\s\S]*))?$/u.exec(trimmed)
 
   if (!match) {

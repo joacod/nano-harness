@@ -377,6 +377,57 @@ describe('BuiltInActionExecutor', () => {
       output: { passedDelta: 1, failedDelta: -1, scoreDelta: 0.33999999999999997, improved: true },
     })
   })
+
+  it('creates spec and draft PR artifacts without remote push', async () => {
+    const rootPath = await createWorkspace()
+    const executor = createExecutor()
+    const specResult = await executor.execute(
+      createExecutionInput({
+        actionId: 'create_spec_artifact',
+        settings: { ...workspaceSettings, workspace: { ...workspaceSettings.workspace, rootPath } },
+        input: {
+          task: 'Fix the settings crash',
+          acceptanceCriteria: ['Settings saves without crashing.'],
+          validationPlan: ['pnpm test'],
+        },
+      }),
+    )
+
+    expect(specResult).toMatchObject({
+      status: 'completed',
+      output: {
+        buildRequiresApproval: true,
+        branchCreationRequiresApproval: true,
+        remotePushRequiresApproval: true,
+      },
+    })
+
+    if (!specResult.output || Array.isArray(specResult.output) || typeof specResult.output !== 'object' || !('spec' in specResult.output)) {
+      throw new Error('Expected create_spec_artifact to return a spec output')
+    }
+
+    const draftResult = await executor.execute(
+      createExecutionInput({
+        actionId: 'create_draft_pr_artifact',
+        settings: { ...workspaceSettings, workspace: { ...workspaceSettings.workspace, rootPath } },
+        input: {
+          spec: specResult.output.spec,
+          changedFiles: ['apps/desktop/src/renderer/routes/SettingsRoute.tsx'],
+          validationOutputs: ['pnpm test passed'],
+          evidenceLinks: ['run-evidence.json'],
+        },
+      }),
+    )
+
+    expect(draftResult).toMatchObject({
+      status: 'completed',
+      output: {
+        draftPr: { pushRequiresApproval: true },
+        evidencePacket: { changedFiles: ['apps/desktop/src/renderer/routes/SettingsRoute.tsx'] },
+        remotePushBlockedUntilApproval: true,
+      },
+    })
+  })
 })
 
 function createExecutor() {
