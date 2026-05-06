@@ -1,11 +1,13 @@
+import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import type { AppSettings } from '../../../../../packages/shared/src'
-import { SettingsFormCard } from '../components/SettingsFormCard'
+import { SettingsFormCard, type SettingsTab } from '../components/SettingsFormCard'
 import { Card } from '../components/ui'
 import { contextQueryOptions, mcpInventoryQueryOptions, memoryProposalsQueryOptions, memoryRecordsQueryOptions, providerStatusQueryOptions, settingsQueryOptions, skillsQueryOptions } from '../queries'
 
 export function SettingsRoute() {
+  const [selectedTab, setSelectedTab] = useState<SettingsTab>('providers')
   const queryClient = useQueryClient()
   const contextQuery = useQuery(contextQueryOptions)
   const settingsQuery = useQuery(settingsQueryOptions)
@@ -113,6 +115,7 @@ export function SettingsRoute() {
         mcpInventory={mcpInventoryQuery.data ?? null}
         memoryRecords={memoryRecordsQuery.data ?? null}
         memoryProposals={memoryProposalsQuery.data ?? null}
+        selectedTab={selectedTab}
         isSaving={mutation.isPending}
         isSavingApiKey={saveApiKeyMutation.isPending}
         isStartingOauth={startOauthMutation.isPending}
@@ -154,6 +157,7 @@ export function SettingsRoute() {
         onToggleSkill={async (input) => {
           await toggleSkillMutation.mutateAsync(input)
         }}
+        onSelectedTabChange={setSelectedTab}
         onResolveMemoryProposal={async (input) => {
           await resolveMemoryProposalMutation.mutateAsync(input)
         }}

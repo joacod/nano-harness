@@ -15,7 +15,7 @@ import { SkillsHubCard } from './settings/SkillsHubCard'
 import { WorkspaceSettingsForm } from './settings/WorkspaceSettingsForm'
 import { Card, Tabs } from './ui'
 
-type SettingsTab = 'providers' | 'workspace' | 'skills' | 'mcp' | 'memory' | 'harness' | 'data'
+export type SettingsTab = 'providers' | 'workspace' | 'skills' | 'mcp' | 'memory' | 'harness' | 'data'
 
 export function SettingsFormCard({
   initialSettings,
@@ -25,6 +25,7 @@ export function SettingsFormCard({
   mcpInventory,
   memoryRecords,
   memoryProposals,
+  selectedTab,
   isSaving,
   isSavingApiKey,
   isStartingOauth,
@@ -50,6 +51,7 @@ export function SettingsFormCard({
   onExportData,
   onImportData,
   onToggleSkill,
+  onSelectedTabChange,
   onResolveMemoryProposal,
 }: {
   initialSettings: AppSettings
@@ -59,6 +61,7 @@ export function SettingsFormCard({
   mcpInventory: McpInventory | null
   memoryRecords: MemoryRecordList | null
   memoryProposals: MemoryProposalList | null
+  selectedTab: SettingsTab
   isSaving: boolean
   isSavingApiKey: boolean
   isStartingOauth: boolean
@@ -84,10 +87,10 @@ export function SettingsFormCard({
   onExportData: () => Promise<void>
   onImportData: () => Promise<void>
   onToggleSkill: (input: { skillId: string; enabled: boolean }) => Promise<void>
+  onSelectedTabChange: (tab: SettingsTab) => void
   onResolveMemoryProposal: (input: { proposalId: string; decision: 'approved' | 'rejected' }) => Promise<void>
 }) {
   const [selectedProvider, setSelectedProvider] = useState(initialSettings.provider.provider)
-  const [selectedTab, setSelectedTab] = useState<SettingsTab>('providers')
   const selectedProviderDefinition = getProviderDefinition(selectedProvider)
   const selectedCredentialStatusQuery = useQuery(providerCredentialStatusQueryOptions(selectedProvider))
   const selectedCredentialStatus = selectedCredentialStatusQuery.data ?? null
@@ -124,7 +127,7 @@ export function SettingsFormCard({
       <Tabs
         ariaLabel="Settings sections"
         value={selectedTab}
-        onValueChange={setSelectedTab}
+        onValueChange={onSelectedTabChange}
         tabs={[
           {
             value: 'providers',

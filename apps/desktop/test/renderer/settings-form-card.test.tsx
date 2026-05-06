@@ -2,11 +2,12 @@
 
 import { cleanup, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { useState } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { createDefaultProviderSettings, providerDefaultModels, type AppSettings, type McpInventory, type ProviderStatus, type SkillInventory } from '@nano-harness/shared'
 
-import { SettingsFormCard } from '../../src/renderer/components/SettingsFormCard'
+import { SettingsFormCard, type SettingsTab } from '../../src/renderer/components/SettingsFormCard'
 import { createDesktopMock, renderWithQueryClient } from './test-utils'
 
 describe('SettingsFormCard', () => {
@@ -44,7 +45,7 @@ describe('SettingsFormCard', () => {
     expect(screen.getByRole('tab', { name: 'Skills' }).getAttribute('aria-selected')).toBe('true')
     expect(screen.getByText('Skills hub')).toBeTruthy()
     expect(screen.getByText('Repo Onboarding')).toBeTruthy()
-    expect(screen.getByRole('switch', { name: 'Disable skill' })).toBeTruthy()
+    expect(screen.getByRole('switch', { name: 'enabled' })).toBeTruthy()
     expect(screen.queryByText('Workspace Root')).toBeNull()
 
     await user.click(screen.getByRole('tab', { name: 'MCP' }))
@@ -109,6 +110,14 @@ function renderSettingsFormCard() {
   })
 
   return renderWithQueryClient(
+    <SettingsFormCardHarness />,
+  )
+}
+
+function SettingsFormCardHarness() {
+  const [selectedTab, setSelectedTab] = useState<SettingsTab>('providers')
+
+  return (
     <SettingsFormCard
       initialSettings={createSettings()}
       dataPath="/tmp/nano-harness.db"
@@ -117,6 +126,7 @@ function renderSettingsFormCard() {
       mcpInventory={createMcpInventory()}
       memoryRecords={{ records: [] }}
       memoryProposals={{ proposals: [] }}
+      selectedTab={selectedTab}
       isSaving={false}
       isSavingApiKey={false}
       isStartingOauth={false}
@@ -142,8 +152,9 @@ function renderSettingsFormCard() {
       onExportData={vi.fn(async () => undefined)}
       onImportData={vi.fn(async () => undefined)}
       onToggleSkill={vi.fn(async () => undefined)}
+      onSelectedTabChange={setSelectedTab}
       onResolveMemoryProposal={vi.fn(async () => undefined)}
-    />,
+    />
   )
 }
 
