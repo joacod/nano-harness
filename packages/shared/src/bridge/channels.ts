@@ -3,6 +3,7 @@ export const desktopBridgeChannels = {
   listConversations: 'desktop:list-conversations',
   getProviderStatus: 'desktop:get-provider-status',
   listSkills: 'desktop:list-skills',
+  listMcpInventory: 'desktop:list-mcp-inventory',
   getProviderCredentialStatus: 'desktop:get-provider-credential-status',
   saveProviderAuth: 'desktop:save-provider-auth',
   startProviderOauth: 'desktop:start-provider-oauth',

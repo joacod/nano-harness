@@ -4,7 +4,7 @@ import { cleanup, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { createDefaultProviderSettings, providerDefaultModels, type AppSettings, type ProviderStatus, type SkillInventory } from '@nano-harness/shared'
+import { createDefaultProviderSettings, providerDefaultModels, type AppSettings, type McpInventory, type ProviderStatus, type SkillInventory } from '@nano-harness/shared'
 
 import { SettingsRoute } from '../../src/renderer/routes/SettingsRoute'
 import { createDesktopMock, renderWithQueryClient } from './test-utils'
@@ -14,6 +14,7 @@ type MockSettingsFormCardProps = {
   dataPath: string | null
   providerStatus: ProviderStatus | null
   skillInventory: SkillInventory | null
+  mcpInventory: McpInventory | null
   isSaving: boolean
   isSavingApiKey: boolean
   isStartingOauth: boolean
@@ -51,6 +52,7 @@ vi.mock('../../src/renderer/components/SettingsFormCard', () => ({
         <p>dataPath:{props.dataPath ?? 'null'}</p>
         <p>provider:{props.providerStatus?.providerLabel ?? 'none'}</p>
         <p>skills:{props.skillInventory?.skills.length ?? 0}</p>
+        <p>mcp:{props.mcpInventory?.servers.length ?? 0}</p>
         <p>export:{props.exportDataResult ?? 'none'}</p>
         <p>import:{props.importDataResult ?? 'none'}</p>
         <p>saveError:{props.saveError ?? 'none'}</p>
@@ -131,6 +133,7 @@ describe('SettingsRoute', () => {
           enabled: true,
         }],
       }),
+      listMcpInventory: async () => ({ servers: [], tools: [], resources: [] }),
       saveSettings,
       saveProviderAuth,
       startProviderOauth,
@@ -146,6 +149,7 @@ describe('SettingsRoute', () => {
     expect(screen.getByText('dataPath:/tmp/nano-harness.db')).toBeTruthy()
     expect(screen.getByText('provider:OpenRouter')).toBeTruthy()
     expect(screen.getByText('skills:1')).toBeTruthy()
+    expect(screen.getByText('mcp:0')).toBeTruthy()
     expect(latestSettingsFormCardProps?.initialSettings.provider.model).toBe(providerDefaultModels.openrouter)
 
     await user.click(screen.getByRole('button', { name: 'Save settings action' }))

@@ -1,6 +1,7 @@
 import { z } from 'zod'
 
 import { skillSettingsSchema } from './skills'
+import { mcpSettingsSchema } from './mcp'
 
 export const approvalPolicySchema = z.enum(['always', 'on-request', 'never'])
 
@@ -173,6 +174,7 @@ export const appSettingsSchema = z.object({
   provider: providerSettingsSchema,
   workspace: workspaceSettingsSchema,
   skills: skillSettingsSchema.optional(),
+  mcp: mcpSettingsSchema.optional(),
 })
 
 export type AppSettings = z.infer<typeof appSettingsSchema>

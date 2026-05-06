@@ -114,6 +114,18 @@ describe('setupIpcHandlers', () => {
     expect(runtime.skillResolver.listSkills).toHaveBeenCalled()
   })
 
+  it('lists MCP inventory through the registry', async () => {
+    const runtime = createRuntime()
+    setupIpcHandlers(runtime)
+
+    await expect(invokeHandler(desktopBridgeChannels.listMcpInventory)).resolves.toEqual({
+      servers: [],
+      tools: [],
+      resources: [],
+    })
+    expect(runtime.mcpRegistry.getInventory).toHaveBeenCalled()
+  })
+
   it('delegates getConversation, startRun, cancelRun, and resolveApproval', async () => {
     const runtime = createRuntime()
     setupIpcHandlers(runtime)
@@ -297,6 +309,9 @@ function createRuntime() {
           content: 'Read first.',
         },
       ]),
+    },
+    mcpRegistry: {
+      getInventory: vi.fn(async () => ({ servers: [], tools: [], resources: [] })),
     },
     runEngine: {
       startRun: vi.fn(async () => ({ runId: 'run-123', cancel: async () => {} })),

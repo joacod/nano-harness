@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { actionCallSchema, actionDefinitionSchema, actionResultSchema } from './actions'
 import { approvalRequestSchema, approvalResolutionSchema } from './approvals'
 import { messageSchema } from './messages'
+import { mcpInventorySchema } from './mcp'
 import { providerReasoningDeltaSchema } from './reasoning'
 import { runSchema } from './runs'
 import { skillSummarySchema } from './skills'
@@ -44,11 +45,7 @@ export const runDryRunPreviewEventSchema = eventBaseSchema.extend({
       available: z.array(skillSummarySchema),
       selected: z.array(skillSummarySchema),
     }),
-    mcp: z.object({
-      servers: z.array(z.string()),
-      tools: z.array(z.string()),
-      resources: z.array(z.string()),
-    }),
+    mcp: mcpInventorySchema,
   }),
 })
 

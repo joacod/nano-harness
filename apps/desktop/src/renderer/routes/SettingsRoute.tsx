@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { AppSettings } from '../../../../../packages/shared/src'
 import { SettingsFormCard } from '../components/SettingsFormCard'
 import { Card } from '../components/ui'
-import { contextQueryOptions, providerStatusQueryOptions, settingsQueryOptions, skillsQueryOptions } from '../queries'
+import { contextQueryOptions, mcpInventoryQueryOptions, providerStatusQueryOptions, settingsQueryOptions, skillsQueryOptions } from '../queries'
 
 export function SettingsRoute() {
   const queryClient = useQueryClient()
@@ -11,6 +11,7 @@ export function SettingsRoute() {
   const settingsQuery = useQuery(settingsQueryOptions)
   const providerStatusQuery = useQuery(providerStatusQueryOptions)
   const skillsQuery = useQuery(skillsQueryOptions)
+  const mcpInventoryQuery = useQuery(mcpInventoryQueryOptions)
   const mutation = useMutation({
     mutationFn: async (settings: AppSettings) => window.desktop.saveSettings(settings),
     onSuccess: async () => {
@@ -100,6 +101,7 @@ export function SettingsRoute() {
         dataPath={contextQuery.data?.dataPath ?? null}
         providerStatus={providerStatusQuery.data ?? null}
         skillInventory={skillsQuery.data ?? null}
+        mcpInventory={mcpInventoryQuery.data ?? null}
         isSaving={mutation.isPending}
         isSavingApiKey={saveApiKeyMutation.isPending}
         isStartingOauth={startOauthMutation.isPending}

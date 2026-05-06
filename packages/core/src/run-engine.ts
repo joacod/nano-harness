@@ -19,6 +19,8 @@ import { getLatestPendingApproval } from './approvals'
 import type { EventBus } from './event-bus'
 import { noopEventBus } from './event-bus'
 import type { Policy } from './policy'
+import type { McpRegistry } from './mcp'
+import { EmptyMcpRegistry } from './mcp'
 import type { Provider, ProviderActionRequest, ProviderCredentialResolver, ProviderGenerateResult, SkillResolver } from './provider'
 import { EmptySkillResolver } from './provider'
 import { assertStatusTransition, isTerminalStatus } from './run-status'
@@ -29,6 +31,7 @@ export interface RunEngineDependencies {
   provider: Provider
   providerCredentialResolver: ProviderCredentialResolver
   skillResolver?: SkillResolver
+  mcpRegistry?: McpRegistry
   actionExecutor: ActionExecutor
   policy: Policy
   eventBus?: EventBus
@@ -133,6 +136,7 @@ export class CoreRunEngine implements RunEngine {
   private readonly provider: Provider
   private readonly providerCredentialResolver: ProviderCredentialResolver
   private readonly skillResolver: SkillResolver
+  private readonly mcpRegistry: McpRegistry
   private readonly actionExecutor: ActionExecutor
   private readonly policy: Policy
   private readonly eventBus: EventBus
@@ -147,6 +151,7 @@ export class CoreRunEngine implements RunEngine {
     this.provider = dependencies.provider
     this.providerCredentialResolver = dependencies.providerCredentialResolver
     this.skillResolver = dependencies.skillResolver ?? new EmptySkillResolver()
+    this.mcpRegistry = dependencies.mcpRegistry ?? new EmptyMcpRegistry()
     this.actionExecutor = dependencies.actionExecutor
     this.policy = dependencies.policy
     this.eventBus = dependencies.eventBus ?? noopEventBus
@@ -564,6 +569,7 @@ export class CoreRunEngine implements RunEngine {
   private async createDryRunPreview(settings: AppSettings, run: Run, messages: Message[]): Promise<DryRunPreviewPayload> {
     const actions = await this.actionExecutor.listDefinitions()
     const skills = await this.skillResolver.resolveForRun({ settings, run, messages })
+    const mcp = await this.mcpRegistry.getInventory(settings)
 
     return {
       provider: {
@@ -594,11 +600,7 @@ export class CoreRunEngine implements RunEngine {
           enabled: skill.enabled,
         })),
       },
-      mcp: {
-        servers: [],
-        tools: [],
-        resources: [],
-      },
+      mcp,
     }
   }
 

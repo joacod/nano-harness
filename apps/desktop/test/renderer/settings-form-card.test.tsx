@@ -4,7 +4,7 @@ import { cleanup, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { createDefaultProviderSettings, providerDefaultModels, type AppSettings, type ProviderStatus, type SkillInventory } from '@nano-harness/shared'
+import { createDefaultProviderSettings, providerDefaultModels, type AppSettings, type McpInventory, type ProviderStatus, type SkillInventory } from '@nano-harness/shared'
 
 import { SettingsFormCard } from '../../src/renderer/components/SettingsFormCard'
 import { createDesktopMock, renderWithQueryClient } from './test-utils'
@@ -14,7 +14,7 @@ describe('SettingsFormCard', () => {
     cleanup()
   })
 
-  it('shows provider settings by default and moves workspace, skills, and data tools into separate tabs', async () => {
+  it('shows provider settings by default and moves workspace, skills, MCP, and data tools into separate tabs', async () => {
     const user = userEvent.setup()
 
     renderSettingsFormCard()
@@ -28,6 +28,7 @@ describe('SettingsFormCard', () => {
     expect(screen.queryByText('Workspace Root')).toBeNull()
     expect(screen.queryByText('Approval Policy')).toBeNull()
     expect(screen.queryByText('Skills hub')).toBeNull()
+    expect(screen.queryByText('MCP inventory')).toBeNull()
     expect(screen.queryByText('Backup and restore')).toBeNull()
 
     await user.click(screen.getByRole('tab', { name: 'Workspace' }))
@@ -45,6 +46,12 @@ describe('SettingsFormCard', () => {
     expect(screen.getByText('Repo Onboarding')).toBeTruthy()
     expect(screen.getByRole('switch', { name: 'Disable skill' })).toBeTruthy()
     expect(screen.queryByText('Workspace Root')).toBeNull()
+
+    await user.click(screen.getByRole('tab', { name: 'MCP' }))
+
+    expect(screen.getByRole('tab', { name: 'MCP' }).getAttribute('aria-selected')).toBe('true')
+    expect(screen.getByText('MCP inventory')).toBeTruthy()
+    expect(screen.getByText('No MCP servers configured.')).toBeTruthy()
 
     await user.click(screen.getByRole('tab', { name: 'Data' }))
 
@@ -107,6 +114,7 @@ function renderSettingsFormCard() {
       dataPath="/tmp/nano-harness.db"
       providerStatus={createProviderStatus()}
       skillInventory={createSkillInventory()}
+      mcpInventory={createMcpInventory()}
       isSaving={false}
       isSavingApiKey={false}
       isStartingOauth={false}
@@ -180,4 +188,8 @@ function createSkillInventory(): SkillInventory {
       },
     ],
   }
+}
+
+function createMcpInventory(): McpInventory {
+  return { servers: [], tools: [], resources: [] }
 }

@@ -51,6 +51,9 @@ type IpcRuntime = {
   skillResolver: {
     listSkills: DesktopRuntime['skillResolver']['listSkills']
   }
+  mcpRegistry: {
+    getInventory: DesktopRuntime['mcpRegistry']['getInventory']
+  }
   runEngine: {
     startRun: DesktopRuntime['runEngine']['startRun']
     resumeRun: DesktopRuntime['runEngine']['resumeRun']
@@ -106,6 +109,16 @@ export function setupIpcHandlers(runtime: IpcRuntime): void {
       path: skill.path,
       enabled: skill.enabled,
     })) }
+  })
+
+  ipcMain.handle(desktopBridgeChannels.listMcpInventory, async () => {
+    const settings = await runtime.store.getSettings()
+
+    if (!settings) {
+      return { servers: [], tools: [], resources: [] }
+    }
+
+    return await runtime.mcpRegistry.getInventory(settings)
   })
 
   ipcMain.handle(desktopBridgeChannels.getProviderCredentialStatus, async (_event, payload) => {

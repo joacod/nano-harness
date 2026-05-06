@@ -4,7 +4,7 @@ import { join } from 'node:path'
 
 import type { Provider, ProviderGenerateInput, ProviderGenerateResult } from '../../../../packages/core/src'
 import { CoreRunEngine, InMemoryEventBus, StaticPolicy } from '../../../../packages/core/src'
-import { BuiltInActionExecutor, ChatGptSubscriptionProvider, MarkdownSkillResolver, OpenAICompatibleProvider, createSqliteStore } from '../../../../packages/infra/src'
+import { BuiltInActionExecutor, ChatGptSubscriptionProvider, CompositeActionExecutor, ConfiguredMcpRegistry, MarkdownSkillResolver, McpActionExecutor, OpenAICompatibleProvider, createSqliteStore } from '../../../../packages/infra/src'
 import { createDefaultProviderSettings, desktopBridgeChannels, getProviderDefinition, providerStatusSchema, runEventSchema, storedProviderCredentialSchema, type AppSettings, type ProviderAdapterId, type ProviderAuthMethod } from '../../../../packages/shared/src'
 import { DesktopApprovalCoordinator } from './approval-coordinator'
 import { refreshOpenAIChatGptCredential } from './openai-chatgpt-auth'
@@ -15,6 +15,7 @@ export type DesktopRuntime = {
   store: Awaited<ReturnType<typeof createSqliteStore>>
   runEngine: CoreRunEngine
   skillResolver: MarkdownSkillResolver
+  mcpRegistry: ConfiguredMcpRegistry
   eventBus: InMemoryEventBus
   approvalCoordinator: DesktopApprovalCoordinator
 }
@@ -147,12 +148,17 @@ export async function createRuntime(): Promise<DesktopRuntime> {
     },
   })
   const skillResolver = new MarkdownSkillResolver()
+  const mcpRegistry = new ConfiguredMcpRegistry()
   const runEngine = new CoreRunEngine({
     store,
     provider: new DesktopProviderRouter(),
     providerCredentialResolver,
     skillResolver,
-    actionExecutor: new BuiltInActionExecutor(),
+    mcpRegistry,
+    actionExecutor: new CompositeActionExecutor([
+      new BuiltInActionExecutor(),
+      new McpActionExecutor(mcpRegistry),
+    ]),
     policy: new StaticPolicy(),
     eventBus,
     approvalCoordinator,
@@ -161,6 +167,7 @@ export async function createRuntime(): Promise<DesktopRuntime> {
     store,
     runEngine,
     skillResolver,
+    mcpRegistry,
     eventBus,
     approvalCoordinator,
   }

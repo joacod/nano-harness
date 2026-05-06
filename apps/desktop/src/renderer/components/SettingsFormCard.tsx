@@ -1,24 +1,26 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 
-import { getProviderDefinition, type AppSettings, type ProviderAuthMethod, type ProviderStatus, type SkillInventory } from '../../../../../packages/shared/src'
+import { getProviderDefinition, type AppSettings, type McpInventory, type ProviderAuthMethod, type ProviderStatus, type SkillInventory } from '../../../../../packages/shared/src'
 import { providerCredentialStatusQueryOptions } from '../queries'
 import { ApiKeySettingsForm } from './settings/ApiKeySettingsForm'
 import { DataBackupPanel } from './settings/DataBackupPanel'
 import { OAuthSettingsForm } from './settings/OAuthSettingsForm'
+import { McpInspectorCard } from './settings/McpInspectorCard'
 import { ProviderSettingsForm } from './settings/ProviderSettingsForm'
 import { ProviderStatusPanel } from './settings/ProviderStatusPanel'
 import { SkillsHubCard } from './settings/SkillsHubCard'
 import { WorkspaceSettingsForm } from './settings/WorkspaceSettingsForm'
 import { Card, Tabs } from './ui'
 
-type SettingsTab = 'providers' | 'workspace' | 'skills' | 'data'
+type SettingsTab = 'providers' | 'workspace' | 'skills' | 'mcp' | 'data'
 
 export function SettingsFormCard({
   initialSettings,
   dataPath,
   providerStatus,
   skillInventory,
+  mcpInventory,
   isSaving,
   isSavingApiKey,
   isStartingOauth,
@@ -47,6 +49,7 @@ export function SettingsFormCard({
   dataPath: string | null
   providerStatus: ProviderStatus | null
   skillInventory: SkillInventory | null
+  mcpInventory: McpInventory | null
   isSaving: boolean
   isSavingApiKey: boolean
   isStartingOauth: boolean
@@ -149,6 +152,11 @@ export function SettingsFormCard({
                 onToggleSkill={onToggleSkill}
               />
             ),
+          },
+          {
+            value: 'mcp',
+            label: 'MCP',
+            panel: <McpInspectorCard inventory={mcpInventory} />,
           },
           {
             value: 'data',

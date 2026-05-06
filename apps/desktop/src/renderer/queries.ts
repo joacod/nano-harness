@@ -22,6 +22,11 @@ export const skillsQueryOptions = queryOptions({
   queryFn: () => window.desktop.listSkills(),
 })
 
+export const mcpInventoryQueryOptions = queryOptions({
+  queryKey: ['mcp-inventory'],
+  queryFn: () => window.desktop.listMcpInventory(),
+})
+
 type ProviderCredentialStatusQueryKey = readonly ['provider-credential-status', AppSettings['provider']['provider']]
 type ConversationQueryKey = readonly ['conversation', string]
 

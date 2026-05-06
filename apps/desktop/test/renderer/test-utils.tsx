@@ -29,6 +29,7 @@ export function createDesktopMock(overrides?: Partial<DesktopApi>): DesktopApi {
     listConversations: async () => [],
     getProviderStatus: async () => null,
     listSkills: async () => ({ skills: [] }),
+    listMcpInventory: async () => ({ servers: [], tools: [], resources: [] }),
     getProviderCredentialStatus: async () => ({ apiKeyPresent: false }),
     saveProviderAuth: async () => undefined,
     startProviderOauth: async (input) => ({ provider: input.provider }),
