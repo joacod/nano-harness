@@ -11,6 +11,7 @@ import {
   openExternalUrlInputSchema,
   providerCredentialInputSchema,
   resolveApprovalInputSchema,
+  resolveMemoryProposalInputSchema,
   runCreateInputSchema,
   runIdInputSchema,
   saveProviderAuthInputSchema,
@@ -37,6 +38,9 @@ type IpcRuntime = {
     listConversations: DesktopRuntime['store']['listConversations']
     listSessions: DesktopRuntime['store']['listSessions']
     listRuns: DesktopRuntime['store']['listRuns']
+    listMemoryRecords: DesktopRuntime['store']['listMemoryRecords']
+    listMemoryProposals: DesktopRuntime['store']['listMemoryProposals']
+    resolveMemoryProposal: DesktopRuntime['store']['resolveMemoryProposal']
     getProviderCredentialStatus: DesktopRuntime['store']['getProviderCredentialStatus']
     getEncryptedProviderCredentialPayload: DesktopRuntime['store']['getEncryptedProviderCredentialPayload']
     saveProviderCredentialPayload: DesktopRuntime['store']['saveProviderCredentialPayload']
@@ -129,6 +133,19 @@ export function setupIpcHandlers(runtime: IpcRuntime): void {
     }
 
     return await runtime.mcpRegistry.getInventory(settings)
+  })
+
+  ipcMain.handle(desktopBridgeChannels.listMemoryRecords, async () => {
+    return { records: await runtime.store.listMemoryRecords() }
+  })
+
+  ipcMain.handle(desktopBridgeChannels.listMemoryProposals, async () => {
+    return { proposals: await runtime.store.listMemoryProposals() }
+  })
+
+  ipcMain.handle(desktopBridgeChannels.resolveMemoryProposal, async (_event, payload) => {
+    const input = resolveMemoryProposalInputSchema.parse(payload)
+    await runtime.store.resolveMemoryProposal(input)
   })
 
   ipcMain.handle(desktopBridgeChannels.getProviderCredentialStatus, async (_event, payload) => {

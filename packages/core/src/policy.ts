@@ -274,6 +274,8 @@ function evaluateRolePolicy(role: Run['role'], action: ActionDefinition): Policy
     'fetch_url',
     'list_mcp_resources',
     'read_mcp_resource',
+    'list_harness_components',
+    'compare_benchmark_results',
   ])
   const reviewAllowed = new Set([
     'list_directory',
@@ -286,6 +288,8 @@ function evaluateRolePolicy(role: Run['role'], action: ActionDefinition): Policy
     'run_command',
     'list_mcp_resources',
     'read_mcp_resource',
+    'list_harness_components',
+    'compare_benchmark_results',
   ])
   const allowed = role === 'plan' ? planAllowed : reviewAllowed
 

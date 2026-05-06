@@ -115,6 +115,8 @@ function renderSettingsFormCard() {
       providerStatus={createProviderStatus()}
       skillInventory={createSkillInventory()}
       mcpInventory={createMcpInventory()}
+      memoryRecords={{ records: [] }}
+      memoryProposals={{ proposals: [] }}
       isSaving={false}
       isSavingApiKey={false}
       isStartingOauth={false}
@@ -123,6 +125,7 @@ function renderSettingsFormCard() {
       isExportingData={false}
       isImportingData={false}
       isSavingSkills={false}
+      isResolvingMemoryProposal={false}
       saveError={null}
       apiKeyError={null}
       oauthError={null}
@@ -130,6 +133,7 @@ function renderSettingsFormCard() {
       importDataResult={null}
       dataError={null}
       skillsError={null}
+      memoryError={null}
       onSubmit={vi.fn(async () => undefined)}
       onSaveApiKey={vi.fn(async () => undefined)}
       onClearApiKey={vi.fn(async () => undefined)}
@@ -138,6 +142,7 @@ function renderSettingsFormCard() {
       onExportData={vi.fn(async () => undefined)}
       onImportData={vi.fn(async () => undefined)}
       onToggleSkill={vi.fn(async () => undefined)}
+      onResolveMemoryProposal={vi.fn(async () => undefined)}
     />,
   )
 }

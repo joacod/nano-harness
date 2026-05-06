@@ -1,19 +1,21 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 
-import { getProviderDefinition, type AppSettings, type McpInventory, type ProviderAuthMethod, type ProviderStatus, type SkillInventory } from '../../../../../packages/shared/src'
+import { getProviderDefinition, type AppSettings, type McpInventory, type MemoryProposalList, type MemoryRecordList, type ProviderAuthMethod, type ProviderStatus, type SkillInventory } from '../../../../../packages/shared/src'
 import { providerCredentialStatusQueryOptions } from '../queries'
 import { ApiKeySettingsForm } from './settings/ApiKeySettingsForm'
 import { DataBackupPanel } from './settings/DataBackupPanel'
+import { HarnessEngineeringCard } from './settings/HarnessEngineeringCard'
 import { OAuthSettingsForm } from './settings/OAuthSettingsForm'
 import { McpInspectorCard } from './settings/McpInspectorCard'
+import { MemoryInspectorCard } from './settings/MemoryInspectorCard'
 import { ProviderSettingsForm } from './settings/ProviderSettingsForm'
 import { ProviderStatusPanel } from './settings/ProviderStatusPanel'
 import { SkillsHubCard } from './settings/SkillsHubCard'
 import { WorkspaceSettingsForm } from './settings/WorkspaceSettingsForm'
 import { Card, Tabs } from './ui'
 
-type SettingsTab = 'providers' | 'workspace' | 'skills' | 'mcp' | 'data'
+type SettingsTab = 'providers' | 'workspace' | 'skills' | 'mcp' | 'memory' | 'harness' | 'data'
 
 export function SettingsFormCard({
   initialSettings,
@@ -21,6 +23,8 @@ export function SettingsFormCard({
   providerStatus,
   skillInventory,
   mcpInventory,
+  memoryRecords,
+  memoryProposals,
   isSaving,
   isSavingApiKey,
   isStartingOauth,
@@ -29,6 +33,7 @@ export function SettingsFormCard({
   isExportingData,
   isImportingData,
   isSavingSkills,
+  isResolvingMemoryProposal,
   saveError,
   apiKeyError,
   oauthError,
@@ -36,6 +41,7 @@ export function SettingsFormCard({
   importDataResult,
   dataError,
   skillsError,
+  memoryError,
   onSubmit,
   onSaveApiKey,
   onClearApiKey,
@@ -44,12 +50,15 @@ export function SettingsFormCard({
   onExportData,
   onImportData,
   onToggleSkill,
+  onResolveMemoryProposal,
 }: {
   initialSettings: AppSettings
   dataPath: string | null
   providerStatus: ProviderStatus | null
   skillInventory: SkillInventory | null
   mcpInventory: McpInventory | null
+  memoryRecords: MemoryRecordList | null
+  memoryProposals: MemoryProposalList | null
   isSaving: boolean
   isSavingApiKey: boolean
   isStartingOauth: boolean
@@ -58,6 +67,7 @@ export function SettingsFormCard({
   isExportingData: boolean
   isImportingData: boolean
   isSavingSkills: boolean
+  isResolvingMemoryProposal: boolean
   saveError: string | null
   apiKeyError: string | null
   oauthError: string | null
@@ -65,6 +75,7 @@ export function SettingsFormCard({
   importDataResult: string | null
   dataError: string | null
   skillsError: string | null
+  memoryError: string | null
   onSubmit: (settings: AppSettings) => Promise<void>
   onSaveApiKey: (input: { provider: AppSettings['provider']['provider']; apiKey: string }) => Promise<void>
   onClearApiKey: (input: { provider: AppSettings['provider']['provider'] }) => Promise<void>
@@ -73,6 +84,7 @@ export function SettingsFormCard({
   onExportData: () => Promise<void>
   onImportData: () => Promise<void>
   onToggleSkill: (input: { skillId: string; enabled: boolean }) => Promise<void>
+  onResolveMemoryProposal: (input: { proposalId: string; decision: 'approved' | 'rejected' }) => Promise<void>
 }) {
   const [selectedProvider, setSelectedProvider] = useState(initialSettings.provider.provider)
   const [selectedTab, setSelectedTab] = useState<SettingsTab>('providers')
@@ -157,6 +169,24 @@ export function SettingsFormCard({
             value: 'mcp',
             label: 'MCP',
             panel: <McpInspectorCard inventory={mcpInventory} />,
+          },
+          {
+            value: 'memory',
+            label: 'Memory',
+            panel: (
+              <MemoryInspectorCard
+                records={memoryRecords}
+                proposals={memoryProposals}
+                isResolving={isResolvingMemoryProposal}
+                error={memoryError}
+                onResolveProposal={onResolveMemoryProposal}
+              />
+            ),
+          },
+          {
+            value: 'harness',
+            label: 'Harness',
+            panel: <HarnessEngineeringCard />,
           },
           {
             value: 'data',

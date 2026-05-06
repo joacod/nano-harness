@@ -96,11 +96,11 @@ function toOpenAICompatibleAssistantToolCalls(toolCalls: AssistantToolCall[]) {
   }))
 }
 
-function toOpenAICompatibleMessages(input: Pick<ProviderGenerateInput, 'run' | 'messages' | 'settings' | 'skills'>): OpenAICompatibleMessage[] {
+function toOpenAICompatibleMessages(input: Pick<ProviderGenerateInput, 'run' | 'messages' | 'settings' | 'skills' | 'memory'>): OpenAICompatibleMessage[] {
   return [
     {
       role: 'system' as const,
-      content: createProviderInstructions({ workspaceRoot: input.settings.workspace.rootPath, role: input.run.role, skills: input.skills }),
+      content: createProviderInstructions({ workspaceRoot: input.settings.workspace.rootPath, role: input.run.role, skills: input.skills, memory: input.memory }),
     },
     ...input.messages.map((message): OpenAICompatibleMessage => {
       if (message.role === 'tool') {

@@ -1,4 +1,4 @@
-import { mkdtemp, rm } from 'node:fs/promises'
+import { mkdtemp, readFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 
@@ -280,6 +280,36 @@ describe('SqliteStore', () => {
 
       expect(await store.getEncryptedProviderCredentialPayload('openrouter', 'api-key')).toBe('encrypted-api-key')
       expect(await store.getEncryptedProviderCredentialPayload('openai', 'oauth')).toBe('encrypted-oauth-token-account-claim')
+    } finally {
+      await store.close()
+    }
+  })
+
+  it('approves memory proposals into recallable records and markdown files', async () => {
+    const store = await createTestStore()
+
+    try {
+      await store.saveMemoryProposal({
+        id: 'proposal-1',
+        runId: 'run-1',
+        category: 'preference',
+        content: 'The user prefers concise summaries.',
+        rationale: 'Repeated feedback favored concise answers.',
+        evidence: ['run-1'],
+        status: 'pending',
+        createdAt: '2026-04-29T10:00:00.000Z',
+      })
+
+      await expect(store.listMemoryProposals('pending')).resolves.toHaveLength(1)
+      await store.resolveMemoryProposal({ proposalId: 'proposal-1', decision: 'approved' })
+
+      const records = await store.listMemoryRecords()
+      expect(records).toEqual([expect.objectContaining({ category: 'preference', content: 'The user prefers concise summaries.' })])
+      await expect(store.recallMemory({ query: 'concise summaries', settings: {
+        provider: createDefaultProviderSettings('openrouter'),
+        workspace: { rootPath: '/workspace', approvalPolicy: 'on-request' },
+      } })).resolves.toMatchObject({ selected: [{ id: 'memory-proposal-1' }] })
+      await expect(readFile(path.join(store.paths.dataDir, 'USER.md'), 'utf8')).resolves.toContain('The user prefers concise summaries.')
     } finally {
       await store.close()
     }

@@ -1,4 +1,4 @@
-import type { ActionDefinition, AppSettings, JsonValue, Message, ProviderAuth, ProviderAuthMethod, ProviderKey, ProviderReasoningDelta, ReasoningDetail, Run, SkillContext } from '@nano-harness/shared'
+import type { ActionDefinition, AppSettings, JsonValue, MemoryRecall, Message, ProviderAuth, ProviderAuthMethod, ProviderKey, ProviderReasoningDelta, ReasoningDetail, Run, SkillContext } from '@nano-harness/shared'
 
 export interface ProviderActionRequest {
   toolCallId: string
@@ -13,6 +13,7 @@ export interface ProviderGenerateInput {
   settings: AppSettings
   providerAuth: ProviderAuth
   skills?: SkillContext
+  memory?: MemoryRecall
   signal: AbortSignal
   onDelta?: (delta: string) => Promise<void> | void
   onReasoningDelta?: (delta: ProviderReasoningDelta) => Promise<void> | void

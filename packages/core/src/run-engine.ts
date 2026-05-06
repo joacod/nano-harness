@@ -8,6 +8,7 @@ import type {
   HookPhase,
   HookResult,
   JsonValue,
+  MemoryProposal,
   Message,
   Run,
   RunCreateInput,
@@ -154,6 +155,8 @@ function filterActionsForRole(actions: ActionDefinition[], role: Run['role']): A
     'fetch_url',
     'list_mcp_resources',
     'read_mcp_resource',
+    'list_harness_components',
+    'compare_benchmark_results',
   ])
   const allowedReviewActions = new Set([
     'list_directory',
@@ -166,6 +169,8 @@ function filterActionsForRole(actions: ActionDefinition[], role: Run['role']): A
     'run_command',
     'list_mcp_resources',
     'read_mcp_resource',
+    'list_harness_components',
+    'compare_benchmark_results',
   ])
   const allowedActions = role === 'plan' ? allowedPlanActions : allowedReviewActions
 
@@ -500,6 +505,10 @@ export class CoreRunEngine implements RunEngine {
       run: input.run,
       messages: input.messages,
     })
+    const memory = await this.store.recallMemory({
+      query: input.messages.map((message) => message.content).join('\n'),
+      settings: input.settings,
+    })
     const providerDefinition = getProviderDefinition(input.settings.provider.provider)
     const providerAuth = await this.providerCredentialResolver.getProviderAuth({
       provider: input.settings.provider.provider,
@@ -516,6 +525,7 @@ export class CoreRunEngine implements RunEngine {
       settings: input.settings,
       providerAuth,
       skills,
+      memory,
       signal: input.signal,
       onDelta: async (delta) => {
         streamedMessage += delta
@@ -614,6 +624,7 @@ export class CoreRunEngine implements RunEngine {
     const actions = filterActionsForRole(await this.actionExecutor.listDefinitions(), run.role)
     const skills = await this.skillResolver.resolveForRun({ settings, run, messages })
     const mcp = await this.mcpRegistry.getInventory(settings)
+    const memory = await this.store.recallMemory({ query: messages.map((message) => message.content).join('\n'), settings })
     const permissionDecisions = await Promise.all(actions.map((action) => this.policy.evaluateAction({
       run,
       action,
@@ -663,12 +674,50 @@ export class CoreRunEngine implements RunEngine {
         })),
       },
       mcp,
+      memory,
     }
   }
 
   private async completeRun(run: Run): Promise<void> {
     const finishedAt = this.now()
     await this.transitionRun(run, 'completed', { finishedAt }, 'run.completed', { finishedAt })
+    await this.createPostRunMemoryProposal(run)
+  }
+
+  private async createPostRunMemoryProposal(run: Run): Promise<void> {
+    const events = await this.store.listRunEvents(run.id)
+    const requestedActions = events.flatMap((event) => event.type === 'action.requested' ? [event.payload.actionCall] : [])
+    const editedActions = requestedActions.filter((actionCall) => actionCall.actionId === 'write_file' || actionCall.actionId === 'apply_patch')
+
+    if (editedActions.length === 0) {
+      return
+    }
+
+    const alreadyProposed = (await this.store.listMemoryProposals()).some((proposal) => proposal.runId === run.id)
+
+    if (alreadyProposed) {
+      return
+    }
+
+    const proposal: MemoryProposal = {
+      id: this.createId(),
+      runId: run.id,
+      category: 'workflow',
+      content: 'After file edits, run the relevant validation command before considering the task complete.',
+      rationale: 'This run edited files; durable workflow memory is proposed for approval instead of written automatically.',
+      evidence: editedActions.map((actionCall) => `${actionCall.actionId}:${actionCall.id}`),
+      status: 'pending',
+      createdAt: this.now(),
+    }
+
+    await this.store.saveMemoryProposal(proposal)
+    await this.emitEvent({
+      id: this.createId(),
+      runId: run.id,
+      timestamp: proposal.createdAt,
+      type: 'memory.proposal_created',
+      payload: { proposal },
+    })
   }
 
   private async failRun(run: Run, message: string): Promise<void> {
