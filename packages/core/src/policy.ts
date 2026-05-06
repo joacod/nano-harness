@@ -1,5 +1,6 @@
 import { createDefaultSafetySettings, type ActionCall, type ActionDefinition, type AppSettings, type PermissionDecision, type PermissionPreview, type Run } from '@nano-harness/shared'
 
+import { isActionAllowedForRole } from './role-actions'
 import { isWorkspaceRelativePathInsideRoot } from './workspace-paths'
 
 export interface PolicyInput {
@@ -235,45 +236,7 @@ function getPathInput(actionId: string, input: ActionCall['input']): string | un
 }
 
 function evaluateRolePolicy(role: Run['role'], action: ActionDefinition): PolicyDecision | null {
-  if (!role || role === 'build') {
-    return null
-  }
-
-  const planAllowed = new Set([
-    'list_directory',
-    'read_file',
-    'read_range',
-    'glob',
-    'grep',
-    'git_status',
-    'git_diff',
-    'fetch_url',
-    'list_mcp_resources',
-    'read_mcp_resource',
-    'list_harness_components',
-    'compare_benchmark_results',
-    'create_spec_artifact',
-    'create_draft_pr_artifact',
-  ])
-  const reviewAllowed = new Set([
-    'list_directory',
-    'read_file',
-    'read_range',
-    'glob',
-    'grep',
-    'git_status',
-    'git_diff',
-    'run_command',
-    'list_mcp_resources',
-    'read_mcp_resource',
-    'list_harness_components',
-    'compare_benchmark_results',
-    'create_spec_artifact',
-    'create_draft_pr_artifact',
-  ])
-  const allowed = role === 'plan' ? planAllowed : reviewAllowed
-
-  if (allowed.has(action.id)) {
+  if (isActionAllowedForRole(role, action.id)) {
     return null
   }
 

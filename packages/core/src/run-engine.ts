@@ -30,6 +30,7 @@ import type { McpRegistry } from './mcp'
 import { EmptyMcpRegistry } from './mcp'
 import type { Provider, ProviderActionRequest, ProviderCredentialResolver, ProviderGenerateResult, SkillResolver } from './provider'
 import { EmptySkillResolver } from './provider'
+import { filterActionsForRole } from './role-actions'
 import { assertStatusTransition, isTerminalStatus } from './run-status'
 import type { ConversationSnapshot, Store } from './store'
 
@@ -137,48 +138,6 @@ function stringifyActionResult(result: ActionResult): string {
 
 function isAbortError(error: unknown): boolean {
   return error instanceof Error && error.name === 'AbortError'
-}
-
-function filterActionsForRole(actions: ActionDefinition[], role: Run['role']): ActionDefinition[] {
-  if (!role || role === 'build') {
-    return actions
-  }
-
-  const allowedPlanActions = new Set([
-    'list_directory',
-    'read_file',
-    'read_range',
-    'glob',
-    'grep',
-    'git_status',
-    'git_diff',
-    'fetch_url',
-    'list_mcp_resources',
-    'read_mcp_resource',
-    'list_harness_components',
-    'compare_benchmark_results',
-    'create_spec_artifact',
-    'create_draft_pr_artifact',
-  ])
-  const allowedReviewActions = new Set([
-    'list_directory',
-    'read_file',
-    'read_range',
-    'glob',
-    'grep',
-    'git_status',
-    'git_diff',
-    'run_command',
-    'list_mcp_resources',
-    'read_mcp_resource',
-    'list_harness_components',
-    'compare_benchmark_results',
-    'create_spec_artifact',
-    'create_draft_pr_artifact',
-  ])
-  const allowedActions = role === 'plan' ? allowedPlanActions : allowedReviewActions
-
-  return actions.filter((action) => allowedActions.has(action.id))
 }
 
 export class CoreRunEngine implements RunEngine {
