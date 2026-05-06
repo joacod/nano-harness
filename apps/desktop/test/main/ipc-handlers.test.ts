@@ -114,6 +114,24 @@ describe('setupIpcHandlers', () => {
     expect(runtime.skillResolver.listSkills).toHaveBeenCalled()
   })
 
+  it('delegates session list, fork, clone, and export handlers', async () => {
+    const runtime = createRuntime()
+    setupIpcHandlers(runtime)
+
+    await expect(invokeHandler(desktopBridgeChannels.listSessions)).resolves.toEqual([])
+    await expect(invokeHandler(desktopBridgeChannels.forkSession, { sessionId: 'conversation-1' })).resolves.toEqual({
+      sessionId: 'conversation-1-fork',
+      conversationId: 'conversation-1-fork',
+    })
+    await expect(invokeHandler(desktopBridgeChannels.cloneSession, { sessionId: 'conversation-1' })).resolves.toEqual({
+      sessionId: 'conversation-1-clone',
+      conversationId: 'conversation-1-clone',
+    })
+    await expect(invokeHandler(desktopBridgeChannels.exportSession, { sessionId: 'conversation-1' })).resolves.toMatchObject({
+      exportedFilePath: expect.stringContaining('conversation-1-session.json'),
+    })
+  })
+
   it('lists MCP inventory through the registry', async () => {
     const runtime = createRuntime()
     setupIpcHandlers(runtime)
@@ -280,6 +298,7 @@ function createRuntime() {
     store: {
       paths: { dataDir: '/tmp', databaseFilePath: '/tmp/nano-harness.db' },
       listConversations: vi.fn(async () => []),
+      listSessions: vi.fn(async () => []),
       listRuns: vi.fn(async () => []),
       getProviderCredentialStatus: vi.fn(async () => ({ apiKeyPresent: true })),
       getEncryptedProviderCredentialPayload: vi.fn(async () => null),
@@ -289,6 +308,40 @@ function createRuntime() {
       saveSettings: vi.fn(async () => {}),
       getConversation: vi.fn(async () => snapshot),
       getRun: vi.fn(async () => null),
+      forkSession: vi.fn(async (sessionId: string) => ({
+        id: `${sessionId}-fork`,
+        conversationId: `${sessionId}-fork`,
+        parentSessionId: sessionId,
+        rootSessionId: sessionId,
+        title: 'Fork',
+        createdAt: '2026-04-29T10:00:00.000Z',
+        updatedAt: '2026-04-29T10:00:00.000Z',
+      })),
+      cloneSession: vi.fn(async (sessionId: string) => ({
+        id: `${sessionId}-clone`,
+        conversationId: `${sessionId}-clone`,
+        parentSessionId: sessionId,
+        rootSessionId: sessionId,
+        title: 'Clone',
+        createdAt: '2026-04-29T10:00:00.000Z',
+        updatedAt: '2026-04-29T10:00:00.000Z',
+      })),
+      exportSession: vi.fn(async () => ({
+        session: {
+          id: 'session-1',
+          conversationId: 'session-1',
+          parentSessionId: null,
+          rootSessionId: 'session-1',
+          title: 'Session',
+          createdAt: '2026-04-29T10:00:00.000Z',
+          updatedAt: '2026-04-29T10:00:00.000Z',
+        },
+        lineage: [],
+        runs: [],
+        messages: [],
+        events: [],
+        approvals: { requests: [], resolutions: [] },
+      })),
       backupToFile: vi.fn(async () => {}),
       sanitizeDatabaseFile: vi.fn(async () => {}),
       validateDatabaseFile: vi.fn(async () => {}),

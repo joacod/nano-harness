@@ -197,6 +197,7 @@ describe('SqliteStore', () => {
         'conversation-2',
         'conversation-1',
       ])
+      expect((await store.listSessions()).map((session) => session.id)).toEqual(['conversation-1', 'conversation-2'])
       expect((await store.listRuns()).map((storedRun) => storedRun.id)).toEqual(['run-1', 'run-2'])
       expect((await store.listRuns(['started'])).map((storedRun) => storedRun.id)).toEqual(['run-2'])
       expect(await store.listRunEvents('run-2')).toEqual([createdEvent, providerEvent])
@@ -243,6 +244,15 @@ describe('SqliteStore', () => {
           decidedAt: '2026-04-29T10:00:09.500Z',
         },
       ])
+
+      const forkedSession = await store.forkSession('conversation-1')
+      expect(forkedSession).toMatchObject({ parentSessionId: 'conversation-1', rootSessionId: 'conversation-1' })
+      const exportedSession = await store.exportSession('conversation-1')
+      expect(exportedSession).toMatchObject({
+        session: { id: 'conversation-1' },
+        runs: [{ id: 'run-1' }, { id: 'run-2' }],
+      })
+      expect(exportedSession.lineage.map((session) => session.id)).toContain(forkedSession.id)
     } finally {
       await store.close()
     }

@@ -27,6 +27,7 @@ export function createDesktopMock(overrides?: Partial<DesktopApi>): DesktopApi {
   return {
     getContext: async () => ({ platform: 'darwin', version: '0.0.1', dataPath: '/tmp/nano-harness.db' }),
     listConversations: async () => [],
+    listSessions: async () => [],
     getProviderStatus: async () => null,
     listSkills: async () => ({ skills: [] }),
     listMcpInventory: async () => ({ servers: [], tools: [], resources: [] }),
@@ -47,6 +48,9 @@ export function createDesktopMock(overrides?: Partial<DesktopApi>): DesktopApi {
       approvalRequests: [],
       approvalResolutions: [],
     }),
+    forkSession: async (input) => ({ sessionId: `${input.sessionId}-fork`, conversationId: `${input.sessionId}-fork` }),
+    cloneSession: async (input) => ({ sessionId: `${input.sessionId}-clone`, conversationId: `${input.sessionId}-clone` }),
+    exportSession: async () => ({ exportedFilePath: '/tmp/session.json' }),
     startRun: async () => ({ runId: 'run-1' }),
     resumeRun: async () => undefined,
     cancelRun: async () => undefined,

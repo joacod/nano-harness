@@ -73,3 +73,23 @@ export function normalizeNullableMessageRow(row: {
     createdAt: row.createdAt,
   }
 }
+
+export function normalizeNullableSessionRow(row: {
+  id: string
+  conversationId: string
+  parentSessionId: string | null
+  rootSessionId: string
+  title: string
+  createdAt: string
+  updatedAt: string
+}) {
+  return {
+    id: row.id,
+    conversationId: row.conversationId,
+    parentSessionId: row.parentSessionId,
+    rootSessionId: row.rootSessionId,
+    title: row.title,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  }
+}

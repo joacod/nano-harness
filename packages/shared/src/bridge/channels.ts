@@ -1,6 +1,7 @@
 export const desktopBridgeChannels = {
   getContext: 'desktop:get-context',
   listConversations: 'desktop:list-conversations',
+  listSessions: 'desktop:list-sessions',
   getProviderStatus: 'desktop:get-provider-status',
   listSkills: 'desktop:list-skills',
   listMcpInventory: 'desktop:list-mcp-inventory',
@@ -14,6 +15,9 @@ export const desktopBridgeChannels = {
   getSettings: 'desktop:get-settings',
   saveSettings: 'desktop:save-settings',
   getConversation: 'desktop:get-conversation',
+  forkSession: 'desktop:fork-session',
+  cloneSession: 'desktop:clone-session',
+  exportSession: 'desktop:export-session',
   startRun: 'desktop:start-run',
   resumeRun: 'desktop:resume-run',
   cancelRun: 'desktop:cancel-run',

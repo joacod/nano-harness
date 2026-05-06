@@ -1,13 +1,13 @@
 import { Link } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 
-import { conversationsQueryOptions } from '../../queries'
+import { sessionsQueryOptions } from '../../queries'
 import { formatTimestamp } from '../../utils/formatting'
 import { FeedbackText } from '../ui'
 
 export function ConversationNav() {
-  const conversationsQuery = useQuery(conversationsQueryOptions)
-  const conversations = conversationsQuery.data ?? []
+  const conversationsQuery = useQuery(sessionsQueryOptions)
+  const sessions = conversationsQuery.data ?? []
 
   return (
     <div className="sidebar-section sidebar-session-section sidebar-collapsible-content">
@@ -24,17 +24,17 @@ export function ConversationNav() {
             Failed to load conversations.
           </FeedbackText>
         ) : null}
-        {!conversationsQuery.isLoading && !conversationsQuery.isError && conversations.length > 0 ? (
-          conversations.map((conversation) => (
+        {!conversationsQuery.isLoading && !conversationsQuery.isError && sessions.length > 0 ? (
+          sessions.map((session) => (
             <Link
-              key={conversation.id}
+              key={session.id}
               to="/conversations/$conversationId"
-              params={{ conversationId: conversation.id }}
+              params={{ conversationId: session.conversationId }}
               className="conversation-link"
               activeProps={{ className: 'conversation-link conversation-link-active' }}
             >
-              <span>{conversation.title}</span>
-              <small>{formatTimestamp(conversation.updatedAt)}</small>
+              <span>{session.parentSessionId ? `↳ ${session.title}` : session.title}</span>
+              <small>{formatTimestamp(session.updatedAt)}</small>
             </Link>
           ))
         ) : (

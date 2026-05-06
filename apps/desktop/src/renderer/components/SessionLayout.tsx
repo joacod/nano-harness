@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 
 import { providerStatusQueryOptions } from '../queries'
 import { ComposerCard } from './ComposerCard'
-import { Card } from './ui'
+import { Button, Card, FeedbackText } from './ui'
 
 export function SessionLayout({
   conversationId,
@@ -13,6 +13,12 @@ export function SessionLayout({
   title,
   transcriptChildren,
   transcriptRef,
+  onCloneSession,
+  onExportSession,
+  onForkSession,
+  sessionActionError,
+  sessionExportPath,
+  isSessionActionPending,
 }: {
   conversationId: string | null
   inspectorChildren?: ReactNode
@@ -21,6 +27,12 @@ export function SessionLayout({
   title: string
   transcriptChildren?: ReactNode
   transcriptRef?: Ref<HTMLElement>
+  onCloneSession?: () => void
+  onExportSession?: () => void
+  onForkSession?: () => void
+  sessionActionError?: string | null
+  sessionExportPath?: string | null
+  isSessionActionPending?: boolean
 }) {
   const providerStatusQuery = useQuery(providerStatusQueryOptions)
   const providerStatus = providerStatusQuery.data
@@ -45,6 +57,13 @@ export function SessionLayout({
               </div>
             ) : null}
           </div>
+          <div className="run-controls">
+            <Button type="button" disabled={isSessionActionPending || !onForkSession} onClick={onForkSession}>Fork</Button>
+            <Button type="button" disabled={isSessionActionPending || !onCloneSession} onClick={onCloneSession}>Clone</Button>
+            <Button type="button" disabled={isSessionActionPending || !onExportSession} onClick={onExportSession}>Export session</Button>
+          </div>
+          {sessionExportPath ? <FeedbackText live>Exported session to {sessionExportPath}</FeedbackText> : null}
+          {sessionActionError ? <FeedbackText variant="error" live>{sessionActionError}</FeedbackText> : null}
         </Card>
 
         <Card ref={transcriptRef} className="transcript-panel" onScroll={onTranscriptScroll}>

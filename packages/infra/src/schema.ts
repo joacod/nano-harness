@@ -7,6 +7,20 @@ export const conversationsTable = sqliteTable('conversations', {
   updatedAt: text('updated_at').notNull(),
 })
 
+export const sessionsTable = sqliteTable(
+  'sessions',
+  {
+    id: text('id').primaryKey(),
+    conversationId: text('conversation_id').notNull(),
+    parentSessionId: text('parent_session_id'),
+    rootSessionId: text('root_session_id').notNull(),
+    title: text('title').notNull(),
+    createdAt: text('created_at').notNull(),
+    updatedAt: text('updated_at').notNull(),
+  },
+  (table) => [index('sessions_root_session_id_idx').on(table.rootSessionId, table.createdAt)],
+)
+
 export const runsTable = sqliteTable(
   'runs',
   {
@@ -92,6 +106,7 @@ export const providerCredentialsTable = sqliteTable(
 
 export const schema = {
   conversationsTable,
+  sessionsTable,
   runsTable,
   messagesTable,
   runEventsTable,

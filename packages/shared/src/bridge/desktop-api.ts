@@ -5,6 +5,7 @@ import { runCreateInputSchema } from '../runs'
 import { appSettingsSchema } from '../settings'
 import type { SkillInventory } from '../skills'
 import type { McpInventory } from '../mcp'
+import type { SessionExportResult, SessionInput, SessionList } from '../sessions'
 import type { ClearProviderAuthInput, ExportRunEvidenceInput, GetConversationInput, OpenExternalUrlInput, ProviderCredentialInput, ResolveApprovalInput, RunIdInput, SaveProviderAuthInput, StartProviderOauthInput } from './inputs'
 import type {
   ConversationList,
@@ -22,6 +23,7 @@ import type {
 export type DesktopApi = {
   getContext(): Promise<DesktopContext>
   listConversations(): Promise<ConversationList>
+  listSessions(): Promise<SessionList>
   getProviderStatus(): Promise<ProviderStatus | null>
   listSkills(): Promise<SkillInventory>
   listMcpInventory(): Promise<McpInventory>
@@ -35,6 +37,9 @@ export type DesktopApi = {
   getSettings(): Promise<z.infer<typeof appSettingsSchema> | null>
   saveSettings(settings: z.infer<typeof appSettingsSchema>): Promise<z.infer<typeof appSettingsSchema>>
   getConversation(input: GetConversationInput): Promise<ConversationSnapshot>
+  forkSession(input: SessionInput): Promise<{ sessionId: string; conversationId: string }>
+  cloneSession(input: SessionInput): Promise<{ sessionId: string; conversationId: string }>
+  exportSession(input: SessionInput): Promise<SessionExportResult>
   startRun(input: z.infer<typeof runCreateInputSchema>): Promise<StartRunResult>
   resumeRun(input: RunIdInput): Promise<void>
   cancelRun(input: RunIdInput): Promise<void>

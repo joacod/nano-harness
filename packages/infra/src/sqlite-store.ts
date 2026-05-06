@@ -8,8 +8,11 @@ import {
   appSettingsSchema,
   approvalRequestSchema,
   approvalResolutionSchema,
+  type Conversation,
   conversationSchema,
   messageSchema,
+  sessionExportSchema,
+  sessionSchema,
   providerKeySchema,
   providerAuthMethodSchema,
   runStatusSchema,
@@ -30,6 +33,7 @@ import {
   runEventsTable,
   runsTable,
   schema,
+  sessionsTable,
   settingsTable,
 } from './schema'
 import { backupDatabaseToFile, createStagedImportCopy, sanitizeDatabaseFile, validateDatabaseFile } from './sqlite/database-files'
@@ -40,6 +44,7 @@ import {
   deserializeRunEvent,
   normalizeNullableMessageRow,
   normalizeNullableRunRow,
+  normalizeNullableSessionRow,
   parseJson,
   serializeJson,
   serializeRunEvent,
@@ -93,11 +98,103 @@ export class SqliteStore implements Store {
           updatedAt: parsedConversation.updatedAt,
         },
       })
+
+    await this.ensureSessionForConversation(parsedConversation)
+  }
+
+  private async ensureSessionForConversation(conversation: Conversation): Promise<void> {
+    const [existingSession] = await this.db.select().from(sessionsTable).where(eq(sessionsTable.conversationId, conversation.id))
+
+    if (existingSession) {
+      await this.db.update(sessionsTable).set({ title: conversation.title, updatedAt: conversation.updatedAt }).where(eq(sessionsTable.id, existingSession.id))
+      return
+    }
+
+    const session = sessionSchema.parse({
+      id: conversation.id,
+      conversationId: conversation.id,
+      parentSessionId: null,
+      rootSessionId: conversation.id,
+      title: conversation.title,
+      createdAt: conversation.createdAt,
+      updatedAt: conversation.updatedAt,
+    })
+
+    await this.db.insert(sessionsTable).values(session)
   }
 
   async listConversations() {
     const conversationRows = await this.db.select().from(conversationsTable).orderBy(asc(conversationsTable.updatedAt))
     return conversationRows.reverse().map((conversation) => conversationSchema.parse(conversation))
+  }
+
+  async listSessions() {
+    const sessionRows = await this.db.select().from(sessionsTable).orderBy(asc(sessionsTable.createdAt))
+    return sessionRows.map((session) => sessionSchema.parse(normalizeNullableSessionRow(session)))
+  }
+
+  async forkSession(sessionId: string) {
+    return await this.createChildSession(sessionId, 'Fork')
+  }
+
+  async cloneSession(sessionId: string) {
+    return await this.createChildSession(sessionId, 'Clone')
+  }
+
+  private async createChildSession(sessionId: string, label: string) {
+    const [parentRow] = await this.db.select().from(sessionsTable).where(eq(sessionsTable.id, sessionId))
+
+    if (!parentRow) {
+      throw new Error(`Session ${sessionId} not found`)
+    }
+
+    const parent = sessionSchema.parse(normalizeNullableSessionRow(parentRow))
+    const now = new Date().toISOString()
+    const childId = `${parent.id}-${label.toLowerCase()}-${Date.now().toString(36)}`
+    const conversation = conversationSchema.parse({
+      id: childId,
+      title: `${parent.title} (${label})`,
+      createdAt: now,
+      updatedAt: now,
+    })
+    const session = sessionSchema.parse({
+      id: childId,
+      conversationId: childId,
+      parentSessionId: parent.id,
+      rootSessionId: parent.rootSessionId,
+      title: conversation.title,
+      createdAt: now,
+      updatedAt: now,
+    })
+
+    await this.db.insert(conversationsTable).values(conversation)
+    await this.db.insert(sessionsTable).values(session)
+
+    return session
+  }
+
+  async exportSession(sessionId: string) {
+    const [sessionRow] = await this.db.select().from(sessionsTable).where(eq(sessionsTable.id, sessionId))
+
+    if (!sessionRow) {
+      throw new Error(`Session ${sessionId} not found`)
+    }
+
+    const session = sessionSchema.parse(normalizeNullableSessionRow(sessionRow))
+    const snapshot = await this.getConversation(session.conversationId)
+    const lineageRows = await this.db.select().from(sessionsTable).where(eq(sessionsTable.rootSessionId, session.rootSessionId)).orderBy(asc(sessionsTable.createdAt))
+
+    return sessionExportSchema.parse({
+      session,
+      lineage: lineageRows.map((row) => sessionSchema.parse(normalizeNullableSessionRow(row))),
+      runs: snapshot.runs,
+      messages: snapshot.messages,
+      events: snapshot.events,
+      approvals: {
+        requests: snapshot.approvalRequests,
+        resolutions: snapshot.approvalResolutions,
+      },
+    })
   }
 
   async listRuns(statuses?: Array<ReturnType<typeof runStatusSchema.parse>>) {
