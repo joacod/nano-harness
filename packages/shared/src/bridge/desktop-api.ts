@@ -5,6 +5,7 @@ import { runCreateInputSchema } from '../runs'
 import { appSettingsSchema } from '../settings'
 import type { SkillInventory } from '../skills'
 import type { McpInventory } from '../mcp'
+import type { MemoryProposalList, MemoryRecordList, ResolveMemoryProposalInput } from '../memory'
 import type { SessionExportResult, SessionInput, SessionList } from '../sessions'
 import type { ClearProviderAuthInput, ExportRunEvidenceInput, GetConversationInput, OpenExternalUrlInput, ProviderCredentialInput, ResolveApprovalInput, RunIdInput, SaveProviderAuthInput, StartProviderOauthInput } from './inputs'
 import type {
@@ -27,6 +28,9 @@ export type DesktopApi = {
   getProviderStatus(): Promise<ProviderStatus | null>
   listSkills(): Promise<SkillInventory>
   listMcpInventory(): Promise<McpInventory>
+  listMemoryRecords(): Promise<MemoryRecordList>
+  listMemoryProposals(): Promise<MemoryProposalList>
+  resolveMemoryProposal(input: ResolveMemoryProposalInput): Promise<void>
   getProviderCredentialStatus(input: ProviderCredentialInput): Promise<ProviderCredentialStatus>
   saveProviderAuth(input: SaveProviderAuthInput): Promise<void>
   startProviderOauth(input: StartProviderOauthInput): Promise<StartProviderOauthResult>

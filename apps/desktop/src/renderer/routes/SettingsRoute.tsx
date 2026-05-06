@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { AppSettings } from '../../../../../packages/shared/src'
 import { SettingsFormCard } from '../components/SettingsFormCard'
 import { Card } from '../components/ui'
-import { contextQueryOptions, mcpInventoryQueryOptions, providerStatusQueryOptions, settingsQueryOptions, skillsQueryOptions } from '../queries'
+import { contextQueryOptions, mcpInventoryQueryOptions, memoryProposalsQueryOptions, memoryRecordsQueryOptions, providerStatusQueryOptions, settingsQueryOptions, skillsQueryOptions } from '../queries'
 
 export function SettingsRoute() {
   const queryClient = useQueryClient()
@@ -12,6 +12,8 @@ export function SettingsRoute() {
   const providerStatusQuery = useQuery(providerStatusQueryOptions)
   const skillsQuery = useQuery(skillsQueryOptions)
   const mcpInventoryQuery = useQuery(mcpInventoryQueryOptions)
+  const memoryRecordsQuery = useQuery(memoryRecordsQueryOptions)
+  const memoryProposalsQuery = useQuery(memoryProposalsQueryOptions)
   const mutation = useMutation({
     mutationFn: async (settings: AppSettings) => window.desktop.saveSettings(settings),
     onSuccess: async () => {
@@ -84,6 +86,13 @@ export function SettingsRoute() {
       await queryClient.invalidateQueries({ queryKey: ['skills'] })
     },
   })
+  const resolveMemoryProposalMutation = useMutation({
+    mutationFn: async (input: { proposalId: string; decision: 'approved' | 'rejected' }) => window.desktop.resolveMemoryProposal(input),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['memory-records'] })
+      await queryClient.invalidateQueries({ queryKey: ['memory-proposals'] })
+    },
+  })
 
   if (!settingsQuery.data) {
     return (
@@ -102,6 +111,8 @@ export function SettingsRoute() {
         providerStatus={providerStatusQuery.data ?? null}
         skillInventory={skillsQuery.data ?? null}
         mcpInventory={mcpInventoryQuery.data ?? null}
+        memoryRecords={memoryRecordsQuery.data ?? null}
+        memoryProposals={memoryProposalsQuery.data ?? null}
         isSaving={mutation.isPending}
         isSavingApiKey={saveApiKeyMutation.isPending}
         isStartingOauth={startOauthMutation.isPending}
@@ -110,6 +121,7 @@ export function SettingsRoute() {
         isExportingData={exportDataMutation.isPending}
         isImportingData={importDataMutation.isPending}
         isSavingSkills={toggleSkillMutation.isPending}
+        isResolvingMemoryProposal={resolveMemoryProposalMutation.isPending}
         saveError={mutation.error instanceof Error ? mutation.error.message : null}
         apiKeyError={saveApiKeyMutation.error instanceof Error ? saveApiKeyMutation.error.message : clearApiKeyMutation.error instanceof Error ? clearApiKeyMutation.error.message : null}
         oauthError={startOauthMutation.error instanceof Error ? startOauthMutation.error.message : clearOauthMutation.error instanceof Error ? clearOauthMutation.error.message : null}
@@ -117,6 +129,7 @@ export function SettingsRoute() {
         importDataResult={importDataMutation.data?.backupFilePath ?? null}
         dataError={exportDataMutation.error instanceof Error ? exportDataMutation.error.message : importDataMutation.error instanceof Error ? importDataMutation.error.message : null}
         skillsError={toggleSkillMutation.error instanceof Error ? toggleSkillMutation.error.message : null}
+        memoryError={resolveMemoryProposalMutation.error instanceof Error ? resolveMemoryProposalMutation.error.message : null}
         onSubmit={async (settings) => {
           await mutation.mutateAsync(settings)
         }}
@@ -140,6 +153,9 @@ export function SettingsRoute() {
         }}
         onToggleSkill={async (input) => {
           await toggleSkillMutation.mutateAsync(input)
+        }}
+        onResolveMemoryProposal={async (input) => {
+          await resolveMemoryProposalMutation.mutateAsync(input)
         }}
       />
   )

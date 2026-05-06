@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { actionCallSchema, actionDefinitionSchema, actionResultSchema } from './actions'
 import { approvalRequestSchema, approvalResolutionSchema } from './approvals'
 import { messageSchema } from './messages'
+import { memoryProposalSchema, memoryRecallSchema } from './memory'
 import { mcpInventorySchema } from './mcp'
 import { providerReasoningDeltaSchema } from './reasoning'
 import { runSchema } from './runs'
@@ -53,6 +54,14 @@ export const runDryRunPreviewEventSchema = eventBaseSchema.extend({
       selected: z.array(skillSummarySchema),
     }),
     mcp: mcpInventorySchema,
+    memory: memoryRecallSchema,
+  }),
+})
+
+export const memoryProposalCreatedEventSchema = eventBaseSchema.extend({
+  type: z.literal('memory.proposal_created'),
+  payload: z.object({
+    proposal: memoryProposalSchema,
   }),
 })
 
@@ -214,6 +223,7 @@ export const runEventSchema = z.discriminatedUnion('type', [
   runCreatedEventSchema,
   runStartedEventSchema,
   runDryRunPreviewEventSchema,
+  memoryProposalCreatedEventSchema,
   runWaitingApprovalEventSchema,
   runCompletedEventSchema,
   runFailedEventSchema,

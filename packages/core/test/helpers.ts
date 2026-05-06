@@ -6,6 +6,9 @@ import type {
   ApprovalResolution,
   Conversation,
   Message,
+  MemoryProposal,
+  MemoryRecall,
+  MemoryRecord,
   Run,
   RunCreateInput,
   RunEvent,
@@ -79,6 +82,8 @@ export class FakeStore implements Store {
   events: RunEvent[] = []
   approvalRequests: ApprovalRequest[] = []
   approvalResolutions: ApprovalResolution[] = []
+  memoryRecords: MemoryRecord[] = []
+  memoryProposals: MemoryProposal[] = []
   settings: AppSettings | null = structuredClone(testSettings)
   sessions: Session[] = []
 
@@ -229,6 +234,55 @@ export class FakeStore implements Store {
 
   async listRunEvents(runId: string): Promise<RunEvent[]> {
     return this.events.filter((event) => event.runId === runId)
+  }
+
+  async recallMemory(): Promise<MemoryRecall> {
+    return { selected: this.memoryRecords, excludedCategories: [] }
+  }
+
+  async listMemoryRecords(): Promise<MemoryRecord[]> {
+    return this.memoryRecords
+  }
+
+  async listMemoryProposals(status?: MemoryProposal['status']): Promise<MemoryProposal[]> {
+    return status ? this.memoryProposals.filter((proposal) => proposal.status === status) : this.memoryProposals
+  }
+
+  async saveMemoryProposal(proposal: MemoryProposal): Promise<void> {
+    const index = this.memoryProposals.findIndex((current) => current.id === proposal.id)
+
+    if (index >= 0) {
+      this.memoryProposals[index] = proposal
+      return
+    }
+
+    this.memoryProposals.push(proposal)
+  }
+
+  async resolveMemoryProposal(input: { proposalId: string; decision: 'approved' | 'rejected' }): Promise<MemoryProposal> {
+    const proposal = this.memoryProposals.find((current) => current.id === input.proposalId)
+
+    if (!proposal) {
+      throw new Error(`Memory proposal ${input.proposalId} not found`)
+    }
+
+    const resolved = { ...proposal, status: input.decision, decidedAt: '2026-04-29T10:00:05.000Z' } satisfies MemoryProposal
+    await this.saveMemoryProposal(resolved)
+
+    if (input.decision === 'approved') {
+      this.memoryRecords.push({
+        id: `memory-${proposal.id}`,
+        category: proposal.category,
+        content: proposal.content,
+        source: `proposal:${proposal.id}`,
+        runId: proposal.runId,
+        confidence: 0.8,
+        createdAt: resolved.decidedAt,
+        updatedAt: resolved.decidedAt,
+      })
+    }
+
+    return resolved
   }
 
   async saveApprovalRequest(request: ApprovalRequest): Promise<void> {

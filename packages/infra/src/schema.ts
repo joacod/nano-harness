@@ -93,6 +93,37 @@ export const settingsTable = sqliteTable('settings', {
   updatedAt: text('updated_at').notNull(),
 })
 
+export const memoryRecordsTable = sqliteTable(
+  'memory_records',
+  {
+    id: text('id').primaryKey(),
+    category: text('category').notNull(),
+    content: text('content').notNull(),
+    source: text('source').notNull(),
+    runId: text('run_id'),
+    confidence: text('confidence').notNull(),
+    createdAt: text('created_at').notNull(),
+    updatedAt: text('updated_at').notNull(),
+  },
+  (table) => [index('memory_records_category_updated_at_idx').on(table.category, table.updatedAt)],
+)
+
+export const memoryProposalsTable = sqliteTable(
+  'memory_proposals',
+  {
+    id: text('id').primaryKey(),
+    runId: text('run_id').notNull(),
+    category: text('category').notNull(),
+    content: text('content').notNull(),
+    rationale: text('rationale').notNull(),
+    evidence: text('evidence').notNull(),
+    status: text('status').notNull(),
+    createdAt: text('created_at').notNull(),
+    decidedAt: text('decided_at'),
+  },
+  (table) => [index('memory_proposals_status_created_at_idx').on(table.status, table.createdAt)],
+)
+
 export const providerCredentialsTable = sqliteTable(
   'provider_credentials',
   {
@@ -113,5 +144,7 @@ export const schema = {
   approvalRequestsTable,
   approvalResolutionsTable,
   settingsTable,
+  memoryRecordsTable,
+  memoryProposalsTable,
   providerCredentialsTable,
 }

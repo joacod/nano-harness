@@ -184,6 +184,7 @@ describe('shared contracts', () => {
             selected: [],
           },
           mcp: { servers: [], tools: [], resources: [] },
+          memory: { selected: [], excludedCategories: [] },
         },
       }),
     ).toMatchObject({ type: 'run.dry_run_preview' })

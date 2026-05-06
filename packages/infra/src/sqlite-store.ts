@@ -1,5 +1,6 @@
 import { mkdirSync } from 'node:fs'
-import { mkdir } from 'node:fs/promises'
+import { mkdir, writeFile } from 'node:fs/promises'
+import { join } from 'node:path'
 
 import { createClient } from '@libsql/client/node'
 import type { Client } from '@libsql/client'
@@ -11,6 +12,10 @@ import {
   type Conversation,
   conversationSchema,
   messageSchema,
+  memoryProposalSchema,
+  type MemoryProposal,
+  memoryRecordSchema,
+  memorySettingsSchema,
   sessionExportSchema,
   sessionSchema,
   providerKeySchema,
@@ -28,6 +33,8 @@ import {
   approvalRequestsTable,
   approvalResolutionsTable,
   conversationsTable,
+  memoryProposalsTable,
+  memoryRecordsTable,
   messagesTable,
   providerCredentialsTable,
   runEventsTable,
@@ -347,6 +354,125 @@ export class SqliteStore implements Store {
     return eventRows.map(deserializeRunEvent)
   }
 
+  async recallMemory(input: { query: string; settings: Parameters<typeof appSettingsSchema.parse>[0] }) {
+    const parsedSettings = appSettingsSchema.parse(input.settings)
+    const memorySettings = memorySettingsSchema.parse(parsedSettings.memory ?? {})
+
+    if (!memorySettings.enabled || memorySettings.maxSnippets === 0) {
+      return { selected: [], excludedCategories: memorySettings.enabledCategories }
+    }
+
+    const rows = await this.db.select().from(memoryRecordsTable).orderBy(asc(memoryRecordsTable.updatedAt))
+    const enabledCategories = new Set(memorySettings.enabledCategories)
+    const terms = input.query.toLowerCase().split(/\s+/).filter((term) => term.length > 2)
+    const records = rows
+      .map((row) => memoryRecordSchema.parse({
+        ...row,
+        runId: row.runId ?? undefined,
+        confidence: Number.parseFloat(row.confidence),
+      }))
+      .filter((record) => enabledCategories.has(record.category))
+      .map((record) => ({ record, score: scoreMemoryRecord(record.content, terms) }))
+      .filter((item) => item.score > 0 || terms.length === 0)
+      .sort((left, right) => right.score - left.score || right.record.updatedAt.localeCompare(left.record.updatedAt))
+      .slice(0, memorySettings.maxSnippets)
+      .map((item) => item.record)
+    const excludedCategories = memorySettingsSchema.parse({}).enabledCategories.filter((category) => !enabledCategories.has(category))
+
+    return { selected: records, excludedCategories }
+  }
+
+  async listMemoryRecords() {
+    const rows = await this.db.select().from(memoryRecordsTable).orderBy(asc(memoryRecordsTable.updatedAt))
+    return rows.reverse().map((row) => memoryRecordSchema.parse({
+      ...row,
+      runId: row.runId ?? undefined,
+      confidence: Number.parseFloat(row.confidence),
+    }))
+  }
+
+  async listMemoryProposals(status?: MemoryProposal['status']) {
+    const rows = status
+      ? await this.db.select().from(memoryProposalsTable).where(eq(memoryProposalsTable.status, status)).orderBy(asc(memoryProposalsTable.createdAt))
+      : await this.db.select().from(memoryProposalsTable).orderBy(asc(memoryProposalsTable.createdAt))
+
+    return rows.reverse().map((row) => memoryProposalSchema.parse({
+      ...row,
+      decidedAt: row.decidedAt ?? undefined,
+      evidence: parseJson(row.evidence),
+    }))
+  }
+
+  async saveMemoryProposal(proposal: Parameters<typeof memoryProposalSchema.parse>[0]): Promise<void> {
+    const parsedProposal = memoryProposalSchema.parse(proposal)
+
+    await this.db
+      .insert(memoryProposalsTable)
+      .values({
+        ...parsedProposal,
+        decidedAt: parsedProposal.decidedAt,
+        evidence: serializeJson(parsedProposal.evidence),
+      })
+      .onConflictDoUpdate({
+        target: memoryProposalsTable.id,
+        set: {
+          category: parsedProposal.category,
+          content: parsedProposal.content,
+          rationale: parsedProposal.rationale,
+          evidence: serializeJson(parsedProposal.evidence),
+          status: parsedProposal.status,
+          decidedAt: parsedProposal.decidedAt,
+        },
+      })
+  }
+
+  async resolveMemoryProposal(input: { proposalId: string; decision: 'approved' | 'rejected' }) {
+    const [proposalRow] = await this.db.select().from(memoryProposalsTable).where(eq(memoryProposalsTable.id, input.proposalId))
+
+    if (!proposalRow) {
+      throw new Error(`Memory proposal ${input.proposalId} not found`)
+    }
+
+    const proposal = memoryProposalSchema.parse({
+      ...proposalRow,
+      decidedAt: proposalRow.decidedAt ?? undefined,
+      evidence: parseJson(proposalRow.evidence),
+    })
+    const now = new Date().toISOString()
+    const resolvedProposal = memoryProposalSchema.parse({ ...proposal, status: input.decision, decidedAt: now })
+
+    await this.saveMemoryProposal(resolvedProposal)
+
+    if (input.decision === 'approved') {
+      const record = memoryRecordSchema.parse({
+        id: `memory-${proposal.id}`,
+        category: proposal.category,
+        content: proposal.content,
+        source: `proposal:${proposal.id}`,
+        runId: proposal.runId,
+        confidence: 0.8,
+        createdAt: now,
+        updatedAt: now,
+      })
+
+      await this.db.insert(memoryRecordsTable).values({
+        ...record,
+        confidence: record.confidence.toString(),
+      })
+      await this.writeMemoryFiles(await this.listMemoryRecords())
+    }
+
+    return resolvedProposal
+  }
+
+  private async writeMemoryFiles(records: Array<ReturnType<typeof memoryRecordSchema.parse>>): Promise<void> {
+    const userRecords = records.filter((record) => record.category === 'preference')
+    const projectRecords = records.filter((record) => record.category !== 'preference')
+
+    await writeFile(join(this.paths.dataDir, 'USER.md'), formatMemoryMarkdown('User Memory', userRecords), 'utf8')
+    await writeFile(join(this.paths.dataDir, 'MEMORY.md'), formatMemoryMarkdown('Project Memory', projectRecords), 'utf8')
+  }
+
   async saveApprovalRequest(request: Parameters<typeof approvalRequestSchema.parse>[0]): Promise<void> {
     const parsedRequest = approvalRequestSchema.parse(request)
 
@@ -497,6 +623,31 @@ export class SqliteStore implements Store {
   async close(): Promise<void> {
     await this.client.close()
   }
+}
+
+function scoreMemoryRecord(content: string, terms: string[]): number {
+  if (terms.length === 0) {
+    return 1
+  }
+
+  const normalized = content.toLowerCase()
+  return terms.reduce((score, term) => score + (normalized.includes(term) ? 1 : 0), 0)
+}
+
+function formatMemoryMarkdown(title: string, records: Array<ReturnType<typeof memoryRecordSchema.parse>>): string {
+  const lines = [`# ${title}`, '']
+
+  if (records.length === 0) {
+    lines.push('_No approved memory yet._')
+  } else {
+    for (const record of records) {
+      lines.push(`- [${record.category}] ${record.content}`)
+      lines.push(`  - Source: ${record.source}; updated: ${record.updatedAt}; confidence: ${record.confidence}`)
+    }
+  }
+
+  lines.push('')
+  return lines.join('\n')
 }
 
 

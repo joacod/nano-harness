@@ -18,7 +18,10 @@ import {
   skillInventorySchema,
   openExternalUrlInputSchema,
   mcpInventorySchema,
+  memoryProposalListSchema,
+  memoryRecordListSchema,
   resolveApprovalInputSchema,
+  resolveMemoryProposalInputSchema,
   runCreateInputSchema,
   runEventSchema,
   runIdInputSchema,
@@ -50,6 +53,16 @@ const desktopApi: DesktopApi = {
   },
   async listMcpInventory() {
     return mcpInventorySchema.parse(await ipcRenderer.invoke(desktopBridgeChannels.listMcpInventory))
+  },
+  async listMemoryRecords() {
+    return memoryRecordListSchema.parse(await ipcRenderer.invoke(desktopBridgeChannels.listMemoryRecords))
+  },
+  async listMemoryProposals() {
+    return memoryProposalListSchema.parse(await ipcRenderer.invoke(desktopBridgeChannels.listMemoryProposals))
+  },
+  async resolveMemoryProposal(input) {
+    const payload = resolveMemoryProposalInputSchema.parse(input)
+    await ipcRenderer.invoke(desktopBridgeChannels.resolveMemoryProposal, payload)
   },
   async getProviderCredentialStatus(input) {
     const payload = providerCredentialInputSchema.parse(input)

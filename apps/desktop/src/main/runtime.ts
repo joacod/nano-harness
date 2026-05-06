@@ -5,7 +5,7 @@ import { join } from 'node:path'
 import type { Provider, ProviderGenerateInput, ProviderGenerateResult } from '../../../../packages/core/src'
 import { CoreRunEngine, InMemoryEventBus, StaticPolicy } from '../../../../packages/core/src'
 import { BuiltInActionExecutor, ChatGptSubscriptionProvider, CompositeActionExecutor, ConfiguredMcpRegistry, MarkdownSkillResolver, McpActionExecutor, OpenAICompatibleProvider, createSqliteStore } from '../../../../packages/infra/src'
-import { createDefaultProviderSettings, createDefaultSafetySettings, desktopBridgeChannels, getProviderDefinition, providerStatusSchema, runEventSchema, storedProviderCredentialSchema, type AppSettings, type ProviderAdapterId, type ProviderAuthMethod } from '../../../../packages/shared/src'
+import { createDefaultMemorySettings, createDefaultProviderSettings, createDefaultSafetySettings, desktopBridgeChannels, getProviderDefinition, providerStatusSchema, runEventSchema, storedProviderCredentialSchema, type AppSettings, type ProviderAdapterId, type ProviderAuthMethod } from '../../../../packages/shared/src'
 import { DesktopApprovalCoordinator } from './approval-coordinator'
 import { refreshOpenAIChatGptCredential } from './openai-chatgpt-auth'
 import { createProviderCredentialResolver } from './provider-credential-resolver'
@@ -54,6 +54,7 @@ function buildDefaultSettings(): AppSettings {
       approvalPolicy: 'on-request',
     },
     safety: createDefaultSafetySettings(),
+    memory: createDefaultMemorySettings(),
   }
 }
 

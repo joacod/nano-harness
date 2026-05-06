@@ -7,6 +7,13 @@ export const requiredDatabaseTables = [
   'approval_requests',
   'approval_resolutions',
   'settings',
+  'memory_records',
+  'memory_records_fts',
+  'memory_records_fts_config',
+  'memory_records_fts_data',
+  'memory_records_fts_docsize',
+  'memory_records_fts_idx',
+  'memory_proposals',
   'provider_credentials',
 ] as const
 
@@ -76,6 +83,30 @@ export const initializationStatements = [
     payload TEXT NOT NULL,
     updated_at TEXT NOT NULL
   )`,
+  `CREATE TABLE IF NOT EXISTS memory_records (
+    id TEXT PRIMARY KEY NOT NULL,
+    category TEXT NOT NULL,
+    content TEXT NOT NULL,
+    source TEXT NOT NULL,
+    run_id TEXT,
+    confidence TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  )`,
+  `CREATE INDEX IF NOT EXISTS memory_records_category_updated_at_idx ON memory_records (category, updated_at)`,
+  `CREATE VIRTUAL TABLE IF NOT EXISTS memory_records_fts USING fts5(content, source, content='memory_records', content_rowid='rowid')`,
+  `CREATE TABLE IF NOT EXISTS memory_proposals (
+    id TEXT PRIMARY KEY NOT NULL,
+    run_id TEXT NOT NULL,
+    category TEXT NOT NULL,
+    content TEXT NOT NULL,
+    rationale TEXT NOT NULL,
+    evidence TEXT NOT NULL,
+    status TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    decided_at TEXT
+  )`,
+  `CREATE INDEX IF NOT EXISTS memory_proposals_status_created_at_idx ON memory_proposals (status, created_at)`,
   `CREATE TABLE IF NOT EXISTS provider_credentials (
     provider TEXT NOT NULL,
     auth_method TEXT NOT NULL,

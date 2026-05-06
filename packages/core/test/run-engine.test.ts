@@ -298,6 +298,38 @@ describe('CoreRunEngine', () => {
     expect(store.runs.get(handle.runId)).toMatchObject({ role: 'plan' })
   })
 
+  it('passes recalled memory into provider calls and dry-run previews', async () => {
+    const store = new FakeStore()
+    store.memoryRecords.push({
+      id: 'memory-1',
+      category: 'preference',
+      content: 'The user prefers concise summaries.',
+      source: 'proposal:memory-proposal-1',
+      confidence: 0.8,
+      createdAt: '2026-04-29T09:00:00.000Z',
+      updatedAt: '2026-04-29T09:00:00.000Z',
+    })
+    const provider = new FakeProvider([{ content: 'Concise summary.' }])
+    const engine = new CoreRunEngine({
+      store,
+      provider,
+      providerCredentialResolver: defaultCredentialResolver,
+      actionExecutor: new FakeActionExecutor([], async (input) => createActionResult({ actionCallId: input.call.id })),
+      policy: new FakePolicy(() => ({ effect: 'allow' })),
+      now: () => '2026-04-29T10:00:00.000Z',
+      createId: createSequentialId(),
+    })
+
+    const handle = await engine.startRun(createRunInput({ prompt: 'Summarize the run.' }))
+
+    await waitForCondition(() => store.runs.get(handle.runId)?.status === 'completed')
+
+    expect(provider.calls[0].memory?.selected).toEqual(store.memoryRecords)
+    expect(store.events.find((event) => event.type === 'run.dry_run_preview')).toMatchObject({
+      payload: { memory: { selected: [{ id: 'memory-1' }] } },
+    })
+  })
+
   it('returns failed tool results to the provider so the run can recover', async () => {
     const store = new FakeStore()
     const readFileAction = createActionDefinition({ id: 'read_file', title: 'Read File' })
@@ -413,6 +445,14 @@ describe('CoreRunEngine', () => {
       },
     ])
     expect(store.events.map((event) => event.type)).toContain('approval.granted')
+    expect(store.memoryProposals).toEqual([
+      expect.objectContaining({
+        category: 'workflow',
+        status: 'pending',
+        runId: handle.runId,
+      }),
+    ])
+    expect(store.events.map((event) => event.type)).toContain('memory.proposal_created')
   })
 
   it('cancels the run when approval is rejected', async () => {

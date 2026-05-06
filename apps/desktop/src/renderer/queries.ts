@@ -27,6 +27,16 @@ export const mcpInventoryQueryOptions = queryOptions({
   queryFn: () => window.desktop.listMcpInventory(),
 })
 
+export const memoryRecordsQueryOptions = queryOptions({
+  queryKey: ['memory-records'],
+  queryFn: () => window.desktop.listMemoryRecords(),
+})
+
+export const memoryProposalsQueryOptions = queryOptions({
+  queryKey: ['memory-proposals'],
+  queryFn: () => window.desktop.listMemoryProposals(),
+})
+
 type ProviderCredentialStatusQueryKey = readonly ['provider-credential-status', AppSettings['provider']['provider']]
 type ConversationQueryKey = readonly ['conversation', string]
 

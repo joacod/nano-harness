@@ -49,6 +49,7 @@ function getActivityPhase(event: RunEvent): StreamingRunState['phase'] | null {
     case 'hook.completed':
     case 'hook.denied':
     case 'hook.error':
+    case 'memory.proposal_created':
       return 'using_tools'
     case 'approval.required':
     case 'run.waiting_approval':
@@ -212,8 +213,10 @@ export function describeRunEvent(event: RunEvent) {
     case 'run.dry_run_preview':
       return {
         title: 'Dry-run preview captured',
-        detail: `${event.payload.provider.provider} · ${event.payload.provider.model} · ${event.payload.actions.length} actions · ${event.payload.permissions.risky.length} risky · ${event.payload.permissions.denied.length} denied · ${event.payload.permissions.activeHooks.length} hooks`,
+        detail: `${event.payload.provider.provider} · ${event.payload.provider.model} · ${event.payload.actions.length} actions · ${event.payload.permissions.risky.length} risky · ${event.payload.permissions.denied.length} denied · ${event.payload.permissions.activeHooks.length} hooks · ${event.payload.memory.selected.length} memory snippets`,
       }
+    case 'memory.proposal_created':
+      return { title: 'Memory proposal created', detail: `${event.payload.proposal.category}: ${event.payload.proposal.content}` }
     case 'run.waiting_approval':
       return { title: 'Waiting for approval', detail: `Approval request ${event.payload.approvalRequestId}` }
     case 'run.completed':
