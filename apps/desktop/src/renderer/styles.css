@@ -1117,6 +1117,54 @@ a {
   overflow-wrap: anywhere;
 }
 
+.settings-card-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.settings-card-item {
+  min-width: 0;
+}
+
+.skill-status-switch {
+  width: auto;
+  min-height: 30px;
+  padding: 4px 6px 4px 9px;
+  gap: 8px;
+  border-color: rgba(67, 255, 157, 0.36);
+  background: rgba(67, 255, 157, 0.12);
+  color: #b6ffd8;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+}
+
+.skill-status-switch:not(.switch-button-active) {
+  border-color: rgba(255, 95, 138, 0.42);
+  background: rgba(255, 95, 138, 0.12);
+  color: #ffb3c7;
+}
+
+.skill-status-switch .switch-track {
+  width: 30px;
+  height: 16px;
+}
+
+.skill-status-switch .switch-thumb {
+  top: 2px;
+  left: 2px;
+  width: 10px;
+  height: 10px;
+}
+
+.skill-status-switch.switch-button-active .switch-thumb {
+  left: 16px;
+}
+
 .timeline-type {
   color: #8ffff0;
   font-size: 0.78rem;

@@ -46,3 +46,10 @@ export const sessionExportResultSchema = z.object({
 })
 
 export type SessionExportResult = z.infer<typeof sessionExportResultSchema>
+
+export const sessionMutationResultSchema = z.object({
+  sessionId: z.string().min(1),
+  conversationId: z.string().min(1),
+})
+
+export type SessionMutationResult = z.infer<typeof sessionMutationResultSchema>

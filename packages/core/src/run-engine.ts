@@ -1,13 +1,6 @@
 import type {
-  ActionCall,
-  ActionDefinition,
-  ActionResult,
   AppSettings,
-  ApprovalRequest,
   ApprovalResolution,
-  HookPhase,
-  HookResult,
-  JsonValue,
   MemoryProposal,
   Message,
   Run,
@@ -17,18 +10,21 @@ import type {
 } from '@nano-harness/shared'
 import { getProviderDefinition } from '@nano-harness/shared'
 
+import { ActionInvocationPipeline, type ExecuteActionRequestsOutput } from './action-invocation-pipeline'
 import type { ActionExecutor } from './actions'
+import { ApprovalGate } from './approval-gate'
 import type { ApprovalCoordinator, PendingApprovalContext } from './approvals'
 import { getLatestPendingApproval } from './approvals'
 import type { EventBus } from './event-bus'
 import { noopEventBus } from './event-bus'
 import type { HookRunner } from './hooks'
+import { DryRunPreviewBuilder } from './dry-run-preview-builder'
 import { PersonalRulesHookRunner } from './hooks'
 import type { Policy } from './policy'
-import { listActiveSafetyRules } from './policy'
 import type { McpRegistry } from './mcp'
 import { EmptyMcpRegistry } from './mcp'
 import type { Provider, ProviderActionRequest, ProviderCredentialResolver, ProviderGenerateResult, SkillResolver } from './provider'
+import { ProviderTurnRunner, type ProviderTurnResult } from './provider-turn-runner'
 import { EmptySkillResolver } from './provider'
 import { assertStatusTransition, isTerminalStatus } from './run-status'
 import type { ConversationSnapshot, Store } from './store'
@@ -69,11 +65,6 @@ type ContinueRunContext = {
   pendingApproval?: PendingApprovalContext
 }
 
-type ProviderTurnResult = {
-  providerResult: ProviderGenerateResult
-  streamedMessage: string
-}
-
 type PersistAssistantResultInput = {
   run: Run
   messages: Message[]
@@ -85,13 +76,6 @@ type PersistAssistantResultOutput = {
   messages: Message[]
   providerMessageId?: string
 }
-
-type ExecuteActionRequestsOutput = {
-  messages: Message[]
-  stopped: boolean
-}
-
-type DryRunPreviewPayload = Extract<RunEvent, { type: 'run.dry_run_preview' }>['payload']
 
 class RunAbortError extends Error {
   constructor() {
@@ -113,72 +97,8 @@ function deriveConversationTitle(prompt: string): string {
   return title.length > 60 ? `${title.slice(0, 57)}...` : title
 }
 
-function stringifyToolOutput(value: JsonValue | undefined): string {
-  if (value === undefined) {
-    return ''
-  }
-
-  return JSON.stringify(value, null, 2)
-}
-
-function stringifyActionResult(result: ActionResult): string {
-  if (result.status === 'completed') {
-    return stringifyToolOutput(result.output)
-  }
-
-  const output: JsonValue = {
-    status: result.status,
-    errorMessage: result.errorMessage ?? 'Action failed',
-    ...(result.output === undefined ? {} : { output: result.output }),
-  }
-
-  return stringifyToolOutput(output)
-}
-
 function isAbortError(error: unknown): boolean {
   return error instanceof Error && error.name === 'AbortError'
-}
-
-function filterActionsForRole(actions: ActionDefinition[], role: Run['role']): ActionDefinition[] {
-  if (!role || role === 'build') {
-    return actions
-  }
-
-  const allowedPlanActions = new Set([
-    'list_directory',
-    'read_file',
-    'read_range',
-    'glob',
-    'grep',
-    'git_status',
-    'git_diff',
-    'fetch_url',
-    'list_mcp_resources',
-    'read_mcp_resource',
-    'list_harness_components',
-    'compare_benchmark_results',
-    'create_spec_artifact',
-    'create_draft_pr_artifact',
-  ])
-  const allowedReviewActions = new Set([
-    'list_directory',
-    'read_file',
-    'read_range',
-    'glob',
-    'grep',
-    'git_status',
-    'git_diff',
-    'run_command',
-    'list_mcp_resources',
-    'read_mcp_resource',
-    'list_harness_components',
-    'compare_benchmark_results',
-    'create_spec_artifact',
-    'create_draft_pr_artifact',
-  ])
-  const allowedActions = role === 'plan' ? allowedPlanActions : allowedReviewActions
-
-  return actions.filter((action) => allowedActions.has(action.id))
 }
 
 export class CoreRunEngine implements RunEngine {
@@ -195,6 +115,10 @@ export class CoreRunEngine implements RunEngine {
   private readonly now: () => string
   private readonly createId: () => string
   private readonly maxProviderTurns: number
+  private readonly dryRunPreviewBuilder: DryRunPreviewBuilder
+  private readonly providerTurnRunner: ProviderTurnRunner
+  private readonly actionInvocationPipeline: ActionInvocationPipeline
+  private readonly approvalGate: ApprovalGate
   private readonly activeRuns = new Map<string, AbortController>()
 
   constructor(dependencies: RunEngineDependencies) {
@@ -211,6 +135,60 @@ export class CoreRunEngine implements RunEngine {
     this.now = dependencies.now ?? defaultNow
     this.createId = dependencies.createId ?? defaultCreateId
     this.maxProviderTurns = dependencies.maxProviderTurns ?? 8
+    this.dryRunPreviewBuilder = new DryRunPreviewBuilder({
+      store: this.store,
+      actionExecutor: this.actionExecutor,
+      skillResolver: this.skillResolver,
+      mcpRegistry: this.mcpRegistry,
+      policy: this.policy,
+      hookRunner: this.hookRunner,
+      now: this.now,
+    })
+    this.providerTurnRunner = new ProviderTurnRunner({
+      store: this.store,
+      provider: this.provider,
+      providerCredentialResolver: this.providerCredentialResolver,
+      skillResolver: this.skillResolver,
+      actionExecutor: this.actionExecutor,
+      onDelta: async ({ run, delta }) => {
+        await this.emitEvent({
+          id: this.createId(),
+          runId: run.id,
+          timestamp: this.now(),
+          type: 'provider.delta',
+          payload: { delta },
+        })
+      },
+      onReasoningDelta: async ({ run, delta }) => {
+        await this.emitEvent({
+          id: this.createId(),
+          runId: run.id,
+          timestamp: this.now(),
+          type: 'provider.reasoning_delta',
+          payload: delta,
+        })
+      },
+    })
+    this.approvalGate = new ApprovalGate({
+      store: this.store,
+      approvalCoordinator: this.approvalCoordinator,
+      now: this.now,
+      createId: this.createId,
+      emitEvent: async (event) => this.emitEvent(event),
+      transitionRun: async (run, nextStatus, update, eventType, payload) => this.transitionRun(run, nextStatus, update, eventType, payload),
+      cancelRun: async (run, reason) => this.cancelActiveRun(run, reason),
+    })
+    this.actionInvocationPipeline = new ActionInvocationPipeline({
+      store: this.store,
+      actionExecutor: this.actionExecutor,
+      policy: this.policy,
+      hookRunner: this.hookRunner,
+      now: this.now,
+      createId: this.createId,
+      emitEvent: async (event) => this.emitEvent(event),
+      requireApproval: async (input) => this.approvalGate.requestApproval(input),
+      cancelRun: async (run, reason) => this.cancelActiveRun(run, reason),
+    })
   }
 
   async startRun(input: RunCreateInput): Promise<RunHandle> {
@@ -262,7 +240,7 @@ export class CoreRunEngine implements RunEngine {
       runId: run.id,
       timestamp: now,
       type: 'run.dry_run_preview',
-      payload: await this.createDryRunPreview(settings, run, [userMessage]),
+      payload: await this.dryRunPreviewBuilder.build({ settings, run, messages: [userMessage] }),
     })
     await this.store.saveMessage(userMessage)
     await this.emitEvent({
@@ -396,7 +374,7 @@ export class CoreRunEngine implements RunEngine {
       throw new Error(`Run ${run.id} is not waiting for approval`)
     }
 
-    await this.persistApprovalResolution(run, {
+    await this.approvalGate.persistResolution(run, {
       approvalRequestId: input.approvalRequestId,
       decision: input.decision,
       decidedAt: this.now(),
@@ -416,7 +394,13 @@ export class CoreRunEngine implements RunEngine {
 
     try {
       if (context.pendingApproval) {
-        run = await this.resumeFromPendingApproval(run, context.pendingApproval, context.settings, snapshot, context.signal)
+        run = await this.approvalGate.resumeFromPendingApproval({
+          run,
+          pendingApproval: context.pendingApproval,
+          settings: context.settings,
+          approvalResolutions: snapshot.approvalResolutions,
+          signal: context.signal,
+        })
       } else if (run.status === 'created') {
         run = await this.startLifecycle(run)
       }
@@ -502,57 +486,7 @@ export class CoreRunEngine implements RunEngine {
       },
     })
 
-    let streamedMessage = ''
-    const actions = filterActionsForRole(await this.actionExecutor.listDefinitions(), input.run.role)
-    const skills = await this.skillResolver.resolveForRun({
-      settings: input.settings,
-      run: input.run,
-      messages: input.messages,
-    })
-    const memory = await this.store.recallMemory({
-      query: input.messages.map((message) => message.content).join('\n'),
-      settings: input.settings,
-    })
-    const providerDefinition = getProviderDefinition(input.settings.provider.provider)
-    const providerAuth = await this.providerCredentialResolver.getProviderAuth({
-      provider: input.settings.provider.provider,
-    })
-
-    if (providerDefinition.requiresApiKey && providerAuth.authMethod !== 'api-key') {
-      throw new Error(`Missing API key for ${providerDefinition.label}`)
-    }
-
-    const providerResult = await this.provider.generate({
-      run: input.run,
-      messages: input.messages,
-      actions,
-      settings: input.settings,
-      providerAuth,
-      skills,
-      memory,
-      signal: input.signal,
-      onDelta: async (delta) => {
-        streamedMessage += delta
-        await this.emitEvent({
-          id: this.createId(),
-          runId: input.run.id,
-          timestamp: this.now(),
-          type: 'provider.delta',
-          payload: { delta },
-        })
-      },
-      onReasoningDelta: async (delta) => {
-        await this.emitEvent({
-          id: this.createId(),
-          runId: input.run.id,
-          timestamp: this.now(),
-          type: 'provider.reasoning_delta',
-          payload: delta,
-        })
-      },
-    })
-
-    return { providerResult, streamedMessage }
+    return this.providerTurnRunner.run(input)
   }
 
   private async persistAssistantResult(input: PersistAssistantResultInput): Promise<PersistAssistantResultOutput> {
@@ -604,82 +538,12 @@ export class CoreRunEngine implements RunEngine {
     settings: AppSettings,
     signal: AbortSignal,
   ): Promise<ExecuteActionRequestsOutput> {
-    let nextMessages = messages
-
-    for (const actionRequest of actionRequests) {
-      const actionOutput = await this.handleActionRequest(run, actionRequest, settings, signal)
-
-      if (actionOutput === null) {
-        return { messages: nextMessages, stopped: true }
-      }
-
-      nextMessages = [...nextMessages, actionOutput]
-    }
-
-    return { messages: nextMessages, stopped: false }
+    return this.actionInvocationPipeline.executeRequests({ run, actionRequests, messages, settings, signal })
   }
 
   private async startLifecycle(run: Run): Promise<Run> {
     const startedAt = this.now()
     return this.transitionRun(run, 'started', { startedAt }, 'run.started', { startedAt })
-  }
-
-  private async createDryRunPreview(settings: AppSettings, run: Run, messages: Message[]): Promise<DryRunPreviewPayload> {
-    const actions = filterActionsForRole(await this.actionExecutor.listDefinitions(), run.role)
-    const skills = await this.skillResolver.resolveForRun({ settings, run, messages })
-    const mcp = await this.mcpRegistry.getInventory(settings)
-    const memory = await this.store.recallMemory({ query: messages.map((message) => message.content).join('\n'), settings })
-    const permissionDecisions = await Promise.all(actions.map((action) => this.policy.evaluateAction({
-      run,
-      action,
-      actionCall: {
-        id: `dry-run-${action.id}`,
-        runId: run.id,
-        actionId: action.id,
-        input: {},
-        requestedAt: this.now(),
-      },
-      settings,
-    })))
-
-    return {
-      provider: {
-        provider: settings.provider.provider,
-        model: settings.provider.model,
-        baseUrl: settings.provider.baseUrl ?? getProviderDefinition(settings.provider.provider).baseUrl,
-      },
-      workspace: {
-        rootPath: settings.workspace.rootPath,
-        approvalPolicy: settings.workspace.approvalPolicy,
-      },
-      actions: actions.map((action) => ({
-        id: action.id,
-        title: action.title,
-        requiresApproval: action.requiresApproval,
-      })),
-      permissions: {
-        denied: permissionDecisions.filter((decision) => decision.effect === 'deny'),
-        risky: permissionDecisions.filter((decision) => decision.effect === 'require_approval'),
-        activeRules: listActiveSafetyRules(settings),
-        activeHooks: await this.hookRunner.listHooks(settings),
-      },
-      skills: {
-        available: skills.available,
-        selected: skills.selected.map((skill) => ({
-          id: skill.id,
-          name: skill.name,
-          description: skill.description,
-          triggers: skill.triggers,
-          tools: skill.tools,
-          safetyNotes: skill.safetyNotes,
-          source: skill.source,
-          path: skill.path,
-          enabled: skill.enabled,
-        })),
-      },
-      mcp,
-      memory,
-    }
   }
 
   private async completeRun(run: Run): Promise<void> {
@@ -739,284 +603,6 @@ export class CoreRunEngine implements RunEngine {
   private async cancelActiveRun(run: Run, reason: string): Promise<void> {
     const finishedAt = this.now()
     await this.transitionRun(run, 'cancelled', { finishedAt }, 'run.cancelled', { reason })
-  }
-
-  private async handleActionRequest(
-    run: Run,
-    actionRequest: ProviderActionRequest,
-    settings: AppSettings,
-    signal: AbortSignal,
-  ): Promise<Message | null> {
-    const actionDefinition = await this.actionExecutor.getDefinition(actionRequest.actionId)
-
-    if (!actionDefinition) {
-      throw new Error(`Unknown action ${actionRequest.actionId}`)
-    }
-
-    const actionCall: ActionCall = {
-      id: this.createId(),
-      runId: run.id,
-      actionId: actionRequest.actionId,
-      input: actionRequest.input,
-      requestedAt: this.now(),
-    }
-
-    await this.emitEvent({
-      id: this.createId(),
-      runId: run.id,
-      timestamp: actionCall.requestedAt,
-      type: 'action.requested',
-      payload: { actionCall },
-    })
-
-    const policyDecision = await this.policy.evaluateAction({
-      run,
-      action: actionDefinition,
-      actionCall,
-      settings,
-    })
-
-    if (policyDecision.effect === 'deny') {
-      throw new Error(policyDecision.reason ?? `Action ${actionDefinition.id} is denied by policy`)
-    }
-
-    if (policyDecision.effect === 'require_approval') {
-      const resolution = await this.requireApproval({
-        run,
-        actionCall,
-        reason: policyDecision.reason ?? `Approval required for ${actionDefinition.title}`,
-        settings,
-        signal,
-      })
-
-      if (resolution.decision === 'rejected') {
-        await this.cancelActiveRun(run, `approval rejected for ${actionDefinition.id}`)
-        return null
-      }
-    }
-
-    const preHookStopped = await this.runToolHooks('pre_tool_use', run, actionDefinition, actionCall, settings)
-
-    if (preHookStopped) {
-      throw new Error(preHookStopped.message)
-    }
-
-    await this.emitEvent({
-      id: this.createId(),
-      runId: run.id,
-      timestamp: this.now(),
-      type: 'action.started',
-      payload: { actionCallId: actionCall.id },
-    })
-
-    const result = await this.actionExecutor.execute({
-      run,
-      action: actionDefinition,
-      call: actionCall,
-      settings,
-      signal,
-    })
-
-    await this.emitEvent({
-      id: this.createId(),
-      runId: run.id,
-      timestamp: this.now(),
-      type: result.status === 'completed' ? 'action.completed' : 'action.failed',
-      payload: { result },
-    })
-
-    const postHookStopped = await this.runToolHooks('post_tool_use', run, actionDefinition, actionCall, settings, result)
-
-    if (postHookStopped) {
-      throw new Error(postHookStopped.message)
-    }
-
-    const toolMessage: Message = {
-      id: this.createId(),
-      conversationId: run.conversationId,
-      runId: run.id,
-      role: 'tool',
-      content: stringifyActionResult(result),
-      toolCallId: actionRequest.toolCallId,
-      toolName: actionRequest.actionId,
-      createdAt: this.now(),
-    }
-
-    await this.store.saveMessage(toolMessage)
-    await this.emitEvent({
-      id: this.createId(),
-      runId: run.id,
-      timestamp: toolMessage.createdAt,
-      type: 'message.created',
-      payload: { message: toolMessage },
-    })
-
-    return toolMessage
-  }
-
-  private async runToolHooks(
-    phase: HookPhase,
-    run: Run,
-    action: ActionDefinition,
-    actionCall: ActionCall,
-    settings: AppSettings,
-    result?: ActionResult,
-  ): Promise<HookResult | null> {
-    let results: HookResult[]
-
-    try {
-      const hookIds = await this.hookRunner.listHooks(settings)
-
-      for (const hookId of hookIds.filter((hookId) => hookId.includes(phase))) {
-        await this.emitEvent({
-          id: this.createId(),
-          runId: run.id,
-          timestamp: this.now(),
-          type: 'hook.started',
-          payload: { hookId, phase, actionCallId: actionCall.id },
-        })
-      }
-
-      results = await this.hookRunner.runHooks({ phase, run, action, actionCall, settings, result })
-    } catch (error) {
-      const failedResult: HookResult = {
-        hookId: 'hook_runner',
-        phase,
-        status: 'failed',
-        message: error instanceof Error ? error.message : 'Hook failed',
-      }
-
-      await this.emitEvent({
-        id: this.createId(),
-        runId: run.id,
-        timestamp: this.now(),
-        type: 'hook.error',
-        payload: { result: failedResult },
-      })
-      return failedResult
-    }
-
-    for (const hookResult of results) {
-      await this.emitEvent({
-        id: this.createId(),
-        runId: run.id,
-        timestamp: this.now(),
-        type: hookResult.status === 'denied' ? 'hook.denied' : hookResult.status === 'failed' ? 'hook.error' : 'hook.completed',
-        payload: { result: hookResult },
-      } as Extract<RunEvent, { type: 'hook.completed' | 'hook.denied' | 'hook.error' }>)
-
-      if (hookResult.status !== 'completed') {
-        return hookResult
-      }
-    }
-
-    return null
-  }
-
-  private async requireApproval(input: {
-    run: Run
-    actionCall: ActionCall
-    reason: string
-    settings: AppSettings
-    signal: AbortSignal
-  }): Promise<ApprovalResolution> {
-    if (!this.approvalCoordinator) {
-      throw new Error('Approval required but no approval coordinator is configured')
-    }
-
-    const request: ApprovalRequest = {
-      id: this.createId(),
-      runId: input.run.id,
-      actionCallId: input.actionCall.id,
-      reason: input.reason,
-      requestedAt: this.now(),
-    }
-
-    await this.store.saveApprovalRequest(request)
-    await this.transitionRun(input.run, 'waiting_approval', undefined, 'run.waiting_approval', {
-      approvalRequestId: request.id,
-    })
-    await this.emitEvent({
-      id: this.createId(),
-      runId: input.run.id,
-      timestamp: request.requestedAt,
-      type: 'approval.required',
-      payload: { approvalRequest: request },
-    })
-
-    const resolution = await this.approvalCoordinator.waitForDecision({
-      request,
-      run: { ...input.run, status: 'waiting_approval' },
-      settings: input.settings,
-      signal: input.signal,
-    })
-
-    return this.persistApprovalResolution(input.run, resolution)
-  }
-
-  private async persistApprovalResolution(run: Run, resolution: ApprovalResolution): Promise<ApprovalResolution> {
-    await this.store.saveApprovalResolution(resolution)
-    await this.emitEvent({
-      id: this.createId(),
-      runId: run.id,
-      timestamp: resolution.decidedAt,
-      type: resolution.decision === 'granted' ? 'approval.granted' : 'approval.rejected',
-      payload: { resolution },
-    })
-
-    if (resolution.decision === 'granted') {
-      await this.transitionRun(run, 'started', undefined, 'run.started', {
-        startedAt: this.now(),
-      })
-    }
-
-    return resolution
-  }
-
-  private async resumeFromPendingApproval(
-    run: Run,
-    pendingApproval: PendingApprovalContext,
-    settings: AppSettings,
-    snapshot: ConversationSnapshot,
-    signal: AbortSignal,
-  ): Promise<Run> {
-    const existingResolution = snapshot.approvalResolutions.find(
-      (resolution) => resolution.approvalRequestId === pendingApproval.request.id,
-    )
-
-    const resolution =
-      existingResolution ??
-      (await this.waitForPendingApprovalDecision(run, pendingApproval.request, settings, signal))
-
-    if (resolution.decision === 'rejected') {
-      await this.cancelActiveRun(run, `approval rejected for ${pendingApproval.actionCall.actionId}`)
-      throw new RunAbortError()
-    }
-
-    return {
-      ...run,
-      status: 'started',
-    }
-  }
-
-  private async waitForPendingApprovalDecision(
-    run: Run,
-    request: ApprovalRequest,
-    settings: AppSettings,
-    signal: AbortSignal,
-  ): Promise<ApprovalResolution> {
-    if (!this.approvalCoordinator) {
-      throw new Error('Approval required but no approval coordinator is configured')
-    }
-
-    const resolution = await this.approvalCoordinator.waitForDecision({
-      request,
-      run,
-      settings,
-      signal,
-    })
-
-    return this.persistApprovalResolution(run, resolution)
   }
 
   private async transitionRun<TPayload extends Record<string, unknown> | undefined>(

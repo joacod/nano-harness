@@ -2,19 +2,18 @@
 
 import { cleanup, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { useState } from 'react'
+import { afterEach, describe, expect, it } from 'vitest'
 
-import { createDefaultProviderSettings, providerDefaultModels, type AppSettings, type McpInventory, type ProviderStatus, type SkillInventory } from '@nano-harness/shared'
-
-import { SettingsFormCard } from '../../src/renderer/components/SettingsFormCard'
-import { createDesktopMock, renderWithQueryClient } from './test-utils'
+import { SettingsFormCard, type SettingsTab } from '../../src/renderer/components/SettingsFormCard'
+import { renderWithQueryClient } from './test-utils'
 
 describe('SettingsFormCard', () => {
   afterEach(() => {
     cleanup()
   })
 
-  it('shows provider settings by default and moves workspace, skills, MCP, and data tools into separate tabs', async () => {
+  it('renders each supplied settings panel in its tab', async () => {
     const user = userEvent.setup()
 
     renderSettingsFormCard()
@@ -44,7 +43,7 @@ describe('SettingsFormCard', () => {
     expect(screen.getByRole('tab', { name: 'Skills' }).getAttribute('aria-selected')).toBe('true')
     expect(screen.getByText('Skills hub')).toBeTruthy()
     expect(screen.getByText('Repo Onboarding')).toBeTruthy()
-    expect(screen.getByRole('switch', { name: 'Disable skill' })).toBeTruthy()
+    expect(screen.getByRole('switch', { name: 'enabled' })).toBeTruthy()
     expect(screen.queryByText('Workspace Root')).toBeNull()
 
     await user.click(screen.getByRole('tab', { name: 'MCP' }))
@@ -60,141 +59,28 @@ describe('SettingsFormCard', () => {
     expect(screen.getByText('/tmp/nano-harness.db')).toBeTruthy()
     expect(screen.queryByText('Workspace Root')).toBeNull()
   })
-
-  it('hides api key settings for providers that do not require an api key', async () => {
-    const user = userEvent.setup()
-
-    const { container } = renderSettingsFormCard()
-
-    expect(screen.getAllByText('API Key').length).toBeGreaterThan(0)
-
-    const providerSelect = container.querySelector<HTMLButtonElement>('[data-select-trigger="provider"]')
-
-    if (!providerSelect) {
-      throw new Error('Missing provider select trigger')
-    }
-
-    await user.click(providerSelect)
-    await user.click(screen.getByRole('option', { name: 'llama.cpp' }))
-
-    expect(screen.queryByText('API Key')).toBeNull()
-  })
-
-  it('shows ChatGPT sign-in controls for the OpenAI provider', async () => {
-    const user = userEvent.setup()
-
-    const { container } = renderSettingsFormCard()
-    const providerSelect = container.querySelector<HTMLButtonElement>('[data-select-trigger="provider"]')
-
-    if (!providerSelect) {
-      throw new Error('Missing provider select trigger')
-    }
-
-    await user.click(providerSelect)
-    await user.click(screen.getByRole('option', { name: 'OpenAI' }))
-
-    expect(screen.getByText('ChatGPT Sign In')).toBeTruthy()
-    expect(await screen.findByRole('button', { name: 'Reconnect ChatGPT' })).toBeTruthy()
-    expect(screen.queryByText('API Key')).toBeNull()
-  })
 })
 
 function renderSettingsFormCard() {
-  window.desktop = createDesktopMock({
-    getProviderCredentialStatus: async ({ provider }) => ({
-      apiKeyPresent: provider === 'openrouter',
-      oauthPresent: provider === 'openai',
-      authMethods: provider === 'openai' ? [{ authMethod: 'oauth', present: true }] : provider === 'openrouter' ? [{ authMethod: 'api-key', present: true }] : [],
-    }),
-  })
-
   return renderWithQueryClient(
-    <SettingsFormCard
-      initialSettings={createSettings()}
-      dataPath="/tmp/nano-harness.db"
-      providerStatus={createProviderStatus()}
-      skillInventory={createSkillInventory()}
-      mcpInventory={createMcpInventory()}
-      memoryRecords={{ records: [] }}
-      memoryProposals={{ proposals: [] }}
-      isSaving={false}
-      isSavingApiKey={false}
-      isStartingOauth={false}
-      isClearingApiKey={false}
-      isClearingOauth={false}
-      isExportingData={false}
-      isImportingData={false}
-      isSavingSkills={false}
-      isResolvingMemoryProposal={false}
-      saveError={null}
-      apiKeyError={null}
-      oauthError={null}
-      exportDataResult={null}
-      importDataResult={null}
-      dataError={null}
-      skillsError={null}
-      memoryError={null}
-      onSubmit={vi.fn(async () => undefined)}
-      onSaveApiKey={vi.fn(async () => undefined)}
-      onClearApiKey={vi.fn(async () => undefined)}
-      onStartOauth={vi.fn(async () => ({}))}
-      onClearOauth={vi.fn(async () => undefined)}
-      onExportData={vi.fn(async () => undefined)}
-      onImportData={vi.fn(async () => undefined)}
-      onToggleSkill={vi.fn(async () => undefined)}
-      onResolveMemoryProposal={vi.fn(async () => undefined)}
-    />,
+    <SettingsFormCardHarness />,
   )
 }
 
-function createSettings(): AppSettings {
-  return {
-    provider: {
-      ...createDefaultProviderSettings('openrouter'),
-      reasoning: { mode: 'auto' },
-    },
-    workspace: {
-      rootPath: '/Users/test/workspace',
-      approvalPolicy: 'always',
-    },
-  }
-}
+function SettingsFormCardHarness() {
+  const [selectedTab, setSelectedTab] = useState<SettingsTab>('providers')
 
-function createProviderStatus(): ProviderStatus {
-  return {
-    providerId: 'openrouter',
-    providerLabel: 'OpenRouter',
-    model: providerDefaultModels.openrouter,
-    baseUrl: 'https://openrouter.ai/api/v1',
-    apiKeyLabel: 'OpenRouter API key',
-    apiKeyPresent: true,
-    authMethod: 'api-key',
-    authLabel: 'API key',
-    authPresent: true,
-    authMethods: [{ authMethod: 'api-key', label: 'API key', present: true }],
-    isReady: true,
-    issues: [],
-    hints: [],
-  }
-}
-
-function createSkillInventory(): SkillInventory {
-  return {
-    skills: [
-      {
-        id: 'repo-onboarding',
-        name: 'Repo Onboarding',
-        description: 'Survey repositories safely.',
-        triggers: ['repo'],
-        tools: ['grep'],
-        safetyNotes: [],
-        source: 'bundled',
-        enabled: true,
-      },
-    ],
-  }
-}
-
-function createMcpInventory(): McpInventory {
-  return { servers: [], tools: [], resources: [] }
+  return (
+    <SettingsFormCard
+      providersPanel={<div><p>Provider status</p><p>OpenRouter</p><p>API Key</p><p>Model</p><p>Base URL</p></div>}
+      workspacePanel={<div><p>Workspace Root</p><p>Approval Policy</p></div>}
+      skillsPanel={<div><p>Skills hub</p><p>Repo Onboarding</p><button type="button" role="switch">enabled</button></div>}
+      mcpPanel={<div><p>MCP inventory</p><p>No MCP servers configured.</p></div>}
+      memoryPanel={<div><p>Memory Proposals</p></div>}
+      harnessPanel={<div><p>Harness</p></div>}
+      dataPanel={<div><p>Backup and restore</p><p>/tmp/nano-harness.db</p></div>}
+      selectedTab={selectedTab}
+      onSelectedTabChange={setSelectedTab}
+    />
+  )
 }

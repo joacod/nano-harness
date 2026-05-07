@@ -28,6 +28,7 @@ import {
   sessionExportResultSchema,
   sessionInputSchema,
   sessionListSchema,
+  sessionMutationResultSchema,
   saveProviderAuthInputSchema,
   startProviderOauthInputSchema,
   startProviderOauthResultSchema,
@@ -107,11 +108,11 @@ const desktopApi: DesktopApi = {
   },
   async forkSession(input) {
     const payload = sessionInputSchema.parse(input)
-    return await ipcRenderer.invoke(desktopBridgeChannels.forkSession, payload) as { sessionId: string; conversationId: string }
+    return sessionMutationResultSchema.parse(await ipcRenderer.invoke(desktopBridgeChannels.forkSession, payload))
   },
   async cloneSession(input) {
     const payload = sessionInputSchema.parse(input)
-    return await ipcRenderer.invoke(desktopBridgeChannels.cloneSession, payload) as { sessionId: string; conversationId: string }
+    return sessionMutationResultSchema.parse(await ipcRenderer.invoke(desktopBridgeChannels.cloneSession, payload))
   },
   async exportSession(input) {
     const payload = sessionInputSchema.parse(input)

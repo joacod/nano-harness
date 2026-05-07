@@ -108,6 +108,22 @@ describe('desktop preload bridge', () => {
     expect(invoke).toHaveBeenCalledWith(desktopBridgeChannels.startProviderOauth, { provider: 'openai' })
   })
 
+  it('parses session mutation result payloads', async () => {
+    invoke
+      .mockResolvedValueOnce({ sessionId: 'session-2', conversationId: 'conversation-2' })
+      .mockResolvedValueOnce({ sessionId: '', conversationId: 'conversation-3' })
+    const desktop = await loadDesktopApi()
+
+    await expect(desktop.forkSession({ sessionId: 'session-1' })).resolves.toEqual({
+      sessionId: 'session-2',
+      conversationId: 'conversation-2',
+    })
+    await expect(desktop.cloneSession({ sessionId: 'session-1' })).rejects.toThrow()
+
+    expect(invoke).toHaveBeenNthCalledWith(1, desktopBridgeChannels.forkSession, { sessionId: 'session-1' })
+    expect(invoke).toHaveBeenNthCalledWith(2, desktopBridgeChannels.cloneSession, { sessionId: 'session-1' })
+  })
+
   it('subscribes to parsed run events and unsubscribes correctly', async () => {
     const desktop = await loadDesktopApi()
     const listener = vi.fn()

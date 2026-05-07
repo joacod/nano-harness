@@ -1,5 +1,7 @@
 import { createDefaultSafetySettings, type ActionCall, type ActionDefinition, type AppSettings, type PermissionDecision, type PermissionPreview, type Run } from '@nano-harness/shared'
 
+import { classifyCommand, getCommandDenialRule, isRiskyGitSubcommand } from './command-safety'
+import { isActionAllowedForRole } from './role-actions'
 import { isWorkspaceRelativePathInsideRoot } from './workspace-paths'
 
 export interface PolicyInput {
@@ -100,6 +102,7 @@ export function listActiveSafetyRules(settings: AppSettings): string[] {
   const rules = [
     'workspace_boundary.reads_and_writes',
     'commands.deny_dangerous',
+    'commands.deny_unlisted',
     'commands.classify_risky_mutation',
   ]
 
@@ -146,22 +149,21 @@ function evaluateCommandPermission(input: PolicyInput, preview: PermissionPrevie
     ? input.actionCall.input.args.filter((arg): arg is string => typeof arg === 'string')
     : []
   const safety = input.settings.safety ?? createDefaultSafetySettings()
-  const deniedCommands = new Set(['rm', 'sudo', 'chmod', 'chown', 'curl', 'wget', ...safety.personalRules.deniedCommands])
-  const gitSubcommand = command === 'git' ? args[0] : undefined
+  const commandDenialRule = getCommandDenialRule(command, safety.personalRules.deniedCommands)
 
-  if (!command || command.includes('/') || command.includes('\\') || deniedCommands.has(command)) {
+  if (commandDenialRule) {
     return {
       effect: 'deny',
       reason: `Command ${command || '(missing)'} is denied by safety policy`,
-      matchedRule: deniedCommands.has(command) ? 'commands.deny_dangerous' : 'commands.deny_shell_paths',
+      matchedRule: commandDenialRule,
       preview,
     }
   }
 
-  if (gitSubcommand && ['push', 'reset', 'checkout', 'restore', 'clean', 'rebase', 'commit'].includes(gitSubcommand)) {
+  if (isRiskyGitSubcommand(command, args)) {
     return {
       effect: 'require_approval',
-      reason: `git ${gitSubcommand} is a risky repository mutation`,
+      reason: `git ${args[0]} is a risky repository mutation`,
       matchedRule: 'commands.classify_risky_mutation',
       preview,
     }
@@ -202,26 +204,6 @@ function createPermissionPreview(input: PolicyInput): PermissionPreview {
   }
 }
 
-function classifyCommand(command: string, args: string[]): PermissionPreview['classification'] {
-  if (!command || command.includes('/') || command.includes('\\') || ['rm', 'sudo', 'chmod', 'chown', 'curl', 'wget'].includes(command)) {
-    return 'denied'
-  }
-
-  if (command === 'git' && ['status', 'diff', 'log', 'show'].includes(args[0] ?? 'status')) {
-    return 'safe_inspection'
-  }
-
-  if (['tsc', 'vitest'].includes(command) || (command === 'pnpm' && ['test', 'typecheck', 'lint', 'build', 'test:e2e'].includes(args[0] ?? ''))) {
-    return 'validation'
-  }
-
-  if (['pnpm', 'npm', 'node', 'git'].includes(command)) {
-    return 'risky_mutation'
-  }
-
-  return 'safe_inspection'
-}
-
 function getPathInput(actionId: string, input: ActionCall['input']): string | undefined {
   if (actionId === 'run_command') {
     return typeof input.cwd === 'string' && input.cwd.trim() ? input.cwd : '.'
@@ -235,45 +217,7 @@ function getPathInput(actionId: string, input: ActionCall['input']): string | un
 }
 
 function evaluateRolePolicy(role: Run['role'], action: ActionDefinition): PolicyDecision | null {
-  if (!role || role === 'build') {
-    return null
-  }
-
-  const planAllowed = new Set([
-    'list_directory',
-    'read_file',
-    'read_range',
-    'glob',
-    'grep',
-    'git_status',
-    'git_diff',
-    'fetch_url',
-    'list_mcp_resources',
-    'read_mcp_resource',
-    'list_harness_components',
-    'compare_benchmark_results',
-    'create_spec_artifact',
-    'create_draft_pr_artifact',
-  ])
-  const reviewAllowed = new Set([
-    'list_directory',
-    'read_file',
-    'read_range',
-    'glob',
-    'grep',
-    'git_status',
-    'git_diff',
-    'run_command',
-    'list_mcp_resources',
-    'read_mcp_resource',
-    'list_harness_components',
-    'compare_benchmark_results',
-    'create_spec_artifact',
-    'create_draft_pr_artifact',
-  ])
-  const allowed = role === 'plan' ? planAllowed : reviewAllowed
-
-  if (allowed.has(action.id)) {
+  if (isActionAllowedForRole(role, action.id)) {
     return null
   }
 

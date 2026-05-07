@@ -15,10 +15,9 @@ export function McpInspectorCard({ inventory }: { inventory: McpInventory | null
       </FeedbackText>
       {servers.length === 0 ? <FeedbackText>No MCP servers configured.</FeedbackText> : null}
       {servers.length > 0 ? (
-        <ol className="timeline-list" aria-label="Configured MCP servers">
+        <ol className="settings-card-list" aria-label="Configured MCP servers">
           {servers.map((server) => (
-            <li key={server.id} className="timeline-item">
-              <div className="timeline-dot timeline-info" />
+            <li key={server.id} className="settings-card-item">
               <div className="timeline-card">
                 <div className="timeline-header">
                   <strong>{server.label}</strong>

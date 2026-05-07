@@ -1,5 +1,5 @@
 import type { SkillInventory } from '../../../../../../packages/shared/src'
-import { FeedbackText, StatusBadge, Switch } from '../ui'
+import { FeedbackText, Switch } from '../ui'
 
 export function SkillsHubCard({
   inventory,
@@ -24,29 +24,26 @@ export function SkillsHubCard({
       {error ? <FeedbackText variant="error" live>{error}</FeedbackText> : null}
       {skills.length === 0 ? <FeedbackText>No skills discovered.</FeedbackText> : null}
       {skills.length > 0 ? (
-        <ol className="timeline-list" aria-label="Available skills">
+        <ol className="settings-card-list" aria-label="Available skills">
           {skills.map((skill) => (
-            <li key={skill.id} className="timeline-item">
-              <div className="timeline-dot timeline-info" />
+            <li key={skill.id} className="settings-card-item">
               <div className="timeline-card">
                 <div className="timeline-header">
                   <strong>{skill.name}</strong>
-                  <StatusBadge status={skill.enabled ? 'completed' : 'cancelled'}>{skill.enabled ? 'enabled' : 'disabled'}</StatusBadge>
+                  <Switch
+                    type="button"
+                    className="skill-status-switch"
+                    checked={skill.enabled}
+                    disabled={isSaving}
+                    onClick={() => void onToggleSkill({ skillId: skill.id, enabled: !skill.enabled })}
+                  >
+                    {skill.enabled ? 'enabled' : 'disabled'}
+                  </Switch>
                 </div>
                 <p className="timeline-type">{skill.source}{skill.path ? ` · ${skill.path}` : ''}</p>
                 <FeedbackText>{skill.description}</FeedbackText>
                 {skill.triggers.length ? <small className="muted-copy">Triggers: {skill.triggers.join(', ')}</small> : null}
                 {skill.tools.length ? <small className="muted-copy">Tools: {skill.tools.join(', ')}</small> : null}
-                <div className="run-controls">
-                  <Switch
-                    type="button"
-                    checked={skill.enabled}
-                    disabled={isSaving}
-                    onClick={() => void onToggleSkill({ skillId: skill.id, enabled: !skill.enabled })}
-                  >
-                    {skill.enabled ? 'Disable skill' : 'Enable skill'}
-                  </Switch>
-                </div>
               </div>
             </li>
           ))}

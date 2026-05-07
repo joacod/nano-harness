@@ -9,10 +9,9 @@ export function HarnessEngineeringCard() {
       <FeedbackText>
         Nano can inspect these versioned harness components and propose reversible, benchmark-gated changes. Promotion to live files remains approval-gated.
       </FeedbackText>
-      <ol className="timeline-list" aria-label="Editable harness components">
+      <ol className="settings-card-list" aria-label="Editable harness components">
         {harnessComponentRegistry.components.map((component) => (
-          <li key={component.id} className="timeline-item">
-            <div className="timeline-dot timeline-info" />
+          <li key={component.id} className="settings-card-item">
             <div className="timeline-card">
               <div className="timeline-header">
                 <strong>{component.title}</strong>

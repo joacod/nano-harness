@@ -51,6 +51,29 @@ describe('ConfiguredMcpRegistry', () => {
     expect(inventory.tools.map((tool) => tool.name)).toEqual(['search_docs'])
   })
 
+  it('reports HTTP MCP servers as configured when a url is present', async () => {
+    const inventory = await new ConfiguredMcpRegistry().getInventory({
+      ...settings,
+      mcp: {
+        servers: [
+          {
+            id: 'remote-docs',
+            label: 'Remote Docs Server',
+            enabled: true,
+            transport: 'http',
+            url: 'https://example.com/mcp',
+            allowedTools: [],
+            allowedResources: [],
+            staticResources: [],
+            staticTools: [],
+          },
+        ],
+      },
+    })
+
+    expect(inventory.servers).toEqual([expect.objectContaining({ id: 'remote-docs', status: 'configured' })])
+  })
+
   it('reads allow-listed static resources and denies blocked resources', async () => {
     const registry = new ConfiguredMcpRegistry()
 

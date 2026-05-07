@@ -9,6 +9,7 @@ import {
   implementationSpecSchema,
   parseSpecCommand,
   messageSchema,
+  mcpServerSettingsSchema,
   providerAdapterIdSchema,
   providerDefaultModels,
   openExternalUrlInputSchema,
@@ -266,6 +267,31 @@ describe('shared contracts', () => {
     })
 
     expect(() => openExternalUrlInputSchema.parse({ url: 'not a url' })).toThrow()
+  })
+
+  it('validates transport-specific MCP server settings', () => {
+    expect(
+      mcpServerSettingsSchema.parse({
+        id: 'docs',
+        label: 'Docs Server',
+        enabled: true,
+        transport: 'stdio',
+        command: 'docs-mcp',
+      }),
+    ).toMatchObject({ transport: 'stdio', command: 'docs-mcp', args: [] })
+
+    expect(
+      mcpServerSettingsSchema.parse({
+        id: 'remote-docs',
+        label: 'Remote Docs Server',
+        enabled: true,
+        transport: 'http',
+        url: 'https://example.com/mcp',
+      }),
+    ).toMatchObject({ transport: 'http', url: 'https://example.com/mcp' })
+
+    expect(() => mcpServerSettingsSchema.parse({ id: 'docs', label: 'Docs Server', transport: 'stdio', url: 'https://example.com/mcp' })).toThrow()
+    expect(() => mcpServerSettingsSchema.parse({ id: 'remote-docs', label: 'Remote Docs Server', transport: 'http', command: 'docs-mcp' })).toThrow()
   })
 
   it('validates OAuth bridge payloads', () => {
