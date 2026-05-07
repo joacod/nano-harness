@@ -1,13 +1,8 @@
 import type {
   ActionCall,
-  ActionDefinition,
-  ActionResult,
   AppSettings,
   ApprovalRequest,
   ApprovalResolution,
-  HookPhase,
-  HookResult,
-  JsonValue,
   MemoryProposal,
   Message,
   Run,
@@ -17,6 +12,7 @@ import type {
 } from '@nano-harness/shared'
 import { getProviderDefinition } from '@nano-harness/shared'
 
+import { ActionInvocationPipeline, type ExecuteActionRequestsOutput } from './action-invocation-pipeline'
 import type { ActionExecutor } from './actions'
 import type { ApprovalCoordinator, PendingApprovalContext } from './approvals'
 import { getLatestPendingApproval } from './approvals'
@@ -82,11 +78,6 @@ type PersistAssistantResultOutput = {
   providerMessageId?: string
 }
 
-type ExecuteActionRequestsOutput = {
-  messages: Message[]
-  stopped: boolean
-}
-
 class RunAbortError extends Error {
   constructor() {
     super('Run cancelled')
@@ -105,28 +96,6 @@ function defaultCreateId(): string {
 function deriveConversationTitle(prompt: string): string {
   const title = prompt.trim().replace(/\s+/g, ' ')
   return title.length > 60 ? `${title.slice(0, 57)}...` : title
-}
-
-function stringifyToolOutput(value: JsonValue | undefined): string {
-  if (value === undefined) {
-    return ''
-  }
-
-  return JSON.stringify(value, null, 2)
-}
-
-function stringifyActionResult(result: ActionResult): string {
-  if (result.status === 'completed') {
-    return stringifyToolOutput(result.output)
-  }
-
-  const output: JsonValue = {
-    status: result.status,
-    errorMessage: result.errorMessage ?? 'Action failed',
-    ...(result.output === undefined ? {} : { output: result.output }),
-  }
-
-  return stringifyToolOutput(output)
 }
 
 function isAbortError(error: unknown): boolean {
@@ -149,6 +118,7 @@ export class CoreRunEngine implements RunEngine {
   private readonly maxProviderTurns: number
   private readonly dryRunPreviewBuilder: DryRunPreviewBuilder
   private readonly providerTurnRunner: ProviderTurnRunner
+  private readonly actionInvocationPipeline: ActionInvocationPipeline
   private readonly activeRuns = new Map<string, AbortController>()
 
   constructor(dependencies: RunEngineDependencies) {
@@ -198,6 +168,17 @@ export class CoreRunEngine implements RunEngine {
           payload: delta,
         })
       },
+    })
+    this.actionInvocationPipeline = new ActionInvocationPipeline({
+      store: this.store,
+      actionExecutor: this.actionExecutor,
+      policy: this.policy,
+      hookRunner: this.hookRunner,
+      now: this.now,
+      createId: this.createId,
+      emitEvent: async (event) => this.emitEvent(event),
+      requireApproval: async (input) => this.requireApproval(input),
+      cancelRun: async (run, reason) => this.cancelActiveRun(run, reason),
     })
   }
 
@@ -542,19 +523,7 @@ export class CoreRunEngine implements RunEngine {
     settings: AppSettings,
     signal: AbortSignal,
   ): Promise<ExecuteActionRequestsOutput> {
-    let nextMessages = messages
-
-    for (const actionRequest of actionRequests) {
-      const actionOutput = await this.handleActionRequest(run, actionRequest, settings, signal)
-
-      if (actionOutput === null) {
-        return { messages: nextMessages, stopped: true }
-      }
-
-      nextMessages = [...nextMessages, actionOutput]
-    }
-
-    return { messages: nextMessages, stopped: false }
+    return this.actionInvocationPipeline.executeRequests({ run, actionRequests, messages, settings, signal })
   }
 
   private async startLifecycle(run: Run): Promise<Run> {
@@ -619,178 +588,6 @@ export class CoreRunEngine implements RunEngine {
   private async cancelActiveRun(run: Run, reason: string): Promise<void> {
     const finishedAt = this.now()
     await this.transitionRun(run, 'cancelled', { finishedAt }, 'run.cancelled', { reason })
-  }
-
-  private async handleActionRequest(
-    run: Run,
-    actionRequest: ProviderActionRequest,
-    settings: AppSettings,
-    signal: AbortSignal,
-  ): Promise<Message | null> {
-    const actionDefinition = await this.actionExecutor.getDefinition(actionRequest.actionId)
-
-    if (!actionDefinition) {
-      throw new Error(`Unknown action ${actionRequest.actionId}`)
-    }
-
-    const actionCall: ActionCall = {
-      id: this.createId(),
-      runId: run.id,
-      actionId: actionRequest.actionId,
-      input: actionRequest.input,
-      requestedAt: this.now(),
-    }
-
-    await this.emitEvent({
-      id: this.createId(),
-      runId: run.id,
-      timestamp: actionCall.requestedAt,
-      type: 'action.requested',
-      payload: { actionCall },
-    })
-
-    const policyDecision = await this.policy.evaluateAction({
-      run,
-      action: actionDefinition,
-      actionCall,
-      settings,
-    })
-
-    if (policyDecision.effect === 'deny') {
-      throw new Error(policyDecision.reason ?? `Action ${actionDefinition.id} is denied by policy`)
-    }
-
-    if (policyDecision.effect === 'require_approval') {
-      const resolution = await this.requireApproval({
-        run,
-        actionCall,
-        reason: policyDecision.reason ?? `Approval required for ${actionDefinition.title}`,
-        settings,
-        signal,
-      })
-
-      if (resolution.decision === 'rejected') {
-        await this.cancelActiveRun(run, `approval rejected for ${actionDefinition.id}`)
-        return null
-      }
-    }
-
-    const preHookStopped = await this.runToolHooks('pre_tool_use', run, actionDefinition, actionCall, settings)
-
-    if (preHookStopped) {
-      throw new Error(preHookStopped.message)
-    }
-
-    await this.emitEvent({
-      id: this.createId(),
-      runId: run.id,
-      timestamp: this.now(),
-      type: 'action.started',
-      payload: { actionCallId: actionCall.id },
-    })
-
-    const result = await this.actionExecutor.execute({
-      run,
-      action: actionDefinition,
-      call: actionCall,
-      settings,
-      signal,
-    })
-
-    await this.emitEvent({
-      id: this.createId(),
-      runId: run.id,
-      timestamp: this.now(),
-      type: result.status === 'completed' ? 'action.completed' : 'action.failed',
-      payload: { result },
-    })
-
-    const postHookStopped = await this.runToolHooks('post_tool_use', run, actionDefinition, actionCall, settings, result)
-
-    if (postHookStopped) {
-      throw new Error(postHookStopped.message)
-    }
-
-    const toolMessage: Message = {
-      id: this.createId(),
-      conversationId: run.conversationId,
-      runId: run.id,
-      role: 'tool',
-      content: stringifyActionResult(result),
-      toolCallId: actionRequest.toolCallId,
-      toolName: actionRequest.actionId,
-      createdAt: this.now(),
-    }
-
-    await this.store.saveMessage(toolMessage)
-    await this.emitEvent({
-      id: this.createId(),
-      runId: run.id,
-      timestamp: toolMessage.createdAt,
-      type: 'message.created',
-      payload: { message: toolMessage },
-    })
-
-    return toolMessage
-  }
-
-  private async runToolHooks(
-    phase: HookPhase,
-    run: Run,
-    action: ActionDefinition,
-    actionCall: ActionCall,
-    settings: AppSettings,
-    result?: ActionResult,
-  ): Promise<HookResult | null> {
-    let results: HookResult[]
-
-    try {
-      const hookIds = await this.hookRunner.listHooks(settings)
-
-      for (const hookId of hookIds.filter((hookId) => hookId.includes(phase))) {
-        await this.emitEvent({
-          id: this.createId(),
-          runId: run.id,
-          timestamp: this.now(),
-          type: 'hook.started',
-          payload: { hookId, phase, actionCallId: actionCall.id },
-        })
-      }
-
-      results = await this.hookRunner.runHooks({ phase, run, action, actionCall, settings, result })
-    } catch (error) {
-      const failedResult: HookResult = {
-        hookId: 'hook_runner',
-        phase,
-        status: 'failed',
-        message: error instanceof Error ? error.message : 'Hook failed',
-      }
-
-      await this.emitEvent({
-        id: this.createId(),
-        runId: run.id,
-        timestamp: this.now(),
-        type: 'hook.error',
-        payload: { result: failedResult },
-      })
-      return failedResult
-    }
-
-    for (const hookResult of results) {
-      await this.emitEvent({
-        id: this.createId(),
-        runId: run.id,
-        timestamp: this.now(),
-        type: hookResult.status === 'denied' ? 'hook.denied' : hookResult.status === 'failed' ? 'hook.error' : 'hook.completed',
-        payload: { result: hookResult },
-      } as Extract<RunEvent, { type: 'hook.completed' | 'hook.denied' | 'hook.error' }>)
-
-      if (hookResult.status !== 'completed') {
-        return hookResult
-      }
-    }
-
-    return null
   }
 
   private async requireApproval(input: {

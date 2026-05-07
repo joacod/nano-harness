@@ -1,3 +1,4 @@
+export * from './action-invocation-pipeline'
 export * from './actions'
 export * from './approvals'
 export * from './command-safety'
