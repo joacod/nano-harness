@@ -22,15 +22,15 @@ import type { ApprovalCoordinator, PendingApprovalContext } from './approvals'
 import { getLatestPendingApproval } from './approvals'
 import type { EventBus } from './event-bus'
 import { noopEventBus } from './event-bus'
-import { DryRunPreviewBuilder } from './dry-run-preview-builder'
 import type { HookRunner } from './hooks'
+import { DryRunPreviewBuilder } from './dry-run-preview-builder'
 import { PersonalRulesHookRunner } from './hooks'
 import type { Policy } from './policy'
 import type { McpRegistry } from './mcp'
 import { EmptyMcpRegistry } from './mcp'
 import type { Provider, ProviderActionRequest, ProviderCredentialResolver, ProviderGenerateResult, SkillResolver } from './provider'
+import { ProviderTurnRunner, type ProviderTurnResult } from './provider-turn-runner'
 import { EmptySkillResolver } from './provider'
-import { filterActionsForRole } from './role-actions'
 import { assertStatusTransition, isTerminalStatus } from './run-status'
 import type { ConversationSnapshot, Store } from './store'
 
@@ -68,11 +68,6 @@ type ContinueRunContext = {
   settings: AppSettings
   signal: AbortSignal
   pendingApproval?: PendingApprovalContext
-}
-
-type ProviderTurnResult = {
-  providerResult: ProviderGenerateResult
-  streamedMessage: string
 }
 
 type PersistAssistantResultInput = {
@@ -153,6 +148,7 @@ export class CoreRunEngine implements RunEngine {
   private readonly createId: () => string
   private readonly maxProviderTurns: number
   private readonly dryRunPreviewBuilder: DryRunPreviewBuilder
+  private readonly providerTurnRunner: ProviderTurnRunner
   private readonly activeRuns = new Map<string, AbortController>()
 
   constructor(dependencies: RunEngineDependencies) {
@@ -177,6 +173,31 @@ export class CoreRunEngine implements RunEngine {
       policy: this.policy,
       hookRunner: this.hookRunner,
       now: this.now,
+    })
+    this.providerTurnRunner = new ProviderTurnRunner({
+      store: this.store,
+      provider: this.provider,
+      providerCredentialResolver: this.providerCredentialResolver,
+      skillResolver: this.skillResolver,
+      actionExecutor: this.actionExecutor,
+      onDelta: async ({ run, delta }) => {
+        await this.emitEvent({
+          id: this.createId(),
+          runId: run.id,
+          timestamp: this.now(),
+          type: 'provider.delta',
+          payload: { delta },
+        })
+      },
+      onReasoningDelta: async ({ run, delta }) => {
+        await this.emitEvent({
+          id: this.createId(),
+          runId: run.id,
+          timestamp: this.now(),
+          type: 'provider.reasoning_delta',
+          payload: delta,
+        })
+      },
     })
   }
 
@@ -469,57 +490,7 @@ export class CoreRunEngine implements RunEngine {
       },
     })
 
-    let streamedMessage = ''
-    const actions = filterActionsForRole(await this.actionExecutor.listDefinitions(), input.run.role)
-    const skills = await this.skillResolver.resolveForRun({
-      settings: input.settings,
-      run: input.run,
-      messages: input.messages,
-    })
-    const memory = await this.store.recallMemory({
-      query: input.messages.map((message) => message.content).join('\n'),
-      settings: input.settings,
-    })
-    const providerDefinition = getProviderDefinition(input.settings.provider.provider)
-    const providerAuth = await this.providerCredentialResolver.getProviderAuth({
-      provider: input.settings.provider.provider,
-    })
-
-    if (providerDefinition.requiresApiKey && providerAuth.authMethod !== 'api-key') {
-      throw new Error(`Missing API key for ${providerDefinition.label}`)
-    }
-
-    const providerResult = await this.provider.generate({
-      run: input.run,
-      messages: input.messages,
-      actions,
-      settings: input.settings,
-      providerAuth,
-      skills,
-      memory,
-      signal: input.signal,
-      onDelta: async (delta) => {
-        streamedMessage += delta
-        await this.emitEvent({
-          id: this.createId(),
-          runId: input.run.id,
-          timestamp: this.now(),
-          type: 'provider.delta',
-          payload: { delta },
-        })
-      },
-      onReasoningDelta: async (delta) => {
-        await this.emitEvent({
-          id: this.createId(),
-          runId: input.run.id,
-          timestamp: this.now(),
-          type: 'provider.reasoning_delta',
-          payload: delta,
-        })
-      },
-    })
-
-    return { providerResult, streamedMessage }
+    return this.providerTurnRunner.run(input)
   }
 
   private async persistAssistantResult(input: PersistAssistantResultInput): Promise<PersistAssistantResultOutput> {
