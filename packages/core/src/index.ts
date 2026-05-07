@@ -1,5 +1,6 @@
 export * from './action-invocation-pipeline'
 export * from './actions'
+export * from './approval-gate'
 export * from './approvals'
 export * from './command-safety'
 export * from './dry-run-preview-builder'

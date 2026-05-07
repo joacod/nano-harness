@@ -1,7 +1,5 @@
 import type {
-  ActionCall,
   AppSettings,
-  ApprovalRequest,
   ApprovalResolution,
   MemoryProposal,
   Message,
@@ -14,6 +12,7 @@ import { getProviderDefinition } from '@nano-harness/shared'
 
 import { ActionInvocationPipeline, type ExecuteActionRequestsOutput } from './action-invocation-pipeline'
 import type { ActionExecutor } from './actions'
+import { ApprovalGate } from './approval-gate'
 import type { ApprovalCoordinator, PendingApprovalContext } from './approvals'
 import { getLatestPendingApproval } from './approvals'
 import type { EventBus } from './event-bus'
@@ -119,6 +118,7 @@ export class CoreRunEngine implements RunEngine {
   private readonly dryRunPreviewBuilder: DryRunPreviewBuilder
   private readonly providerTurnRunner: ProviderTurnRunner
   private readonly actionInvocationPipeline: ActionInvocationPipeline
+  private readonly approvalGate: ApprovalGate
   private readonly activeRuns = new Map<string, AbortController>()
 
   constructor(dependencies: RunEngineDependencies) {
@@ -169,6 +169,15 @@ export class CoreRunEngine implements RunEngine {
         })
       },
     })
+    this.approvalGate = new ApprovalGate({
+      store: this.store,
+      approvalCoordinator: this.approvalCoordinator,
+      now: this.now,
+      createId: this.createId,
+      emitEvent: async (event) => this.emitEvent(event),
+      transitionRun: async (run, nextStatus, update, eventType, payload) => this.transitionRun(run, nextStatus, update, eventType, payload),
+      cancelRun: async (run, reason) => this.cancelActiveRun(run, reason),
+    })
     this.actionInvocationPipeline = new ActionInvocationPipeline({
       store: this.store,
       actionExecutor: this.actionExecutor,
@@ -177,7 +186,7 @@ export class CoreRunEngine implements RunEngine {
       now: this.now,
       createId: this.createId,
       emitEvent: async (event) => this.emitEvent(event),
-      requireApproval: async (input) => this.requireApproval(input),
+      requireApproval: async (input) => this.approvalGate.requestApproval(input),
       cancelRun: async (run, reason) => this.cancelActiveRun(run, reason),
     })
   }
@@ -365,7 +374,7 @@ export class CoreRunEngine implements RunEngine {
       throw new Error(`Run ${run.id} is not waiting for approval`)
     }
 
-    await this.persistApprovalResolution(run, {
+    await this.approvalGate.persistResolution(run, {
       approvalRequestId: input.approvalRequestId,
       decision: input.decision,
       decidedAt: this.now(),
@@ -385,7 +394,13 @@ export class CoreRunEngine implements RunEngine {
 
     try {
       if (context.pendingApproval) {
-        run = await this.resumeFromPendingApproval(run, context.pendingApproval, context.settings, snapshot, context.signal)
+        run = await this.approvalGate.resumeFromPendingApproval({
+          run,
+          pendingApproval: context.pendingApproval,
+          settings: context.settings,
+          approvalResolutions: snapshot.approvalResolutions,
+          signal: context.signal,
+        })
       } else if (run.status === 'created') {
         run = await this.startLifecycle(run)
       }
@@ -588,112 +603,6 @@ export class CoreRunEngine implements RunEngine {
   private async cancelActiveRun(run: Run, reason: string): Promise<void> {
     const finishedAt = this.now()
     await this.transitionRun(run, 'cancelled', { finishedAt }, 'run.cancelled', { reason })
-  }
-
-  private async requireApproval(input: {
-    run: Run
-    actionCall: ActionCall
-    reason: string
-    settings: AppSettings
-    signal: AbortSignal
-  }): Promise<ApprovalResolution> {
-    if (!this.approvalCoordinator) {
-      throw new Error('Approval required but no approval coordinator is configured')
-    }
-
-    const request: ApprovalRequest = {
-      id: this.createId(),
-      runId: input.run.id,
-      actionCallId: input.actionCall.id,
-      reason: input.reason,
-      requestedAt: this.now(),
-    }
-
-    await this.store.saveApprovalRequest(request)
-    await this.transitionRun(input.run, 'waiting_approval', undefined, 'run.waiting_approval', {
-      approvalRequestId: request.id,
-    })
-    await this.emitEvent({
-      id: this.createId(),
-      runId: input.run.id,
-      timestamp: request.requestedAt,
-      type: 'approval.required',
-      payload: { approvalRequest: request },
-    })
-
-    const resolution = await this.approvalCoordinator.waitForDecision({
-      request,
-      run: { ...input.run, status: 'waiting_approval' },
-      settings: input.settings,
-      signal: input.signal,
-    })
-
-    return this.persistApprovalResolution(input.run, resolution)
-  }
-
-  private async persistApprovalResolution(run: Run, resolution: ApprovalResolution): Promise<ApprovalResolution> {
-    await this.store.saveApprovalResolution(resolution)
-    await this.emitEvent({
-      id: this.createId(),
-      runId: run.id,
-      timestamp: resolution.decidedAt,
-      type: resolution.decision === 'granted' ? 'approval.granted' : 'approval.rejected',
-      payload: { resolution },
-    })
-
-    if (resolution.decision === 'granted') {
-      await this.transitionRun(run, 'started', undefined, 'run.started', {
-        startedAt: this.now(),
-      })
-    }
-
-    return resolution
-  }
-
-  private async resumeFromPendingApproval(
-    run: Run,
-    pendingApproval: PendingApprovalContext,
-    settings: AppSettings,
-    snapshot: ConversationSnapshot,
-    signal: AbortSignal,
-  ): Promise<Run> {
-    const existingResolution = snapshot.approvalResolutions.find(
-      (resolution) => resolution.approvalRequestId === pendingApproval.request.id,
-    )
-
-    const resolution =
-      existingResolution ??
-      (await this.waitForPendingApprovalDecision(run, pendingApproval.request, settings, signal))
-
-    if (resolution.decision === 'rejected') {
-      await this.cancelActiveRun(run, `approval rejected for ${pendingApproval.actionCall.actionId}`)
-      throw new RunAbortError()
-    }
-
-    return {
-      ...run,
-      status: 'started',
-    }
-  }
-
-  private async waitForPendingApprovalDecision(
-    run: Run,
-    request: ApprovalRequest,
-    settings: AppSettings,
-    signal: AbortSignal,
-  ): Promise<ApprovalResolution> {
-    if (!this.approvalCoordinator) {
-      throw new Error('Approval required but no approval coordinator is configured')
-    }
-
-    const resolution = await this.approvalCoordinator.waitForDecision({
-      request,
-      run,
-      settings,
-      signal,
-    })
-
-    return this.persistApprovalResolution(run, resolution)
   }
 
   private async transitionRun<TPayload extends Record<string, unknown> | undefined>(
