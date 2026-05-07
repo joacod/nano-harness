@@ -5,38 +5,19 @@ import userEvent from '@testing-library/user-event'
 import type { ReactNode } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { createDefaultProviderSettings, providerDefaultModels, type AppSettings, type McpInventory, type ProviderStatus } from '@nano-harness/shared'
+import { createDefaultProviderSettings, providerDefaultModels, type AppSettings, type ProviderStatus } from '@nano-harness/shared'
 
 import { SettingsRoute } from '../../src/renderer/routes/SettingsRoute'
 import { createDesktopMock, renderWithQueryClient } from './test-utils'
 
 type MockSettingsFormCardProps = {
-  initialSettings: AppSettings
-  dataPath: string | null
-  providerStatus: ProviderStatus | null
+  providersPanel: ReactNode
+  workspacePanel: ReactNode
   skillsPanel: ReactNode
-  mcpInventory: McpInventory | null
+  mcpPanel: ReactNode
   memoryPanel: ReactNode
-  isSaving: boolean
-  isSavingApiKey: boolean
-  isStartingOauth: boolean
-  isClearingApiKey: boolean
-  isClearingOauth: boolean
-  isExportingData: boolean
-  isImportingData: boolean
-  saveError: string | null
-  apiKeyError: string | null
-  oauthError: string | null
-  exportDataResult: string | null
-  importDataResult: string | null
-  dataError: string | null
-  onSubmit: (settings: AppSettings) => Promise<void>
-  onSaveApiKey: (input: { provider: AppSettings['provider']['provider']; apiKey: string }) => Promise<void>
-  onClearApiKey: (input: { provider: AppSettings['provider']['provider'] }) => Promise<void>
-  onStartOauth: (input: { provider: AppSettings['provider']['provider'] }) => Promise<{ accountId?: string }>
-  onClearOauth: (input: { provider: AppSettings['provider']['provider'] }) => Promise<void>
-  onExportData: () => Promise<void>
-  onImportData: () => Promise<void>
+  harnessPanel: ReactNode
+  dataPanel: ReactNode
 }
 
 let latestSettingsFormCardProps: MockSettingsFormCardProps | null = null
@@ -48,38 +29,13 @@ vi.mock('../../src/renderer/components/SettingsFormCard', () => ({
     return (
       <section>
         <p>Mock settings form</p>
-        <p>dataPath:{props.dataPath ?? 'null'}</p>
-        <p>provider:{props.providerStatus?.providerLabel ?? 'none'}</p>
+        {props.providersPanel}
+        {props.workspacePanel}
         {props.skillsPanel}
-        <p>mcp:{props.mcpInventory?.servers.length ?? 0}</p>
+        {props.mcpPanel}
         {props.memoryPanel}
-        <p>export:{props.exportDataResult ?? 'none'}</p>
-        <p>import:{props.importDataResult ?? 'none'}</p>
-        <p>saveError:{props.saveError ?? 'none'}</p>
-        <p>apiKeyError:{props.apiKeyError ?? 'none'}</p>
-        <p>oauthError:{props.oauthError ?? 'none'}</p>
-        <p>dataError:{props.dataError ?? 'none'}</p>
-        <button type="button" onClick={() => void props.onSubmit(createSettings({ provider: { model: 'next/model' } }))}>
-          Save settings action
-        </button>
-        <button type="button" onClick={() => void props.onSaveApiKey({ provider: 'openrouter', apiKey: 'secret-key' })}>
-          Save api key action
-        </button>
-        <button type="button" onClick={() => void props.onClearApiKey({ provider: 'openrouter' })}>
-          Clear api key action
-        </button>
-        <button type="button" onClick={() => void props.onStartOauth({ provider: 'openai' })}>
-          Start oauth action
-        </button>
-        <button type="button" onClick={() => void props.onClearOauth({ provider: 'openai' })}>
-          Clear oauth action
-        </button>
-        <button type="button" onClick={() => void props.onExportData()}>
-          Export action
-        </button>
-        <button type="button" onClick={() => void props.onImportData()}>
-          Import action
-        </button>
+        {props.harnessPanel}
+        {props.dataPanel}
       </section>
     )
   },
@@ -108,11 +64,9 @@ describe('SettingsRoute', () => {
   it('loads settings data and wires mutations to the desktop bridge', async () => {
     const user = userEvent.setup()
     const saveSettings = vi.fn(async (settings: AppSettings) => settings)
-    const saveProviderAuth = vi.fn(async () => undefined)
-    const clearProviderAuth = vi.fn(async () => undefined)
-    const startProviderOauth = vi.fn(async () => ({ provider: 'openai', accountId: 'acct-1' }))
     const exportData = vi.fn(async () => ({ exportedFilePath: '/tmp/export.zip' }))
     const importData = vi.fn(async () => ({ imported: true, backupFilePath: '/tmp/backup.zip' }))
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
 
     window.desktop = createDesktopMock({
       getContext: async () => ({ platform: 'darwin', version: '0.0.1', dataPath: '/tmp/nano-harness.db' }),
@@ -132,9 +86,6 @@ describe('SettingsRoute', () => {
       }),
       listMcpInventory: async () => ({ servers: [], tools: [], resources: [] }),
       saveSettings,
-      saveProviderAuth,
-      startProviderOauth,
-      clearProviderAuth,
       exportData,
       importData,
     })
@@ -143,37 +94,26 @@ describe('SettingsRoute', () => {
     const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries')
 
     expect(await screen.findByText('Mock settings form')).toBeTruthy()
-    expect(screen.getByText('dataPath:/tmp/nano-harness.db')).toBeTruthy()
-    expect(screen.getByText('provider:OpenRouter')).toBeTruthy()
+    expect(await screen.findByText('/tmp/nano-harness.db')).toBeTruthy()
+    expect(screen.getAllByText('OpenRouter').length).toBeGreaterThan(0)
     expect(await screen.findByText('Repo Onboarding')).toBeTruthy()
-    expect(screen.getByText('mcp:0')).toBeTruthy()
-    expect(latestSettingsFormCardProps?.initialSettings.provider.model).toBe(providerDefaultModels.openrouter)
+    expect(screen.getByText('No MCP servers configured.')).toBeTruthy()
+    expect(latestSettingsFormCardProps?.providersPanel).toBeTruthy()
 
-    await user.click(screen.getByRole('button', { name: 'Save settings action' }))
-    await user.click(screen.getByRole('button', { name: 'Save api key action' }))
-    await user.click(screen.getByRole('button', { name: 'Clear api key action' }))
-    await user.click(screen.getByRole('button', { name: 'Start oauth action' }))
-    await user.click(screen.getByRole('button', { name: 'Clear oauth action' }))
-    await user.click(screen.getByRole('button', { name: 'Export action' }))
-    await user.click(screen.getByRole('button', { name: 'Import action' }))
+    await user.click(screen.getByRole('button', { name: 'Export data' }))
+    await user.click(screen.getByRole('button', { name: 'Import data' }))
     await user.click(screen.getByRole('switch', { name: 'enabled' }))
 
     await waitFor(() => {
-      expect(saveSettings).toHaveBeenCalledWith(createSettings({ provider: { model: 'next/model' } }))
       expect(saveSettings).toHaveBeenCalledWith(createSettings({ skills: { disabledSkillIds: ['repo-onboarding'] } }))
-      expect(saveProviderAuth).toHaveBeenCalledWith({ provider: 'openrouter', authMethod: 'api-key', apiKey: 'secret-key' })
-      expect(clearProviderAuth).toHaveBeenCalledWith({ provider: 'openrouter', authMethod: 'api-key' })
-      expect(startProviderOauth).toHaveBeenCalledWith({ provider: 'openai', authMethod: 'oauth' })
-      expect(clearProviderAuth).toHaveBeenCalledWith({ provider: 'openai', authMethod: 'oauth' })
       expect(exportData).toHaveBeenCalledTimes(1)
       expect(importData).toHaveBeenCalledTimes(1)
     })
 
     await waitFor(() => {
       expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['settings'] })
-      expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['provider-status'] })
-      expect(screen.getByText('export:/tmp/export.zip')).toBeTruthy()
-      expect(screen.getByText('import:/tmp/backup.zip')).toBeTruthy()
+      expect(screen.getByText('Exported to /tmp/export.zip')).toBeTruthy()
+      expect(screen.getByText('Safety backup created at /tmp/backup.zip')).toBeTruthy()
     })
   })
 })

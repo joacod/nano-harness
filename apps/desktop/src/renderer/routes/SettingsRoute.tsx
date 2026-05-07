@@ -1,66 +1,21 @@
 import { useState } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 
-import type { AppSettings } from '../../../../../packages/shared/src'
 import { SettingsFormCard, type SettingsTab } from '../components/SettingsFormCard'
+import { DataSettingsTabContainer } from '../components/settings/DataSettingsTabContainer'
+import { HarnessEngineeringCard } from '../components/settings/HarnessEngineeringCard'
 import { MemorySettingsTabContainer } from '../components/settings/MemorySettingsTabContainer'
+import { McpSettingsTabContainer } from '../components/settings/McpSettingsTabContainer'
+import { ProviderSettingsTabContainer } from '../components/settings/ProviderSettingsTabContainer'
 import { SkillsSettingsTabContainer } from '../components/settings/SkillsSettingsTabContainer'
+import { WorkspaceSettingsTabContainer } from '../components/settings/WorkspaceSettingsTabContainer'
 import { Card } from '../components/ui'
-import { contextQueryOptions, mcpInventoryQueryOptions, providerStatusQueryOptions, settingsQueryOptions } from '../queries'
+import { settingsQueryOptions } from '../queries'
 
 export function SettingsRoute() {
   const [selectedTab, setSelectedTab] = useState<SettingsTab>('providers')
-  const queryClient = useQueryClient()
-  const contextQuery = useQuery(contextQueryOptions)
   const settingsQuery = useQuery(settingsQueryOptions)
-  const providerStatusQuery = useQuery(providerStatusQueryOptions)
-  const mcpInventoryQuery = useQuery(mcpInventoryQueryOptions)
-  const mutation = useMutation({
-    mutationFn: async (settings: AppSettings) => window.desktop.saveSettings(settings),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['settings'] })
-      await queryClient.invalidateQueries({ queryKey: ['provider-status'] })
-      await queryClient.invalidateQueries({ queryKey: ['provider-credential-status'] })
-    },
-  })
-  const saveApiKeyMutation = useMutation({
-    mutationFn: async (input: { provider: AppSettings['provider']['provider']; apiKey: string }) =>
-      window.desktop.saveProviderAuth({ ...input, authMethod: 'api-key' }),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['provider-status'] })
-      await queryClient.invalidateQueries({ queryKey: ['provider-credential-status'] })
-    },
-  })
-  const clearApiKeyMutation = useMutation({
-    mutationFn: async (input: { provider: AppSettings['provider']['provider'] }) =>
-      window.desktop.clearProviderAuth({ ...input, authMethod: 'api-key' }),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['provider-status'] })
-      await queryClient.invalidateQueries({ queryKey: ['provider-credential-status'] })
-    },
-  })
-  const startOauthMutation = useMutation({
-    mutationFn: async (input: { provider: AppSettings['provider']['provider'] }) =>
-      window.desktop.startProviderOauth({ ...input, authMethod: 'oauth' }),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['provider-status'] })
-      await queryClient.invalidateQueries({ queryKey: ['provider-credential-status'] })
-    },
-  })
-  const clearOauthMutation = useMutation({
-    mutationFn: async (input: { provider: AppSettings['provider']['provider'] }) =>
-      window.desktop.clearProviderAuth({ ...input, authMethod: 'oauth' }),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['provider-status'] })
-      await queryClient.invalidateQueries({ queryKey: ['provider-credential-status'] })
-    },
-  })
-  const exportDataMutation = useMutation({
-    mutationFn: async () => window.desktop.exportData(),
-  })
-  const importDataMutation = useMutation({
-    mutationFn: async () => window.desktop.importData(),
-  })
+
   if (!settingsQuery.data) {
     return (
       <Card hero>
@@ -72,49 +27,16 @@ export function SettingsRoute() {
 
   return (
     <SettingsFormCard
-        key={JSON.stringify(settingsQuery.data)}
-        initialSettings={settingsQuery.data}
-        dataPath={contextQuery.data?.dataPath ?? null}
-        providerStatus={providerStatusQuery.data ?? null}
-        skillsPanel={<SkillsSettingsTabContainer settings={settingsQuery.data} />}
-        mcpInventory={mcpInventoryQuery.data ?? null}
-        memoryPanel={<MemorySettingsTabContainer />}
-        selectedTab={selectedTab}
-        isSaving={mutation.isPending}
-        isSavingApiKey={saveApiKeyMutation.isPending}
-        isStartingOauth={startOauthMutation.isPending}
-        isClearingApiKey={clearApiKeyMutation.isPending}
-        isClearingOauth={clearOauthMutation.isPending}
-        isExportingData={exportDataMutation.isPending}
-        isImportingData={importDataMutation.isPending}
-        saveError={mutation.error instanceof Error ? mutation.error.message : null}
-        apiKeyError={saveApiKeyMutation.error instanceof Error ? saveApiKeyMutation.error.message : clearApiKeyMutation.error instanceof Error ? clearApiKeyMutation.error.message : null}
-        oauthError={startOauthMutation.error instanceof Error ? startOauthMutation.error.message : clearOauthMutation.error instanceof Error ? clearOauthMutation.error.message : null}
-        exportDataResult={exportDataMutation.data?.exportedFilePath ?? null}
-        importDataResult={importDataMutation.data?.backupFilePath ?? null}
-        dataError={exportDataMutation.error instanceof Error ? exportDataMutation.error.message : importDataMutation.error instanceof Error ? importDataMutation.error.message : null}
-        onSubmit={async (settings) => {
-          await mutation.mutateAsync(settings)
-        }}
-        onSaveApiKey={async (input) => {
-          await saveApiKeyMutation.mutateAsync(input)
-        }}
-        onClearApiKey={async (input) => {
-          await clearApiKeyMutation.mutateAsync(input)
-        }}
-        onStartOauth={async (input) => {
-          return await startOauthMutation.mutateAsync(input)
-        }}
-        onClearOauth={async (input) => {
-          await clearOauthMutation.mutateAsync(input)
-        }}
-        onExportData={async () => {
-          await exportDataMutation.mutateAsync()
-        }}
-        onImportData={async () => {
-          await importDataMutation.mutateAsync()
-        }}
-        onSelectedTabChange={setSelectedTab}
-      />
+      key={JSON.stringify(settingsQuery.data)}
+      providersPanel={<ProviderSettingsTabContainer settings={settingsQuery.data} />}
+      workspacePanel={<WorkspaceSettingsTabContainer settings={settingsQuery.data} />}
+      skillsPanel={<SkillsSettingsTabContainer settings={settingsQuery.data} />}
+      mcpPanel={<McpSettingsTabContainer />}
+      memoryPanel={<MemorySettingsTabContainer />}
+      harnessPanel={<HarnessEngineeringCard />}
+      dataPanel={<DataSettingsTabContainer />}
+      selectedTab={selectedTab}
+      onSelectedTabChange={setSelectedTab}
+    />
   )
 }
