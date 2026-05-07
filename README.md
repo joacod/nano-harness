@@ -1,6 +1,33 @@
 # Nano Harness
 
-`nano-harness` is a local-first desktop app for experimenting with agent runs, provider streaming, approvals, memory, events, and tool execution in a small inspectable workspace.
+`nano-harness` is a personal, local-first coding harness for working with AI providers under controlled autonomy. It gives you a desktop workspace where an assistant can plan, inspect code, make approved changes, run validation, and leave behind a clear trace of what happened.
+
+Nano is intentionally small and opinionated. It is not a marketplace or a general agent platform; it is a local app for one owner who wants useful coding automation without losing visibility or control.
+
+## What It Does
+
+- Connects to configurable AI providers for streamed assistant runs.
+- Lets the assistant inspect a workspace, search files, propose patches, and run approved commands.
+- Keeps risky actions behind approvals and workspace boundaries.
+- Shows an inspectable timeline of messages, tool calls, approvals, events, and validation output.
+- Supports planning, building, reviewing, local skills, memory proposals, sessions, and evidence export.
+
+## Why It Exists
+
+- Local-first: your conversations, settings, approvals, and run evidence stay on your machine.
+- Inspectable: the assistant's work is visible through events, approvals, and exports.
+- Provider-flexible: use hosted or local providers through small adapters.
+- Extensible: add capabilities through local tools, skills, settings, and spec-driven workflows.
+- Personal: defaults and workflows are optimized for a single owner, not a large platform.
+
+## Workspace
+
+- `apps/desktop`: Electron main process, preload bridge, and React renderer.
+- `packages/core`: orchestration runtime, run engine, policy, approvals, hooks, roles, and dry-run preview.
+- `packages/infra`: provider adapters, SQLite persistence, built-in actions, skills loading, MCP adapters, and other side effects.
+- `packages/shared`: shared Zod schemas, bridge contracts, settings, events, runs, memory, skills, MCP, and spec/harness artifacts.
+- `benchmarks`: tracked regression scenarios for agent behavior, safety, and evidence quality.
+- `docs`: ignored local planning notes and roadmap-completion docs.
 
 ## Development
 
@@ -56,11 +83,3 @@ pnpm dist:linux
 - `pnpm dist:mac` creates a macOS disk image.
 - `pnpm pack:win` and `pnpm dist:win` build Windows NSIS targets.
 - `pnpm pack:linux` and `pnpm dist:linux` build Linux AppImage targets.
-
-## Workspace
-
-- `apps/desktop`: Electron app shell and React renderer
-- `packages/core`: orchestration runtime
-- `packages/infra`: providers, persistence, MCP/skills adapters, and side effects
-- `packages/shared`: shared contracts and schemas
-- `benchmarks`: small tracked regression scenarios for agent behavior and evidence quality
