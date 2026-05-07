@@ -1,6 +1,7 @@
 export * from './actions'
 export * from './approvals'
 export * from './command-safety'
+export * from './dry-run-preview-builder'
 export * from './event-bus'
 export * from './instructions'
 export * from './hooks'

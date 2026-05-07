@@ -22,10 +22,10 @@ import type { ApprovalCoordinator, PendingApprovalContext } from './approvals'
 import { getLatestPendingApproval } from './approvals'
 import type { EventBus } from './event-bus'
 import { noopEventBus } from './event-bus'
+import { DryRunPreviewBuilder } from './dry-run-preview-builder'
 import type { HookRunner } from './hooks'
 import { PersonalRulesHookRunner } from './hooks'
 import type { Policy } from './policy'
-import { listActiveSafetyRules } from './policy'
 import type { McpRegistry } from './mcp'
 import { EmptyMcpRegistry } from './mcp'
 import type { Provider, ProviderActionRequest, ProviderCredentialResolver, ProviderGenerateResult, SkillResolver } from './provider'
@@ -92,8 +92,6 @@ type ExecuteActionRequestsOutput = {
   stopped: boolean
 }
 
-type DryRunPreviewPayload = Extract<RunEvent, { type: 'run.dry_run_preview' }>['payload']
-
 class RunAbortError extends Error {
   constructor() {
     super('Run cancelled')
@@ -154,6 +152,7 @@ export class CoreRunEngine implements RunEngine {
   private readonly now: () => string
   private readonly createId: () => string
   private readonly maxProviderTurns: number
+  private readonly dryRunPreviewBuilder: DryRunPreviewBuilder
   private readonly activeRuns = new Map<string, AbortController>()
 
   constructor(dependencies: RunEngineDependencies) {
@@ -170,6 +169,15 @@ export class CoreRunEngine implements RunEngine {
     this.now = dependencies.now ?? defaultNow
     this.createId = dependencies.createId ?? defaultCreateId
     this.maxProviderTurns = dependencies.maxProviderTurns ?? 8
+    this.dryRunPreviewBuilder = new DryRunPreviewBuilder({
+      store: this.store,
+      actionExecutor: this.actionExecutor,
+      skillResolver: this.skillResolver,
+      mcpRegistry: this.mcpRegistry,
+      policy: this.policy,
+      hookRunner: this.hookRunner,
+      now: this.now,
+    })
   }
 
   async startRun(input: RunCreateInput): Promise<RunHandle> {
@@ -221,7 +229,7 @@ export class CoreRunEngine implements RunEngine {
       runId: run.id,
       timestamp: now,
       type: 'run.dry_run_preview',
-      payload: await this.createDryRunPreview(settings, run, [userMessage]),
+      payload: await this.dryRunPreviewBuilder.build({ settings, run, messages: [userMessage] }),
     })
     await this.store.saveMessage(userMessage)
     await this.emitEvent({
@@ -581,64 +589,6 @@ export class CoreRunEngine implements RunEngine {
   private async startLifecycle(run: Run): Promise<Run> {
     const startedAt = this.now()
     return this.transitionRun(run, 'started', { startedAt }, 'run.started', { startedAt })
-  }
-
-  private async createDryRunPreview(settings: AppSettings, run: Run, messages: Message[]): Promise<DryRunPreviewPayload> {
-    const actions = filterActionsForRole(await this.actionExecutor.listDefinitions(), run.role)
-    const skills = await this.skillResolver.resolveForRun({ settings, run, messages })
-    const mcp = await this.mcpRegistry.getInventory(settings)
-    const memory = await this.store.recallMemory({ query: messages.map((message) => message.content).join('\n'), settings })
-    const permissionDecisions = await Promise.all(actions.map((action) => this.policy.evaluateAction({
-      run,
-      action,
-      actionCall: {
-        id: `dry-run-${action.id}`,
-        runId: run.id,
-        actionId: action.id,
-        input: {},
-        requestedAt: this.now(),
-      },
-      settings,
-    })))
-
-    return {
-      provider: {
-        provider: settings.provider.provider,
-        model: settings.provider.model,
-        baseUrl: settings.provider.baseUrl ?? getProviderDefinition(settings.provider.provider).baseUrl,
-      },
-      workspace: {
-        rootPath: settings.workspace.rootPath,
-        approvalPolicy: settings.workspace.approvalPolicy,
-      },
-      actions: actions.map((action) => ({
-        id: action.id,
-        title: action.title,
-        requiresApproval: action.requiresApproval,
-      })),
-      permissions: {
-        denied: permissionDecisions.filter((decision) => decision.effect === 'deny'),
-        risky: permissionDecisions.filter((decision) => decision.effect === 'require_approval'),
-        activeRules: listActiveSafetyRules(settings),
-        activeHooks: await this.hookRunner.listHooks(settings),
-      },
-      skills: {
-        available: skills.available,
-        selected: skills.selected.map((skill) => ({
-          id: skill.id,
-          name: skill.name,
-          description: skill.description,
-          triggers: skill.triggers,
-          tools: skill.tools,
-          safetyNotes: skill.safetyNotes,
-          source: skill.source,
-          path: skill.path,
-          enabled: skill.enabled,
-        })),
-      },
-      mcp,
-      memory,
-    }
   }
 
   private async completeRun(run: Run): Promise<void> {
