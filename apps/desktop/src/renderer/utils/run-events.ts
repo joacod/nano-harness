@@ -17,6 +17,40 @@ export type StreamingRunState = {
   errorMessage?: string
 }
 
+type RunEventDescriptor = {
+  phase?: StreamingRunState['phase']
+  transient?: boolean
+  tone?: string
+}
+
+const runEventDescriptors: Record<RunEvent['type'], RunEventDescriptor> = {
+  'run.created': {},
+  'run.started': { phase: 'started' },
+  'run.dry_run_preview': { phase: 'queued' },
+  'memory.proposal_created': { phase: 'using_tools' },
+  'run.waiting_approval': { phase: 'waiting_approval' },
+  'run.completed': {},
+  'run.failed': { tone: 'failed' },
+  'run.cancelled': {},
+  'provider.requested': { phase: 'contacting_provider' },
+  'provider.delta': { transient: true },
+  'provider.reasoning_delta': { transient: true },
+  'provider.completed': {},
+  'provider.error': { tone: 'failed' },
+  'action.requested': { phase: 'using_tools' },
+  'action.started': { phase: 'using_tools' },
+  'action.completed': { phase: 'using_tools' },
+  'action.failed': { phase: 'using_tools', tone: 'failed' },
+  'hook.started': { phase: 'using_tools' },
+  'hook.completed': { phase: 'using_tools' },
+  'hook.denied': { phase: 'using_tools', tone: 'failed' },
+  'hook.error': { phase: 'using_tools', tone: 'failed' },
+  'approval.required': { phase: 'waiting_approval' },
+  'approval.granted': {},
+  'approval.rejected': { tone: 'failed' },
+  'message.created': {},
+}
+
 function appendActivity(run: StreamingRunState, event: RunEvent): StreamingRunState {
   const description = describeRunEvent(event)
 
@@ -34,29 +68,7 @@ function appendActivity(run: StreamingRunState, event: RunEvent): StreamingRunSt
 }
 
 function getActivityPhase(event: RunEvent): StreamingRunState['phase'] | null {
-  switch (event.type) {
-    case 'run.started':
-      return 'started'
-    case 'run.dry_run_preview':
-      return 'queued'
-    case 'provider.requested':
-      return 'contacting_provider'
-    case 'action.requested':
-    case 'action.started':
-    case 'action.completed':
-    case 'action.failed':
-    case 'hook.started':
-    case 'hook.completed':
-    case 'hook.denied':
-    case 'hook.error':
-    case 'memory.proposal_created':
-      return 'using_tools'
-    case 'approval.required':
-    case 'run.waiting_approval':
-      return 'waiting_approval'
-    default:
-      return null
-  }
+  return runEventDescriptors[event.type].phase ?? null
 }
 
 export function updateStreamingState(current: Record<string, StreamingRunState>, event: RunEvent): Record<string, StreamingRunState> {
@@ -201,7 +213,7 @@ export function mergeRunEvents(persistedEvents: RunEvent[], liveEvents: RunEvent
 }
 
 export function isTransientRunEvent(event: RunEvent): boolean {
-  return event.type === 'provider.delta' || event.type === 'provider.reasoning_delta'
+  return runEventDescriptors[event.type].transient === true
 }
 
 export function describeRunEvent(event: RunEvent) {
@@ -280,16 +292,7 @@ export function getEventFamily(eventType: RunEvent['type']) {
 }
 
 export function getEventTone(event: RunEvent) {
-  if (event.type === 'run.failed'
-    || event.type === 'provider.error'
-    || event.type === 'action.failed'
-    || event.type === 'hook.error'
-    || event.type === 'hook.denied'
-    || event.type === 'approval.rejected') {
-    return 'failed'
-  }
-
-  return getEventFamily(event.type)
+  return runEventDescriptors[event.type].tone ?? getEventFamily(event.type)
 }
 
 export function getRecoverableRunAction(run: ConversationSnapshot['runs'][number], pendingApproval: ApprovalRequest | null) {
