@@ -2,34 +2,34 @@
   color-scheme: dark;
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-size: 15px;
-  background: oklch(12.5% 0.018 42deg);
-  color: oklch(93.5% 0.018 82deg);
-  --background: oklch(12.5% 0.018 42deg);
-  --surface-0: oklch(14.5% 0.019 42deg);
-  --surface-1: oklch(18.5% 0.022 44deg);
-  --surface-2: oklch(23.5% 0.026 46deg);
-  --surface-3: oklch(29% 0.032 48deg);
-  --foreground: oklch(93.5% 0.018 82deg);
-  --text-strong: oklch(97% 0.014 82deg);
-  --text-soft: oklch(76% 0.027 74deg);
+  background: oklch(31% 0.038 266deg);
+  color: oklch(94% 0.018 252deg);
+  --background: oklch(31% 0.038 266deg);
+  --surface-0: oklch(34% 0.04 264deg);
+  --surface-1: oklch(39% 0.04 260deg);
+  --surface-2: oklch(45% 0.038 255deg);
+  --surface-3: oklch(53% 0.04 248deg);
+  --foreground: oklch(94% 0.018 252deg);
+  --text-strong: oklch(98% 0.012 250deg);
+  --text-soft: oklch(78% 0.032 252deg);
   --card: var(--surface-1);
   --card-foreground: var(--foreground);
   --muted: var(--surface-2);
   --muted-foreground: var(--text-soft);
-  --border: oklch(37% 0.035 48deg);
-  --border-strong: oklch(51% 0.06 50deg);
-  --input: oklch(44% 0.05 48deg);
-  --primary: oklch(73% 0.15 43deg);
-  --primary-foreground: oklch(16% 0.024 42deg);
-  --secondary: oklch(72% 0.11 282deg);
-  --signal: oklch(72% 0.11 282deg);
-  --warning: oklch(80% 0.13 78deg);
-  --danger: oklch(69% 0.16 14deg);
-  --success: oklch(70% 0.07 138deg);
+  --border: oklch(61% 0.035 252deg / 0.42);
+  --border-strong: oklch(74% 0.08 286deg / 0.72);
+  --input: oklch(66% 0.05 252deg / 0.56);
+  --primary: oklch(76% 0.14 288deg);
+  --primary-foreground: oklch(22% 0.05 272deg);
+  --secondary: oklch(76% 0.105 188deg);
+  --signal: oklch(76% 0.105 188deg);
+  --warning: oklch(80% 0.115 66deg);
+  --danger: oklch(72% 0.14 352deg);
+  --success: oklch(74% 0.08 152deg);
   --panel: var(--surface-1);
   --panel-strong: var(--surface-2);
-  --shadow-glow: 0 18px 54px oklch(5% 0.012 42deg / 0.5), inset 0 1px 0 oklch(100% 0.01 82deg / 0.06);
-  --radius: 1.05rem;
+  --shadow-glow: 0 18px 48px oklch(18% 0.05 270deg / 0.28), 0 1px 0 oklch(100% 0.01 250deg / 0.08);
+  --radius: 1.2rem;
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
   --font-mono: "SFMono-Regular", "Cascadia Code", "Liberation Mono", "Menlo", monospace;
 }
@@ -49,10 +49,10 @@ body {
   min-height: 100vh;
   overflow: hidden;
   background:
-    radial-gradient(circle at 18% 0%, oklch(60% 0.13 42deg / 0.18), transparent 32%),
-    radial-gradient(circle at 92% 4%, oklch(62% 0.11 282deg / 0.12), transparent 34%),
-    radial-gradient(circle at 58% 100%, oklch(32% 0.08 24deg / 0.16), transparent 42%),
-    linear-gradient(145deg, oklch(10.5% 0.018 42deg) 0%, oklch(15.5% 0.02 42deg) 48%, oklch(12% 0.016 30deg) 100%);
+    radial-gradient(circle at 16% 0%, oklch(74% 0.11 288deg / 0.2), transparent 32%),
+    radial-gradient(circle at 92% 8%, oklch(76% 0.105 188deg / 0.16), transparent 34%),
+    radial-gradient(circle at 54% 100%, oklch(72% 0.12 232deg / 0.12), transparent 42%),
+    linear-gradient(145deg, oklch(35% 0.045 268deg) 0%, oklch(29% 0.038 260deg) 50%, oklch(37% 0.036 236deg) 100%);
 }
 
 body::before,
@@ -66,17 +66,17 @@ body::after {
 body::before {
   z-index: 0;
   background-image:
-    linear-gradient(oklch(100% 0.01 82deg / 0.035) 1px, transparent 1px),
-    linear-gradient(90deg, oklch(100% 0.01 82deg / 0.025) 1px, transparent 1px);
-  background-size: 56px 56px;
-  mask-image: radial-gradient(circle at 50% 44%, oklch(0% 0 0deg) 0%, oklch(0% 0 0deg / 0.66) 44%, transparent 100%);
+    linear-gradient(135deg, oklch(100% 0.01 250deg / 0.055) 0 1px, transparent 1px 22px),
+    radial-gradient(circle at 24px 24px, oklch(100% 0.01 250deg / 0.05) 0 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: radial-gradient(circle at 50% 42%, oklch(0% 0 0deg / 0.86) 0%, oklch(0% 0 0deg / 0.46) 48%, transparent 100%);
 }
 
 body::after {
   z-index: 1;
-  opacity: 0.48;
+  opacity: 0.32;
   background:
-    radial-gradient(circle at 50% 50%, transparent 0%, oklch(5% 0.014 42deg / 0.44) 100%);
+    linear-gradient(180deg, oklch(100% 0.01 250deg / 0.04), transparent 34%, oklch(21% 0.05 270deg / 0.22));
 }
 
 button,
@@ -103,7 +103,7 @@ a {
 }
 
 ::selection {
-  background: oklch(73% 0.15 43deg / 0.34);
+  background: oklch(76% 0.14 288deg / 0.34);
   color: var(--text-strong);
 }
 
@@ -124,7 +124,7 @@ a {
   position: absolute;
   inset: 12px;
   z-index: -1;
-  border: 1px solid oklch(100% 0.01 82deg / 0.055);
+  border: 1px solid oklch(100% 0.01 250deg / 0.08);
   border-radius: 28px;
   content: "";
 }
@@ -144,11 +144,11 @@ a {
   min-height: 0;
   overflow-x: hidden;
   overflow-y: hidden;
-  border-right: 1px solid oklch(100% 0.01 82deg / 0.09);
+  border-right: 1px solid oklch(100% 0.01 250deg / 0.12);
   background:
-    linear-gradient(180deg, oklch(20% 0.024 44deg / 0.96), oklch(12% 0.018 42deg / 0.9)),
-    radial-gradient(circle at 0% 0%, oklch(60% 0.13 42deg / 0.12), transparent 42%);
-  box-shadow: inset -1px 0 0 oklch(72% 0.11 282deg / 0.08), 20px 0 52px oklch(5% 0.012 42deg / 0.38);
+    linear-gradient(180deg, oklch(43% 0.04 258deg / 0.94), oklch(31% 0.038 266deg / 0.9)),
+    radial-gradient(circle at 0% 0%, oklch(76% 0.14 288deg / 0.12), transparent 42%);
+  box-shadow: inset -1px 0 0 oklch(76% 0.105 188deg / 0.1), 20px 0 48px oklch(18% 0.05 270deg / 0.2);
 }
 
 .sidebar-section,
@@ -157,19 +157,9 @@ a {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background:
-    linear-gradient(135deg, oklch(24% 0.027 46deg / 0.94), oklch(17% 0.02 42deg / 0.9)),
-    radial-gradient(circle at top right, oklch(73% 0.15 43deg / 0.055), transparent 34%);
+    linear-gradient(135deg, oklch(45% 0.038 255deg / 0.94), oklch(36% 0.04 264deg / 0.9)),
+    radial-gradient(circle at top right, oklch(76% 0.14 288deg / 0.08), transparent 34%);
   box-shadow: var(--shadow-glow);
-}
-
-.sidebar-section::before,
-.panel-card::before {
-  position: absolute;
-  inset: 7px;
-  pointer-events: none;
-  border: 1px solid oklch(100% 0.01 82deg / 0.035);
-  border-radius: calc(var(--radius) - 0.35rem);
-  content: "";
 }
 
 .sidebar-section {
@@ -304,9 +294,9 @@ a {
 .custom-select-trigger:focus-visible,
 .custom-select-option:focus-visible,
 .text-input:focus-visible {
-  outline: 2px solid oklch(73% 0.15 43deg / 0.9);
+  outline: 2px solid oklch(76% 0.14 288deg / 0.9);
   outline-offset: 3px;
-  box-shadow: 0 0 0 5px oklch(73% 0.15 43deg / 0.16), 0 0 28px oklch(73% 0.15 43deg / 0.14);
+  box-shadow: 0 0 0 5px oklch(76% 0.14 288deg / 0.16), 0 0 28px oklch(76% 0.14 288deg / 0.14);
 }
 
 .ghost-link,
@@ -325,18 +315,18 @@ a {
 
 .ghost-link {
   padding: 10px 14px;
-  border: 1px solid oklch(45% 0.05 48deg);
+  border: 1px solid oklch(63% 0.04 252deg / 0.48);
   color: var(--text-soft);
   background: var(--surface-1);
-  box-shadow: inset 0 1px 0 oklch(100% 0.01 82deg / 0.05);
+  box-shadow: inset 0 1px 0 oklch(100% 0.01 250deg / 0.08);
 }
 
 .ghost-link:hover,
 .ghost-link-active {
-  border-color: oklch(62% 0.11 43deg);
+  border-color: oklch(76% 0.14 288deg / 0.72);
   color: var(--text-strong);
-  background: oklch(28% 0.055 45deg);
-  box-shadow: 0 12px 30px oklch(73% 0.15 43deg / 0.1), inset 0 1px 0 oklch(100% 0.01 82deg / 0.07);
+  background: oklch(48% 0.075 282deg / 0.92);
+  box-shadow: 0 12px 30px oklch(76% 0.14 288deg / 0.12), inset 0 1px 0 oklch(100% 0.01 250deg / 0.1);
 }
 
 .conversation-nav {
@@ -360,9 +350,9 @@ a {
   padding: 10px 12px 10px 14px;
   min-height: 58px;
   min-width: 0;
-  border: 1px solid oklch(100% 0.01 82deg / 0.07);
+  border: 1px solid oklch(100% 0.01 250deg / 0.11);
   border-radius: 0.8rem;
-  background: oklch(17% 0.019 42deg / 0.72);
+  background: oklch(36% 0.04 264deg / 0.72);
   color: var(--foreground);
   overflow: hidden;
 }
@@ -400,9 +390,9 @@ a {
 
 .conversation-link:hover,
 .conversation-link-active {
-  border-color: oklch(60% 0.1 43deg / 0.72);
-  background: oklch(25% 0.045 45deg / 0.92);
-  box-shadow: inset 0 1px 0 oklch(100% 0.01 82deg / 0.07), 0 12px 30px oklch(73% 0.15 43deg / 0.08);
+  border-color: oklch(76% 0.14 288deg / 0.68);
+  background: oklch(47% 0.07 282deg / 0.8);
+  box-shadow: inset 0 1px 0 oklch(100% 0.01 250deg / 0.1), 0 12px 30px oklch(76% 0.14 288deg / 0.08);
 }
 
 .conversation-link-active::before {
@@ -434,7 +424,7 @@ a {
   width: 100%;
   min-height: 40px;
   padding: 9px 10px 9px 12px;
-  border: 1px solid oklch(45% 0.05 48deg);
+  border: 1px solid oklch(63% 0.04 252deg / 0.48);
   border-radius: 0.72rem;
   background: var(--surface-1);
   color: var(--text-soft);
@@ -445,20 +435,20 @@ a {
 
 .switch-button:hover,
 .switch-button-active {
-  border-color: oklch(62% 0.11 43deg);
+  border-color: oklch(76% 0.14 288deg / 0.72);
   color: var(--text-strong);
-  background: oklch(28% 0.055 45deg);
-  box-shadow: 0 12px 30px oklch(73% 0.15 43deg / 0.1), inset 0 1px 0 oklch(100% 0.01 82deg / 0.07);
+  background: oklch(48% 0.075 282deg / 0.92);
+  box-shadow: 0 12px 30px oklch(76% 0.14 288deg / 0.12), inset 0 1px 0 oklch(100% 0.01 250deg / 0.1);
 }
 
 .switch-track {
   position: relative;
   width: 42px;
   height: 22px;
-  border: 1px solid oklch(58% 0.08 282deg / 0.36);
+  border: 1px solid oklch(76% 0.105 188deg / 0.36);
   border-radius: 999px;
   background: var(--background);
-  box-shadow: inset 0 1px 8px oklch(5% 0.012 42deg / 0.34);
+  box-shadow: inset 0 1px 8px oklch(21% 0.05 270deg / 0.28);
 }
 
 .switch-thumb {
@@ -469,14 +459,14 @@ a {
   height: 14px;
   border-radius: 999px;
   background: var(--muted-foreground);
-  box-shadow: 0 0 10px oklch(76% 0.027 74deg / 0.22);
+  box-shadow: 0 0 10px oklch(78% 0.032 252deg / 0.22);
   transition: left 140ms var(--ease-out), background-color 140ms var(--ease-out), box-shadow 140ms var(--ease-out);
 }
 
 .switch-button-active .switch-thumb {
   left: 23px;
   background: var(--primary);
-  box-shadow: 0 0 16px oklch(73% 0.15 43deg / 0.52);
+  box-shadow: 0 0 16px oklch(76% 0.14 288deg / 0.52);
 }
 
 .runtime-pill {
@@ -484,15 +474,15 @@ a {
   align-items: center;
   gap: 8px;
   padding: 7px 10px;
-  border: 1px solid oklch(58% 0.08 282deg / 0.34);
+  border: 1px solid oklch(76% 0.105 188deg / 0.34);
   border-radius: 999px;
-  background: oklch(23% 0.032 282deg / 0.42);
-  color: oklch(84% 0.05 282deg);
+  background: oklch(45% 0.06 190deg / 0.38);
+  color: oklch(89% 0.055 188deg);
   font-family: var(--font-mono);
   font-size: 0.78rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  box-shadow: inset 0 1px 0 oklch(100% 0.01 82deg / 0.05);
+  box-shadow: inset 0 1px 0 oklch(100% 0.01 250deg / 0.08);
 }
 
 .runtime-pill::before {
@@ -515,8 +505,8 @@ a {
 }
 
 .runtime-pill-warning {
-  border-color: oklch(80% 0.13 78deg / 0.38);
-  color: oklch(88% 0.08 78deg);
+  border-color: oklch(80% 0.115 66deg / 0.42);
+  color: oklch(88% 0.08 66deg);
 }
 
 .runtime-pill-warning::before {
@@ -591,7 +581,7 @@ a {
   justify-content: space-between;
   gap: 12px;
   padding: 10px 0;
-  border-top: 1px solid oklch(100% 0.01 82deg / 0.07);
+  border-top: 1px solid oklch(100% 0.01 250deg / 0.1);
 }
 
 .event-list-item > div {
@@ -622,7 +612,7 @@ a {
   flex-direction: column;
   gap: 6px;
   padding: 10px 0;
-  border-top: 1px solid oklch(100% 0.01 82deg / 0.07);
+  border-top: 1px solid oklch(100% 0.01 250deg / 0.1);
 }
 
 .summary-list dt {
@@ -709,9 +699,9 @@ a {
 .panel-card-hero {
   min-height: auto;
   background:
-    linear-gradient(135deg, oklch(25% 0.03 46deg / 0.98), oklch(18% 0.021 42deg / 0.94)),
-    radial-gradient(circle at 86% 12%, oklch(73% 0.15 43deg / 0.12), transparent 30%),
-    radial-gradient(circle at 8% 100%, oklch(72% 0.11 282deg / 0.08), transparent 36%);
+    linear-gradient(135deg, oklch(50% 0.04 252deg / 0.94), oklch(38% 0.04 264deg / 0.9)),
+    radial-gradient(circle at 86% 12%, oklch(76% 0.14 288deg / 0.13), transparent 30%),
+    radial-gradient(circle at 8% 100%, oklch(76% 0.105 188deg / 0.11), transparent 36%);
 }
 
 .conversation-hero-card {
@@ -734,7 +724,7 @@ a {
   justify-content: flex-end;
   gap: 8px;
   padding-top: 10px;
-  border-top: 1px solid oklch(100% 0.01 82deg / 0.07);
+  border-top: 1px solid oklch(100% 0.01 250deg / 0.1);
 }
 
 .conversation-hero-title {
@@ -756,11 +746,11 @@ a {
   max-width: 42%;
   gap: 4px;
   padding: 9px 11px;
-  border: 1px solid oklch(58% 0.08 282deg / 0.34);
+  border: 1px solid oklch(76% 0.105 188deg / 0.34);
   border-radius: 0.9rem;
-  background: oklch(20% 0.032 282deg / 0.38);
-  color: oklch(84% 0.05 282deg);
-  box-shadow: inset 0 1px 0 oklch(100% 0.01 82deg / 0.05);
+  background: oklch(45% 0.06 190deg / 0.36);
+  color: oklch(89% 0.055 188deg);
+  box-shadow: inset 0 1px 0 oklch(100% 0.01 250deg / 0.08);
 }
 
 .session-provider-chip::before {
@@ -771,7 +761,7 @@ a {
   height: 7px;
   border-radius: 999px;
   background: var(--signal);
-  box-shadow: 0 0 12px oklch(72% 0.11 282deg / 0.5);
+  box-shadow: 0 0 12px oklch(76% 0.105 188deg / 0.5);
   transform: translateY(-50%);
   content: "";
 }
@@ -807,8 +797,8 @@ a {
 }
 
 .session-provider-chip-warning {
-  border-color: oklch(80% 0.13 78deg / 0.38);
-  color: oklch(88% 0.08 78deg);
+  border-color: oklch(80% 0.115 66deg / 0.42);
+  color: oklch(88% 0.08 66deg);
 }
 
 .session-provider-chip-warning::before {
@@ -823,8 +813,8 @@ a {
   width: 92px;
   height: 28px;
   pointer-events: none;
-  border-top: 1px solid oklch(73% 0.15 43deg / 0.22);
-  border-right: 1px solid oklch(73% 0.15 43deg / 0.22);
+  border-top: 1px solid oklch(76% 0.14 288deg / 0.24);
+  border-right: 1px solid oklch(76% 0.14 288deg / 0.24);
   opacity: 0.36;
   content: "";
 }
@@ -838,28 +828,28 @@ a {
 }
 
 .composer-card {
-  border-color: oklch(73% 0.15 43deg / 0.24);
+  border-color: oklch(76% 0.14 288deg / 0.26);
   background:
-    linear-gradient(135deg, oklch(23.5% 0.026 46deg / 0.96), oklch(16% 0.02 42deg / 0.95)),
-    radial-gradient(circle at 90% 0%, oklch(73% 0.15 43deg / 0.12), transparent 30%);
+    linear-gradient(135deg, oklch(48% 0.04 252deg / 0.95), oklch(36% 0.04 264deg / 0.92)),
+    radial-gradient(circle at 90% 0%, oklch(76% 0.14 288deg / 0.12), transparent 30%);
 }
 
 .composer-card:focus-within {
-  border-color: oklch(73% 0.15 43deg / 0.72);
-  box-shadow: 0 -20px 60px oklch(73% 0.15 43deg / 0.12), 0 18px 54px oklch(5% 0.012 42deg / 0.5), inset 0 1px 0 oklch(100% 0.01 82deg / 0.08);
+  border-color: oklch(76% 0.14 288deg / 0.76);
+  box-shadow: 0 -20px 60px oklch(76% 0.14 288deg / 0.14), 0 18px 48px oklch(18% 0.05 270deg / 0.3), inset 0 1px 0 oklch(100% 0.01 250deg / 0.1);
 }
 
 .transcript-panel {
   background:
-    linear-gradient(180deg, oklch(15.5% 0.019 42deg / 0.88), oklch(13.5% 0.018 42deg / 0.92)),
-    radial-gradient(circle at 0% 0%, oklch(72% 0.11 282deg / 0.055), transparent 34%);
+    linear-gradient(180deg, oklch(37% 0.04 262deg / 0.86), oklch(33% 0.038 266deg / 0.9)),
+    radial-gradient(circle at 0% 0%, oklch(76% 0.105 188deg / 0.08), transparent 34%);
 }
 
 .inspector-card {
-  border-color: oklch(72% 0.11 282deg / 0.18);
+  border-color: oklch(76% 0.105 188deg / 0.22);
   background:
-    linear-gradient(180deg, oklch(20% 0.026 46deg / 0.94), oklch(15% 0.02 42deg / 0.92)),
-    radial-gradient(circle at 100% 0%, oklch(72% 0.11 282deg / 0.09), transparent 34%);
+    linear-gradient(180deg, oklch(42% 0.04 255deg / 0.94), oklch(34% 0.04 264deg / 0.9)),
+    radial-gradient(circle at 100% 0%, oklch(76% 0.105 188deg / 0.12), transparent 34%);
 }
 
 .tabs {
@@ -874,9 +864,9 @@ a {
   flex-wrap: wrap;
   gap: 8px;
   padding: 6px;
-  border: 1px solid oklch(100% 0.01 82deg / 0.08);
+  border: 1px solid oklch(100% 0.01 250deg / 0.12);
   border-radius: 1rem;
-  background: oklch(12.5% 0.018 42deg / 0.58);
+  background: oklch(32% 0.04 266deg / 0.58);
 }
 
 .tab-button {
@@ -897,10 +887,10 @@ a {
 
 .tab-button:hover,
 .tab-button-active {
-  border-color: oklch(62% 0.11 43deg / 0.6);
+  border-color: oklch(76% 0.14 288deg / 0.68);
   color: var(--text-strong);
-  background: oklch(28% 0.055 45deg / 0.86);
-  box-shadow: inset 0 1px 0 oklch(100% 0.01 82deg / 0.07);
+  background: oklch(48% 0.075 282deg / 0.82);
+  box-shadow: inset 0 1px 0 oklch(100% 0.01 250deg / 0.1);
 }
 
 .tabs-panel,
@@ -916,11 +906,11 @@ a {
   bottom: 0;
   z-index: 3;
   padding-top: 8px;
-  background: linear-gradient(180deg, transparent, oklch(12.5% 0.018 42deg / 0.94) 34%);
+  background: linear-gradient(180deg, transparent, oklch(31% 0.038 266deg / 0.94) 34%);
 }
 
 .composer-sticky-shell .composer-card {
-  box-shadow: 0 -18px 46px oklch(5% 0.012 42deg / 0.28), var(--shadow-glow), inset 0 1px 0 oklch(100% 0.01 82deg / 0.08);
+  box-shadow: 0 -18px 46px oklch(18% 0.05 270deg / 0.2), var(--shadow-glow), inset 0 1px 0 oklch(100% 0.01 250deg / 0.1);
 }
 
 .preset-row {
@@ -936,8 +926,8 @@ a {
 .run-card {
   border: 1px solid var(--border);
   border-radius: 0.9rem;
-  background: oklch(17% 0.02 42deg / 0.78);
-  box-shadow: inset 0 1px 0 oklch(100% 0.01 82deg / 0.05);
+  background: oklch(36% 0.04 264deg / 0.78);
+  box-shadow: inset 0 1px 0 oklch(100% 0.01 250deg / 0.08);
 }
 
 .provider-status-card {
@@ -988,9 +978,9 @@ a {
 
 .run-card:hover,
 .run-card-active {
-  border-color: oklch(62% 0.11 43deg / 0.66);
-  background: oklch(26% 0.048 45deg / 0.9);
-  box-shadow: 0 14px 32px oklch(73% 0.15 43deg / 0.09), inset 0 1px 0 oklch(100% 0.01 82deg / 0.07);
+  border-color: oklch(76% 0.14 288deg / 0.66);
+  background: oklch(47% 0.07 282deg / 0.86);
+  box-shadow: 0 14px 32px oklch(76% 0.14 288deg / 0.1), inset 0 1px 0 oklch(100% 0.01 250deg / 0.1);
 }
 
 .run-provider-label {
@@ -1034,15 +1024,15 @@ a {
 
 .status-created,
 .status-started {
-  border-color: oklch(72% 0.11 282deg / 0.34);
-  background: oklch(72% 0.11 282deg / 0.1);
-  color: oklch(84% 0.05 282deg);
+  border-color: oklch(76% 0.105 188deg / 0.38);
+  background: oklch(76% 0.105 188deg / 0.12);
+  color: oklch(89% 0.055 188deg);
 }
 
 .status-waiting_approval {
-  border-color: oklch(80% 0.13 78deg / 0.42);
-  background: oklch(80% 0.13 78deg / 0.12);
-  color: oklch(88% 0.08 78deg);
+  border-color: oklch(80% 0.115 66deg / 0.46);
+  background: oklch(80% 0.115 66deg / 0.14);
+  color: oklch(90% 0.08 66deg);
   animation: signal-pulse 2s ease-in-out infinite;
 }
 
@@ -1059,9 +1049,9 @@ a {
 
 .status-failed,
 .status-cancelled {
-  border-color: oklch(69% 0.16 14deg / 0.44);
-  background: oklch(69% 0.16 14deg / 0.12);
-  color: oklch(82% 0.09 14deg);
+  border-color: oklch(72% 0.14 352deg / 0.46);
+  background: oklch(72% 0.14 352deg / 0.14);
+  color: oklch(86% 0.08 352deg);
 }
 
 .inspector-summary {
@@ -1090,7 +1080,7 @@ a {
   position: absolute;
   inset: 18px auto 18px 6px;
   width: 1px;
-  background: linear-gradient(180deg, transparent, oklch(73% 0.15 43deg / 0.36), transparent);
+  background: linear-gradient(180deg, transparent, oklch(76% 0.14 288deg / 0.42), transparent);
   content: "";
 }
 
@@ -1107,9 +1097,9 @@ a {
   width: 13px;
   height: 13px;
   margin-top: 18px;
-  border: 1px solid oklch(100% 0.01 82deg / 0.24);
+  border: 1px solid oklch(100% 0.01 250deg / 0.28);
   border-radius: 999px;
-  box-shadow: 0 0 0 4px oklch(100% 0.01 82deg / 0.045);
+  box-shadow: 0 0 0 4px oklch(100% 0.01 250deg / 0.06);
 }
 
 .timeline-run {
@@ -1175,9 +1165,9 @@ a {
 }
 
 .skill-status-switch:not(.switch-button-active) {
-  border-color: oklch(69% 0.16 14deg / 0.42);
-  background: oklch(69% 0.16 14deg / 0.12);
-  color: oklch(82% 0.09 14deg);
+  border-color: oklch(72% 0.14 352deg / 0.44);
+  background: oklch(72% 0.14 352deg / 0.13);
+  color: oklch(86% 0.08 352deg);
 }
 
 .skill-status-switch .switch-track {
@@ -1207,8 +1197,8 @@ a {
   flex-direction: column;
   gap: 12px;
   padding: 16px;
-  border-color: oklch(80% 0.13 78deg / 0.42);
-  background: oklch(26% 0.055 72deg / 0.72);
+  border-color: oklch(80% 0.115 66deg / 0.46);
+  background: oklch(49% 0.08 66deg / 0.28);
 }
 
 .approval-card h3 {
@@ -1242,14 +1232,14 @@ a {
   display: grid;
   gap: 12px;
   padding: 14px;
-  border: 1px solid oklch(100% 0.01 82deg / 0.08);
+  border: 1px solid oklch(100% 0.01 250deg / 0.12);
   border-radius: 0.84rem;
-  background: oklch(12.5% 0.018 42deg / 0.42);
+  background: oklch(34% 0.04 264deg / 0.5);
 }
 
 .settings-section-subtle {
-  border-color: oklch(73% 0.15 43deg / 0.14);
-  background: oklch(21% 0.035 45deg / 0.62);
+  border-color: oklch(76% 0.14 288deg / 0.18);
+  background: oklch(43% 0.055 276deg / 0.44);
 }
 
 .settings-mini-section {
@@ -1258,9 +1248,9 @@ a {
   gap: 12px;
   min-width: 0;
   padding: 14px;
-  border: 1px solid oklch(100% 0.01 82deg / 0.08);
+  border: 1px solid oklch(100% 0.01 250deg / 0.12);
   border-radius: 0.84rem;
-  background: oklch(12.5% 0.018 42deg / 0.42);
+  background: oklch(34% 0.04 264deg / 0.5);
 }
 
 .settings-section-heading {
@@ -1327,9 +1317,9 @@ a {
   display: grid;
   gap: 10px;
   padding: 12px;
-  border: 1px solid oklch(100% 0.01 82deg / 0.08);
+  border: 1px solid oklch(100% 0.01 250deg / 0.12);
   border-radius: 0.72rem;
-  background: oklch(21% 0.03 282deg / 0.34);
+  background: oklch(43% 0.055 276deg / 0.34);
 }
 
 .memory-item p {
@@ -1363,9 +1353,9 @@ a {
   align-items: center;
   min-height: 24px;
   padding: 3px 8px;
-  border: 1px solid oklch(100% 0.01 82deg / 0.07);
+  border: 1px solid oklch(100% 0.01 250deg / 0.12);
   border-radius: 999px;
-  background: oklch(12.5% 0.018 42deg / 0.42);
+  background: oklch(34% 0.04 264deg / 0.48);
   color: var(--text-soft);
   font-family: var(--font-mono);
   font-size: 0.68rem;
@@ -1384,10 +1374,10 @@ a {
   padding: 10px 12px;
   border: 1px solid var(--input);
   border-radius: 0.76rem;
-  background: oklch(12.5% 0.018 42deg / 0.78);
+  background: oklch(32% 0.04 266deg / 0.78);
   color: var(--foreground);
   caret-color: var(--primary);
-  box-shadow: inset 0 1px 0 oklch(100% 0.01 82deg / 0.05);
+  box-shadow: inset 0 1px 0 oklch(100% 0.01 250deg / 0.08);
 }
 
 .text-input::placeholder {
@@ -1395,9 +1385,9 @@ a {
 }
 
 .text-input:focus {
-  outline: 2px solid oklch(73% 0.15 43deg / 0.22);
-  border-color: oklch(73% 0.15 43deg / 0.68);
-  background: oklch(21% 0.036 45deg / 0.94);
+  outline: 2px solid oklch(76% 0.14 288deg / 0.22);
+  border-color: oklch(76% 0.14 288deg / 0.72);
+  background: oklch(43% 0.055 276deg / 0.88);
 }
 
 .custom-select {
@@ -1417,14 +1407,14 @@ a {
   border: 1px solid var(--input);
   border-radius: 0.76rem;
   color: var(--foreground);
-  background: linear-gradient(135deg, oklch(12.5% 0.018 42deg / 0.94), oklch(23.5% 0.026 46deg / 0.88));
-  box-shadow: inset 0 1px 0 oklch(100% 0.01 82deg / 0.05);
+  background: linear-gradient(135deg, oklch(32% 0.04 266deg / 0.94), oklch(45% 0.038 255deg / 0.88));
+  box-shadow: inset 0 1px 0 oklch(100% 0.01 250deg / 0.08);
 }
 
 .custom-select-trigger:hover,
 .custom-select-trigger[aria-expanded='true'] {
-  border-color: oklch(73% 0.15 43deg / 0.68);
-  background: linear-gradient(135deg, oklch(23.5% 0.026 46deg / 0.96), oklch(28% 0.055 45deg / 0.9));
+  border-color: oklch(76% 0.14 288deg / 0.72);
+  background: linear-gradient(135deg, oklch(45% 0.038 255deg / 0.96), oklch(48% 0.075 282deg / 0.84));
 }
 
 .custom-select-value {
@@ -1439,8 +1429,8 @@ a {
   width: 8px;
   height: 8px;
   flex: 0 0 auto;
-  border-right: 1px solid oklch(92% 0.018 82deg / 0.82);
-  border-bottom: 1px solid oklch(92% 0.018 82deg / 0.82);
+  border-right: 1px solid oklch(94% 0.018 252deg / 0.82);
+  border-bottom: 1px solid oklch(94% 0.018 252deg / 0.82);
   transform: translateY(-2px) rotate(45deg);
 }
 
@@ -1452,10 +1442,10 @@ a {
   max-height: 240px;
   overflow: auto;
   padding: 6px;
-  border: 1px solid oklch(73% 0.15 43deg / 0.34);
+  border: 1px solid oklch(76% 0.14 288deg / 0.38);
   border-radius: 0.82rem;
-  background: oklch(12.5% 0.018 42deg / 0.98);
-  box-shadow: 0 18px 42px oklch(5% 0.012 42deg / 0.42), 0 0 28px oklch(73% 0.15 43deg / 0.1);
+  background: oklch(32% 0.04 266deg / 0.98);
+  box-shadow: 0 18px 42px oklch(18% 0.05 270deg / 0.32), 0 0 28px oklch(76% 0.14 288deg / 0.12);
 }
 
 .custom-select-option {
@@ -1464,20 +1454,20 @@ a {
   padding: 8px 10px;
   border: 1px solid transparent;
   border-radius: 0.58rem;
-  color: oklch(93.5% 0.018 82deg / 0.88);
+  color: oklch(94% 0.018 252deg / 0.88);
   background: transparent;
   text-align: left;
 }
 
 .custom-select-option:hover,
 .custom-select-option-active {
-  border-color: oklch(73% 0.15 43deg / 0.42);
+  border-color: oklch(76% 0.14 288deg / 0.46);
   color: var(--text-strong);
-  background: oklch(73% 0.15 43deg / 0.1);
+  background: oklch(76% 0.14 288deg / 0.14);
 }
 
 .custom-select-option-active {
-  box-shadow: inset 0 0 0 1px oklch(73% 0.15 43deg / 0.42);
+  box-shadow: inset 0 0 0 1px oklch(76% 0.14 288deg / 0.46);
 }
 
 .composer-input {
@@ -1511,9 +1501,9 @@ a {
 
 .data-backup-summary div {
   padding: 12px;
-  border: 1px solid oklch(100% 0.01 82deg / 0.08);
+  border: 1px solid oklch(100% 0.01 250deg / 0.12);
   border-radius: 0.72rem;
-  background: oklch(12.5% 0.018 42deg / 0.44);
+  background: oklch(34% 0.04 264deg / 0.5);
 }
 
 .data-backup-summary dd {
@@ -1532,15 +1522,15 @@ a {
   display: grid;
   gap: 6px;
   padding: 12px 14px;
-  border: 1px solid oklch(80% 0.13 78deg / 0.32);
+  border: 1px solid oklch(80% 0.115 66deg / 0.36);
   border-radius: 0.82rem;
-  background: oklch(26% 0.055 72deg / 0.58);
-  color: oklch(88% 0.08 78deg);
-  box-shadow: inset 0 1px 0 oklch(100% 0.01 82deg / 0.05);
+  background: oklch(49% 0.08 66deg / 0.24);
+  color: oklch(90% 0.08 66deg);
+  box-shadow: inset 0 1px 0 oklch(100% 0.01 250deg / 0.08);
 }
 
 .data-backup-notice strong {
-  color: oklch(92% 0.06 78deg);
+  color: oklch(94% 0.055 66deg);
   font-family: var(--font-mono);
   font-size: 0.72rem;
   letter-spacing: 0.12em;
@@ -1549,31 +1539,31 @@ a {
 
 .data-backup-notice p {
   margin: 0;
-  color: oklch(83% 0.07 78deg);
+  color: oklch(86% 0.065 66deg);
   font-size: 0.84rem;
   line-height: 1.45;
 }
 
 .data-backup-notice-warning {
-  border-color: oklch(80% 0.13 78deg / 0.42);
-  background: oklch(28% 0.06 72deg / 0.62);
+  border-color: oklch(80% 0.115 66deg / 0.46);
+  background: oklch(49% 0.08 66deg / 0.3);
 }
 
 .data-backup-actions {
   margin-top: 2px;
   padding-top: 12px;
-  border-top: 1px solid oklch(100% 0.01 82deg / 0.07);
+  border-top: 1px solid oklch(100% 0.01 250deg / 0.12);
 }
 
 .primary-button {
-  border: 1px solid oklch(73% 0.15 43deg / 0.72);
+  border: 1px solid oklch(76% 0.14 288deg / 0.76);
   padding: 10px 16px;
   background:
-    linear-gradient(135deg, oklch(76% 0.15 43deg), oklch(65% 0.14 34deg)),
-    linear-gradient(90deg, oklch(100% 0.01 82deg / 0.18), transparent);
+    linear-gradient(135deg, oklch(80% 0.135 288deg), oklch(70% 0.13 236deg)),
+    linear-gradient(90deg, oklch(100% 0.01 250deg / 0.18), transparent);
   color: var(--primary-foreground);
   font-weight: 800;
-  box-shadow: 0 14px 34px oklch(73% 0.15 43deg / 0.16), inset 0 1px 0 oklch(100% 0.01 82deg / 0.28);
+  box-shadow: 0 14px 34px oklch(76% 0.14 288deg / 0.18), inset 0 1px 0 oklch(100% 0.01 250deg / 0.28);
 }
 
 .primary-button:hover {
@@ -1589,17 +1579,17 @@ a {
 }
 
 .ghost-button {
-  border: 1px solid oklch(45% 0.05 48deg);
+  border: 1px solid oklch(63% 0.04 252deg / 0.48);
   padding: 10px 16px;
   background: var(--surface-1);
   color: var(--text-soft);
 }
 
 .ghost-button:hover {
-  border-color: oklch(62% 0.11 43deg);
+  border-color: oklch(76% 0.14 288deg / 0.72);
   color: var(--text-strong);
-  background: oklch(28% 0.055 45deg);
-  box-shadow: 0 12px 30px oklch(73% 0.15 43deg / 0.1), inset 0 1px 0 oklch(100% 0.01 82deg / 0.07);
+  background: oklch(48% 0.075 282deg / 0.92);
+  box-shadow: 0 12px 30px oklch(76% 0.14 288deg / 0.12), inset 0 1px 0 oklch(100% 0.01 250deg / 0.1);
   transform: translateY(-1px);
 }
 
@@ -1639,23 +1629,23 @@ a {
 
 .ghost-button.run-card:hover,
 .ghost-button.run-card-active {
-  border-color: oklch(62% 0.11 43deg);
+  border-color: oklch(76% 0.14 288deg / 0.72);
   color: var(--text-strong);
-  background: oklch(28% 0.055 45deg);
-  box-shadow: 0 12px 30px oklch(73% 0.15 43deg / 0.1), inset 0 1px 0 oklch(100% 0.01 82deg / 0.07);
+  background: oklch(48% 0.075 282deg / 0.92);
+  box-shadow: 0 12px 30px oklch(76% 0.14 288deg / 0.12), inset 0 1px 0 oklch(100% 0.01 250deg / 0.1);
 }
 
 .ghost-button.run-card-failed {
-  border-color: oklch(69% 0.16 14deg / 0.5);
-  background: oklch(24% 0.07 14deg / 0.54);
-  box-shadow: 0 0 24px oklch(69% 0.16 14deg / 0.18), inset 0 0 22px oklch(69% 0.16 14deg / 0.06);
+  border-color: oklch(72% 0.14 352deg / 0.5);
+  background: oklch(42% 0.09 352deg / 0.32);
+  box-shadow: 0 0 24px oklch(72% 0.14 352deg / 0.18), inset 0 0 22px oklch(72% 0.14 352deg / 0.06);
 }
 
 .ghost-button.run-card-failed:hover,
 .ghost-button.run-card-failed.run-card-active {
-  border-color: oklch(69% 0.16 14deg / 0.76);
-  background: oklch(30% 0.09 14deg / 0.72);
-  box-shadow: 0 0 32px oklch(69% 0.16 14deg / 0.3), inset 0 0 24px oklch(69% 0.16 14deg / 0.1);
+  border-color: oklch(72% 0.14 352deg / 0.76);
+  background: oklch(48% 0.11 352deg / 0.48);
+  box-shadow: 0 0 32px oklch(72% 0.14 352deg / 0.3), inset 0 0 24px oklch(72% 0.14 352deg / 0.1);
 }
 
 .ghost-button.thinking-summary {
@@ -1675,16 +1665,16 @@ a {
   width: 42px;
   height: 42px;
   padding: 0;
-  background: oklch(18.5% 0.022 44deg / 0.9);
-  box-shadow: var(--shadow-glow), inset 0 1px 0 oklch(100% 0.01 82deg / 0.06);
+  background: oklch(39% 0.04 260deg / 0.9);
+  box-shadow: var(--shadow-glow), inset 0 1px 0 oklch(100% 0.01 250deg / 0.1);
 }
 
 .ghost-button.sidebar-toggle-button:hover,
 .ghost-button.sidebar-toggle-button:focus-visible {
-  border-color: oklch(62% 0.11 43deg);
+  border-color: oklch(76% 0.14 288deg / 0.72);
   color: var(--text-strong);
-  background: oklch(28% 0.055 45deg);
-  box-shadow: 0 12px 30px oklch(73% 0.15 43deg / 0.1), inset 0 1px 0 oklch(100% 0.01 82deg / 0.07);
+  background: oklch(48% 0.075 282deg / 0.92);
+  box-shadow: 0 12px 30px oklch(76% 0.14 288deg / 0.12), inset 0 1px 0 oklch(100% 0.01 250deg / 0.1);
 }
 
 .field-stack {
@@ -1708,12 +1698,12 @@ a {
 
 .field-error,
 .error-copy {
-  color: oklch(82% 0.09 14deg);
+  color: oklch(86% 0.08 352deg);
   overflow-wrap: anywhere;
 }
 
 .warning-copy {
-  color: oklch(88% 0.08 78deg);
+  color: oklch(90% 0.08 66deg);
 }
 
 .success-copy {
@@ -1723,11 +1713,11 @@ a {
 @keyframes signal-pulse {
   0%,
   100% {
-    box-shadow: 0 0 16px oklch(73% 0.15 43deg / 0.08), inset 0 0 20px oklch(73% 0.15 43deg / 0.04);
+    box-shadow: 0 0 16px oklch(76% 0.14 288deg / 0.08), inset 0 0 20px oklch(76% 0.14 288deg / 0.04);
   }
 
   50% {
-    box-shadow: 0 0 30px oklch(73% 0.15 43deg / 0.18), inset 0 0 28px oklch(73% 0.15 43deg / 0.08);
+    box-shadow: 0 0 30px oklch(76% 0.14 288deg / 0.18), inset 0 0 28px oklch(76% 0.14 288deg / 0.08);
   }
 }
 

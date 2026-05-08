@@ -19,12 +19,12 @@
   padding: 13px 15px;
   border: 1px solid var(--border);
   border-radius: 1rem;
-  background: oklch(18.5% 0.022 44deg / 0.86);
+  background: oklch(39% 0.04 260deg / 0.84);
   overflow-wrap: anywhere;
   font-size: 0.9rem;
   line-height: 1.55;
   min-width: 0;
-  box-shadow: inset 0 1px 0 oklch(100% 0.01 82deg / 0.05);
+  box-shadow: inset 0 1px 0 oklch(100% 0.01 250deg / 0.08);
 }
 
 .message-bubble::before {
@@ -42,14 +42,14 @@
 .message-user {
   align-self: flex-end;
   max-width: min(74%, 700px);
-  border-color: oklch(73% 0.15 43deg / 0.38);
-  background: linear-gradient(135deg, oklch(29% 0.06 45deg / 0.94), oklch(22% 0.036 44deg / 0.9));
+  border-color: oklch(76% 0.14 288deg / 0.42);
+  background: linear-gradient(135deg, oklch(48% 0.075 282deg / 0.9), oklch(40% 0.045 260deg / 0.9));
 }
 
 .message-assistant {
   max-width: min(88%, 860px);
-  border-color: oklch(72% 0.11 282deg / 0.28);
-  background: linear-gradient(135deg, oklch(22% 0.035 282deg / 0.62), oklch(18% 0.022 44deg / 0.92));
+  border-color: oklch(76% 0.105 188deg / 0.34);
+  background: linear-gradient(135deg, oklch(44% 0.06 190deg / 0.48), oklch(38% 0.04 262deg / 0.9));
 }
 
 .message-assistant::before {
@@ -58,8 +58,8 @@
 
 .message-tool {
   max-width: min(88%, 860px);
-  border-color: oklch(80% 0.13 78deg / 0.34);
-  background: linear-gradient(135deg, oklch(27% 0.058 72deg / 0.68), oklch(18% 0.022 44deg / 0.9));
+  border-color: oklch(80% 0.115 66deg / 0.38);
+  background: linear-gradient(135deg, oklch(49% 0.08 66deg / 0.28), oklch(38% 0.04 262deg / 0.9));
 }
 
 .message-tool::before {
@@ -68,13 +68,13 @@
 
 .message-system {
   max-width: min(88%, 860px);
-  border-color: oklch(100% 0.01 82deg / 0.16);
-  background: oklch(17% 0.02 42deg / 0.76);
+  border-color: oklch(100% 0.01 250deg / 0.16);
+  background: oklch(36% 0.04 264deg / 0.72);
 }
 
 .message-streaming {
   border-style: dashed;
-  box-shadow: 0 0 28px oklch(72% 0.11 282deg / 0.12), inset 0 1px 0 oklch(100% 0.01 82deg / 0.06);
+  box-shadow: 0 0 28px oklch(76% 0.105 188deg / 0.14), inset 0 1px 0 oklch(100% 0.01 250deg / 0.08);
   animation: signal-pulse 1.8s ease-in-out infinite;
 }
 
@@ -94,7 +94,7 @@
 
 .message-meta {
   margin-bottom: 8px;
-  color: var(--secondary);
+  color: var(--signal);
   font-family: var(--font-mono);
   font-size: 0.66rem;
   letter-spacing: 0.1em;
@@ -113,9 +113,9 @@
   flex-direction: column;
   gap: 4px;
   padding: 8px 10px;
-  border: 1px solid oklch(80% 0.13 78deg / 0.34);
+  border: 1px solid oklch(80% 0.115 66deg / 0.38);
   border-radius: 0.72rem;
-  background: oklch(25% 0.05 72deg / 0.72);
+  background: oklch(49% 0.08 66deg / 0.24);
 }
 
 .message-tool-call-chip span {
@@ -130,9 +130,9 @@
   gap: 8px;
   margin-bottom: 12px;
   padding: 10px 12px;
-  border: 1px solid oklch(72% 0.11 282deg / 0.2);
+  border: 1px solid oklch(76% 0.105 188deg / 0.24);
   border-radius: 0.82rem;
-  background: oklch(20% 0.032 282deg / 0.42);
+  background: oklch(45% 0.06 190deg / 0.28);
 }
 
 .message-activity-item {
@@ -154,9 +154,9 @@
 
 .thinking-panel {
   margin-bottom: 10px;
-  border: 1px solid oklch(73% 0.15 43deg / 0.18);
+  border: 1px solid oklch(76% 0.14 288deg / 0.22);
   border-radius: 0.82rem;
-  background: oklch(24% 0.045 45deg / 0.42);
+  background: oklch(43% 0.055 276deg / 0.34);
 }
 
 .thinking-panel-open {
@@ -181,9 +181,9 @@
 }
 
 .thinking-summary:focus-visible {
-  outline: 2px solid oklch(73% 0.15 43deg / 0.9);
+  outline: 2px solid oklch(76% 0.14 288deg / 0.9);
   outline-offset: 3px;
-  box-shadow: 0 0 0 5px oklch(73% 0.15 43deg / 0.16), 0 0 28px oklch(73% 0.15 43deg / 0.2);
+  box-shadow: 0 0 0 5px oklch(76% 0.14 288deg / 0.16), 0 0 28px oklch(76% 0.14 288deg / 0.2);
 }
 
 .thinking-count {
@@ -255,9 +255,9 @@
 }
 
 .message-link {
-  color: oklch(84% 0.05 282deg);
+  color: oklch(89% 0.055 188deg);
   text-decoration: underline;
-  text-decoration-color: oklch(84% 0.05 282deg / 0.42);
+  text-decoration-color: oklch(89% 0.055 188deg / 0.42);
   text-underline-offset: 0.18em;
 }
 
@@ -271,9 +271,9 @@
 .message-markdown code:not(pre code),
 .message-pre code {
   padding: 0.12em 0.34em;
-  border: 1px solid oklch(72% 0.11 282deg / 0.18);
+  border: 1px solid oklch(76% 0.105 188deg / 0.18);
   border-radius: 3px;
-  background: oklch(12.5% 0.018 42deg / 0.68);
+  background: oklch(32% 0.04 266deg / 0.62);
   color: var(--foreground);
   font-size: 0.86em;
 }
@@ -289,15 +289,15 @@
 .sd-root pre,
 .message-markdown pre {
   padding: 12px 14px;
-  border: 1px solid oklch(72% 0.11 282deg / 0.24);
+  border: 1px solid oklch(76% 0.105 188deg / 0.24);
   border-radius: 0.82rem;
   background:
-    linear-gradient(180deg, oklch(22% 0.034 282deg / 0.56), oklch(12.5% 0.018 42deg / 0.9)),
-    radial-gradient(circle at top right, oklch(72% 0.11 282deg / 0.08), transparent 34%);
+    linear-gradient(180deg, oklch(43% 0.055 276deg / 0.46), oklch(32% 0.04 266deg / 0.86)),
+    radial-gradient(circle at top right, oklch(76% 0.105 188deg / 0.08), transparent 34%);
   color: var(--foreground);
   font-size: 0.82rem;
   line-height: 1.48;
-  box-shadow: inset 0 0 22px oklch(72% 0.11 282deg / 0.05);
+  box-shadow: inset 0 0 22px oklch(76% 0.105 188deg / 0.06);
 }
 
 .sd-root pre code,
@@ -321,20 +321,20 @@
 .message-markdown pre:has(code[class*="language-sh"]),
 .message-markdown pre:has(code[class*="language-shell"]),
 .message-markdown pre:has(code[class*="language-zsh"]) {
-  border-color: oklch(80% 0.13 78deg / 0.38);
+  border-color: oklch(80% 0.115 66deg / 0.42);
   background:
-    linear-gradient(180deg, oklch(27% 0.058 72deg / 0.62), oklch(12.5% 0.018 42deg / 0.9)),
-    radial-gradient(circle at top right, oklch(80% 0.13 78deg / 0.08), transparent 34%);
+    linear-gradient(180deg, oklch(49% 0.08 66deg / 0.3), oklch(32% 0.04 266deg / 0.86)),
+    radial-gradient(circle at top right, oklch(80% 0.115 66deg / 0.1), transparent 34%);
 }
 
 .message-markdown [data-streamdown="code-block"],
 .message-markdown [data-streamdown="table-wrapper"] {
   position: relative;
   border-radius: 2px;
-  border: 1px solid oklch(72% 0.11 282deg / 0.24);
+  border: 1px solid oklch(76% 0.105 188deg / 0.24);
   background:
-    linear-gradient(180deg, oklch(22% 0.034 282deg / 0.52), oklch(12.5% 0.018 42deg / 0.94)),
-    radial-gradient(circle at top right, oklch(72% 0.11 282deg / 0.08), transparent 34%);
+    linear-gradient(180deg, oklch(43% 0.055 276deg / 0.44), oklch(32% 0.04 266deg / 0.9)),
+    radial-gradient(circle at top right, oklch(76% 0.105 188deg / 0.08), transparent 34%);
 }
 
 .message-markdown [data-streamdown="code-block"] {
@@ -348,7 +348,7 @@
   z-index: 2;
   min-height: 0;
   padding-right: 0;
-  color: oklch(84% 0.05 282deg);
+  color: oklch(89% 0.055 188deg);
 }
 
 .message-markdown [data-streamdown="code-block-header"] span {
@@ -356,10 +356,10 @@
   align-items: center;
   min-height: 24px;
   padding: 3px 8px;
-  border: 1px solid oklch(72% 0.11 282deg / 0.3);
+  border: 1px solid oklch(76% 0.105 188deg / 0.3);
   border-radius: 2px;
-  background: oklch(16% 0.026 282deg / 0.84);
-  color: oklch(84% 0.05 282deg);
+  background: oklch(43% 0.055 276deg / 0.72);
+  color: oklch(89% 0.055 188deg);
   font-size: 0.68rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -380,18 +380,18 @@
   align-items: center;
   pointer-events: auto;
   gap: 4px;
-  border: 1px solid oklch(72% 0.11 282deg / 0.3);
+  border: 1px solid oklch(76% 0.105 188deg / 0.3);
   border-radius: 2px;
-  background: oklch(16% 0.026 282deg / 0.9);
+  background: oklch(43% 0.055 276deg / 0.72);
   padding: 3px;
-  box-shadow: 0 0 14px oklch(72% 0.11 282deg / 0.1);
+  box-shadow: 0 0 14px oklch(76% 0.105 188deg / 0.12);
 }
 
 .message-markdown [data-streamdown="code-block"] pre {
   margin: 0;
   border: 0;
   border-radius: 0.68rem;
-  background: oklch(12.5% 0.018 42deg / 0.42);
+  background: oklch(32% 0.04 266deg / 0.46);
   box-shadow: none;
 }
 
@@ -403,21 +403,21 @@
   min-width: 28px;
   min-height: 28px;
   padding: 5px 8px;
-  border: 1px solid oklch(72% 0.11 282deg / 0.28);
+  border: 1px solid oklch(76% 0.105 188deg / 0.28);
   border-radius: 2px;
-  background: oklch(18% 0.024 44deg / 0.9);
+  background: oklch(38% 0.04 262deg / 0.86);
   color: var(--foreground);
   font: inherit;
   line-height: 1;
-  box-shadow: inset 0 0 14px oklch(73% 0.15 43deg / 0.04);
+  box-shadow: inset 0 0 14px oklch(76% 0.14 288deg / 0.06);
 }
 
 .message-markdown [data-streamdown="code-block-actions"] button:hover,
 .message-markdown [data-streamdown="table-wrapper"] button:hover,
 .message-markdown [data-streamdown="code-block-actions"] button:focus-visible,
 .message-markdown [data-streamdown="table-wrapper"] button:focus-visible {
-  border-color: oklch(73% 0.15 43deg / 0.58);
-  background: oklch(73% 0.15 43deg / 0.12);
+  border-color: oklch(76% 0.14 288deg / 0.62);
+  background: oklch(76% 0.14 288deg / 0.14);
   color: var(--text-strong);
 }
 
@@ -437,9 +437,9 @@
   justify-content: flex-end;
   gap: 4px;
   max-width: calc(100% - 16px);
-  border: 1px solid oklch(72% 0.11 282deg / 0.3);
+  border: 1px solid oklch(76% 0.105 188deg / 0.3);
   border-radius: 2px;
-  background: oklch(16% 0.026 282deg / 0.9);
+  background: oklch(43% 0.055 276deg / 0.72);
   padding: 3px;
 }
 
@@ -452,11 +452,11 @@
 .message-markdown [data-streamdown="code-block-actions"] :is([role="menu"], [data-radix-popper-content-wrapper], [data-slot="dropdown-menu-content"]) {
   z-index: 6;
   min-width: max-content;
-  border: 1px solid oklch(72% 0.11 282deg / 0.34);
+  border: 1px solid oklch(76% 0.105 188deg / 0.34);
   border-radius: 2px;
-  background: oklch(16% 0.026 282deg / 0.98);
+  background: oklch(34% 0.04 264deg / 0.98);
   color: var(--foreground);
-  box-shadow: 0 12px 28px oklch(5% 0.012 42deg / 0.34), 0 0 18px oklch(72% 0.11 282deg / 0.12);
+  box-shadow: 0 12px 28px oklch(18% 0.05 270deg / 0.28), 0 0 18px oklch(76% 0.105 188deg / 0.12);
 }
 
 .message-markdown table {
@@ -465,8 +465,8 @@
   border-collapse: separate;
   border-spacing: 0;
   overflow: hidden;
-  border: 1px solid oklch(72% 0.11 282deg / 0.18);
-  background: oklch(12.5% 0.018 42deg / 0.38);
+  border: 1px solid oklch(76% 0.105 188deg / 0.18);
+  background: oklch(32% 0.04 266deg / 0.42);
   font-size: 0.9rem;
 }
 
@@ -474,8 +474,8 @@
   position: sticky;
   top: 0;
   z-index: 1;
-  border-bottom: 1px solid oklch(72% 0.11 282deg / 0.3);
-  background: linear-gradient(180deg, oklch(23% 0.036 282deg / 0.96), oklch(18% 0.024 44deg / 0.96));
+  border-bottom: 1px solid oklch(76% 0.105 188deg / 0.3);
+  background: linear-gradient(180deg, oklch(43% 0.055 276deg / 0.86), oklch(38% 0.04 262deg / 0.96));
   color: var(--text-strong);
   font-weight: 800;
   text-align: left;
@@ -484,7 +484,7 @@
 .message-markdown th,
 .message-markdown td {
   padding: 11px 14px;
-  border-right: 1px solid oklch(72% 0.11 282deg / 0.12);
+  border-right: 1px solid oklch(76% 0.105 188deg / 0.14);
   vertical-align: middle;
   white-space: nowrap;
 }
@@ -495,15 +495,15 @@
 }
 
 .message-markdown tbody tr:nth-child(odd) {
-  background: oklch(73% 0.15 43deg / 0.035);
+  background: oklch(76% 0.14 288deg / 0.04);
 }
 
 .message-markdown tbody tr:hover {
-  background: oklch(72% 0.11 282deg / 0.07);
+  background: oklch(76% 0.105 188deg / 0.08);
 }
 
 .message-markdown tbody td {
-  border-bottom: 1px solid oklch(72% 0.11 282deg / 0.1);
+  border-bottom: 1px solid oklch(76% 0.105 188deg / 0.12);
 }
 
 .message-markdown tbody tr:last-child td {

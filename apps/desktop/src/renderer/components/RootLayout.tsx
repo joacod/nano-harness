@@ -78,7 +78,7 @@ export function RootLayout() {
                 checked={showTechnicalInfo}
                 onClick={toggleTechnicalInfo}
               >
-                Telemetry
+                Advanced
               </Switch>
               <RuntimePill className="sidebar-provider-pill" tone={providerStatus?.isReady ? 'ready' : 'warning'} aria-live="polite">
                 Provider
