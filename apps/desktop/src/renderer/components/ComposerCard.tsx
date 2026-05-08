@@ -83,6 +83,12 @@ export function ComposerCard({ conversationId }: { conversationId: string | null
           void form.handleSubmit()
         }}
       >
+        <div className="composer-command-strip" aria-hidden="true">
+          <span>/plan</span>
+          <span>/build</span>
+          <span>/review</span>
+          <span>/spec</span>
+        </div>
         <div className="composer-input-row">
           <form.Field
             name="prompt"
