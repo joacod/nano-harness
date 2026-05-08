@@ -89,6 +89,7 @@ export function ComposerCard({ conversationId }: { conversationId: string | null
             children={(field) => (
               <TextArea
                 className="composer-input"
+                aria-label="Prompt"
                 name="prompt"
                 value={field.state.value}
                 onChange={(event) => field.handleChange(event.target.value)}
