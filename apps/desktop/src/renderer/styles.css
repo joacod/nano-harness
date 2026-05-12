@@ -1,9 +1,4 @@
 :root {
-  color-scheme: dark;
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  font-size: 15px;
-  background: oklch(31% 0.038 266deg);
-  color: oklch(94% 0.018 252deg);
   --background: oklch(31% 0.038 266deg);
   --surface-0: oklch(34% 0.04 264deg);
   --surface-1: oklch(39% 0.04 260deg);
@@ -32,51 +27,6 @@
   --radius: 1.2rem;
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
   --font-mono: "SFMono-Regular", "Cascadia Code", "Liberation Mono", "Menlo", monospace;
-}
-
-* {
-  box-sizing: border-box;
-}
-
-html,
-body,
-#root {
-  margin: 0;
-  min-height: 100%;
-}
-
-body {
-  min-height: 100vh;
-  overflow: hidden;
-  background: var(--background);
-}
-
-button,
-input,
-select,
-textarea {
-  font: inherit;
-}
-
-pre,
-code,
-kbd,
-samp {
-  font-family: var(--font-mono);
-}
-
-button {
-  cursor: pointer;
-}
-
-a {
-  color: inherit;
-  text-decoration: none;
-}
-
-::selection {
-  background: oklch(76% 0.14 288deg / 0.34);
-  color: var(--text-strong);
 }
 
 .workspace-shell {
@@ -1666,17 +1616,6 @@ a {
 
   50% {
     box-shadow: 0 0 30px oklch(76% 0.14 288deg / 0.18), inset 0 0 28px oklch(76% 0.14 288deg / 0.08);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 1ms !important;
-    animation-iteration-count: 1 !important;
-    scroll-behavior: auto !important;
-    transition-duration: 1ms !important;
   }
 }
 
