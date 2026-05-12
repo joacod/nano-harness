@@ -237,18 +237,6 @@
   overflow: hidden;
 }
 
-.conversation-link::before {
-  position: absolute;
-  top: var(--space-3-5);
-  right: var(--space-3);
-  width: 0.4375rem;
-  height: 0.4375rem;
-  border-radius: var(--radius-pill);
-  background: var(--signal);
-  opacity: 0.68;
-  content: "";
-}
-
 .conversation-link span,
 .conversation-link small {
   min-width: 0;
@@ -273,11 +261,6 @@
   border-color: var(--color-primary-alpha-72);
   background: var(--color-bg-purple-active);
   box-shadow: var(--shadow-active-surface);
-}
-
-.conversation-link-active::before {
-  background: var(--primary);
-  opacity: 1;
 }
 
 .sidebar-footer {

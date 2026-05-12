@@ -27,18 +27,6 @@
   box-shadow: var(--surface-card-inset);
 }
 
-.message-bubble::before {
-  position: absolute;
-  top: var(--space-3);
-  right: var(--space-3);
-  width: 0.4375rem;
-  height: 0.4375rem;
-  border-radius: var(--radius-pill);
-  background: var(--primary);
-  opacity: 0.64;
-  content: "";
-}
-
 .message-user {
   align-self: flex-end;
   max-width: min(74%, 43.75rem);
@@ -52,18 +40,10 @@
   background: var(--message-assistant-bg);
 }
 
-.message-assistant::before {
-  background: var(--signal);
-}
-
 .message-tool {
   max-width: min(88%, 53.75rem);
   border-color: var(--message-tool-border);
   background: var(--message-tool-bg);
-}
-
-.message-tool::before {
-  background: var(--warning);
 }
 
 .message-system {
