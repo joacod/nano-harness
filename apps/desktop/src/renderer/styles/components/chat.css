@@ -6,7 +6,7 @@
 .transcript-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--space-3);
   min-height: 100%;
 }
 
@@ -29,8 +29,8 @@
 
 .message-bubble::before {
   position: absolute;
-  top: 12px;
-  right: 12px;
+  top: var(--space-3);
+  right: var(--space-3);
   width: 7px;
   height: 7px;
   border-radius: var(--radius-pill);
@@ -89,11 +89,11 @@
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
+  gap: var(--space-2-5);
 }
 
 .message-meta {
-  margin-bottom: 8px;
+  margin-bottom: var(--space-2);
   color: var(--signal);
   font-family: var(--font-mono);
   font-size: 0.66rem;
@@ -104,15 +104,15 @@
 .message-tool-calls {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 10px;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2-5);
 }
 
 .message-tool-call-chip {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: 8px 10px;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-2-5);
   border: var(--border-width-default) solid var(--color-warning-alpha-38);
   border-radius: var(--radius-lg);
   background: var(--color-warning-alpha-24);
@@ -127,9 +127,9 @@
 .message-activity {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  margin-bottom: 12px;
-  padding: 10px 12px;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+  padding: var(--space-2-5) var(--space-3);
   border: var(--border-width-default) solid var(--color-secondary-alpha-24);
   border-radius: var(--radius-2xl);
   background: var(--color-bg-cyan-subtle);
@@ -138,7 +138,7 @@
 .message-activity-item {
   display: grid;
   grid-template-columns: minmax(120px, 0.36fr) minmax(0, 1fr);
-  gap: 10px;
+  gap: var(--space-2-5);
   color: var(--muted-foreground);
   font-size: 0.8rem;
 }
@@ -153,7 +153,7 @@
 }
 
 .thinking-panel {
-  margin-bottom: 10px;
+  margin-bottom: var(--space-2-5);
   border: var(--border-width-default) solid var(--color-primary-alpha-22);
   border-radius: var(--radius-2xl);
   background: var(--color-bg-purple-subtle);
@@ -167,9 +167,9 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--space-3);
   width: 100%;
-  padding: 8px 10px;
+  padding: var(--space-2) var(--space-2-5);
   border: 0;
   background: transparent;
   color: var(--text-strong);
@@ -194,8 +194,8 @@
 .thinking-body {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding: 2px 10px 10px;
+  gap: var(--space-2-5);
+  padding: var(--space-0-5) var(--space-2-5) var(--space-2-5);
   color: var(--muted-foreground);
 }
 
@@ -288,7 +288,7 @@
 
 .sd-root pre,
 .message-markdown pre {
-  padding: 12px 14px;
+  padding: var(--space-3) var(--space-3-5);
   border: var(--border-width-default) solid var(--color-secondary-alpha-24);
   border-radius: var(--radius-2xl);
   background: var(--color-bg-app-alpha-86);
@@ -332,13 +332,13 @@
 }
 
 .message-markdown [data-streamdown="code-block"] {
-  padding: 44px 12px 12px;
+  padding: var(--space-11) var(--space-3) var(--space-3);
 }
 
 .message-markdown [data-streamdown="code-block-header"] {
   position: absolute;
-  top: 8px;
-  right: 104px;
+  top: var(--space-2);
+  right: var(--code-block-header-actions-offset);
   z-index: 2;
   min-height: 0;
   padding-right: 0;
@@ -349,7 +349,7 @@
   display: inline-flex;
   align-items: center;
   min-height: 24px;
-  padding: 3px 8px;
+  padding: var(--space-0-75) var(--space-2);
   border: var(--border-width-default) solid var(--color-secondary-alpha-30);
   border-radius: var(--radius-2xs);
   background: var(--color-bg-purple-popover);
@@ -361,8 +361,8 @@
 
 .message-markdown [data-streamdown="code-block"] > div:has(> [data-streamdown="code-block-actions"]) {
   position: absolute !important;
-  top: 8px !important;
-  right: 8px !important;
+  top: var(--space-2) !important;
+  right: var(--space-2) !important;
   z-index: 2;
   margin: 0 !important;
   height: auto !important;
@@ -373,11 +373,11 @@
   display: flex;
   align-items: center;
   pointer-events: auto;
-  gap: 4px;
+  gap: var(--space-1);
   border: var(--border-width-default) solid var(--color-secondary-alpha-30);
   border-radius: var(--radius-2xs);
   background: var(--color-bg-purple-popover);
-  padding: 3px;
+  padding: var(--space-0-75);
   box-shadow: 0 0 14px var(--color-secondary-alpha-12);
 }
 
@@ -396,7 +396,7 @@
   justify-content: center;
   min-width: 28px;
   min-height: 28px;
-  padding: 5px 8px;
+  padding: var(--space-1-25) var(--space-2);
   border: var(--border-width-default) solid var(--color-secondary-alpha-28);
   border-radius: var(--radius-2xs);
   background: var(--color-bg-surface-code-action);
@@ -416,25 +416,25 @@
 }
 
 .message-markdown [data-streamdown="table-wrapper"] {
-  padding: 54px 10px 10px;
+  padding: var(--space-13-5) var(--space-2-5) var(--space-2-5);
   overflow: auto;
 }
 
 .message-markdown [data-streamdown="table-wrapper"] > div:first-child:has(button) {
   position: absolute;
-  top: 8px;
-  right: 8px;
+  top: var(--space-2);
+  right: var(--space-2);
   z-index: 2;
   display: flex;
   flex-wrap: wrap;
   align-items: flex-start;
   justify-content: flex-end;
-  gap: 4px;
-  max-width: calc(100% - 16px);
+  gap: var(--space-1);
+  max-width: calc(100% - var(--space-4));
   border: var(--border-width-default) solid var(--color-secondary-alpha-30);
   border-radius: var(--radius-2xs);
   background: var(--color-bg-purple-popover);
-  padding: 3px;
+  padding: var(--space-0-75);
 }
 
 .message-markdown [data-streamdown="table-wrapper"] button[aria-label*="fullscreen" i],
@@ -477,7 +477,7 @@
 
 .message-markdown th,
 .message-markdown td {
-  padding: 11px 14px;
+  padding: var(--space-2-75) var(--space-3-5);
   border-right: var(--border-width-default) solid var(--color-secondary-alpha-14);
   vertical-align: middle;
   white-space: nowrap;

@@ -54,4 +54,6 @@
   --message-radius: var(--radius-4xl);
   --message-padding-block: 13px;
   --message-padding-inline: 15px;
+  --switch-thumb-active-offset: 23px;
+  --code-block-header-actions-offset: 104px;
 }
