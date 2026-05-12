@@ -3,25 +3,15 @@
   --font-family-mono: "SFMono-Regular", "Cascadia Code", "Liberation Mono", "Menlo", monospace;
 
   --font-size-2xs: 0.5rem;
-  --font-size-xs: 0.66rem;
-  --font-size-xs-plus: 0.68rem;
-  --font-size-status: 0.7rem;
-  --font-size-sm: 0.72rem;
-  --font-size-sm-plus: 0.76rem;
-  --font-size-md: 0.78rem;
-  --font-size-md-plus: 0.8rem;
-  --font-size-code: 0.82rem;
-  --font-size-label: 0.84rem;
-  --font-size-lg: 0.86rem;
-  --font-size-body-sm: 0.88rem;
-  --font-size-xl: 0.9rem;
-  --font-size-2xl: 0.94rem;
-  --font-size-3xl: 1.05rem;
-  --font-size-4xl: 1.14rem;
+  --font-size-xs: 0.6875rem;
+  --font-size-sm: 0.75rem;
+  --font-size-md: 0.8125rem;
+  --font-size-lg: 0.875rem;
+  --font-size-xl: 0.9375rem;
+  --font-size-3xl: 1.125rem;
   --font-size-title-fluid: clamp(1.05rem, 1.24vw, 1.24rem);
   --font-size-code-inline: 0.86em;
 
-  --font-weight-medium: 500;
   --font-weight-bold: 700;
   --font-weight-extrabold: 800;
 
@@ -30,17 +20,14 @@
   --line-height-title: 1.2;
   --line-height-snug: 1.25;
   --line-height-form: 1.45;
-  --line-height-code: 1.48;
+  --line-height-code: 1.5;
   --line-height-normal: 1.5;
   --line-height-relaxed: 1.55;
-  --line-height-loose: 1.58;
 
   --letter-spacing-tight-title: -0.026em;
-  --letter-spacing-compact: 0.035em;
   --letter-spacing-subtle: 0.04em;
   --letter-spacing-label: 0.06em;
   --letter-spacing-emphasis: 0.08em;
   --letter-spacing-wide: 0.1em;
-  --letter-spacing-wider: 0.12em;
   --letter-spacing-widest: 0.14em;
 }

@@ -28,6 +28,8 @@ Use tokens in this order:
 
 Component CSS should use semantic or component tokens. Do not add raw colors, spacing, typography, borders, shadows, or motion values directly in `styles/components/*.css` unless the value is layout-specific and not reusable.
 
+Use `rem` for scalable size values. `px` is reserved for hairlines, crisp decorative geometry, media breakpoints, and shadow blur/spread values.
+
 ## Current Theme
 
 Nano currently ships one dark visual design. Theme switching should happen by overriding semantic tokens only, not by duplicating component selectors.
@@ -35,7 +37,7 @@ Nano currently ships one dark visual design. Theme switching should happen by ov
 ## Adding Styles
 
 - Add new raw color values in `colors.css`.
-- Add meaning and alpha variants in `semantic.css`.
+- Add meaning in `semantic.css`; keep alpha variants to broad, reused opacity steps instead of exact one-off values.
 - Add reusable component-level values in `components.css`.
 - Prefer existing spacing, radius, typography, shadow, and motion tokens before adding new ones.
 - Keep layout-specific values local when they encode structure, such as grid widths, max widths, or fixed icon sizes.

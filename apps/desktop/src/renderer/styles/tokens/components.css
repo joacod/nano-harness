@@ -1,7 +1,7 @@
 :root {
   --focus-outline-color: oklch(from var(--color-accent-primary) l c h / 0.9);
   --focus-outline-width: var(--border-width-focus);
-  --focus-outline-offset: 3px;
+  --focus-outline-offset: 0.1875rem;
   --focus-ring-shadow: var(--shadow-focus);
   --focus-ring-shadow-strong: var(--shadow-focus-strong);
 
@@ -12,14 +12,11 @@
   --surface-card-inset: var(--shadow-inset-highlight);
 
   --button-radius: var(--radius-lg);
-  --button-min-height: 40px;
+  --button-min-height: 2.5rem;
   --button-padding-block: var(--space-2-5);
   --button-padding-inline: var(--space-4);
   --button-font-size: var(--font-size-md);
   --button-letter-spacing: var(--letter-spacing-label);
-  --button-transition-duration: var(--duration-normal);
-  --button-transition-easing: var(--ease-out);
-
   --button-primary-bg: var(--color-accent-primary);
   --button-primary-fg: var(--color-text-on-accent);
   --button-primary-border: oklch(from var(--color-accent-primary) l c h / 0.76);
@@ -51,9 +48,9 @@
   --message-tool-border: oklch(from var(--color-status-warning) l c h / 0.38);
   --message-system-bg: oklch(from var(--color-bg-surface-raised) l c h / 0.72);
   --message-system-border: oklch(from var(--color-neutral-100) l c h / 0.16);
-  --message-radius: var(--radius-4xl);
-  --message-padding-block: 13px;
-  --message-padding-inline: 15px;
-  --switch-thumb-active-offset: 23px;
-  --code-block-header-actions-offset: 104px;
+  --message-radius: var(--radius-card);
+  --message-padding-block: 0.8125rem;
+  --message-padding-inline: 0.9375rem;
+  --switch-thumb-active-offset: 1.4375rem;
+  --code-block-header-actions-offset: 6.5rem;
 }

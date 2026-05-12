@@ -19,6 +19,17 @@ const checks = [
     test: (line) => /(?:gap|padding(?:-[a-z-]+)?|margin(?:-[a-z-]+)?|top|right|bottom|left|scroll-padding-block):\s*[^;]*\b\d+(?:\.\d+)?px\b/.test(line),
   },
   {
+    name: 'raw scalable size values',
+    test: (line) => {
+      const trimmed = line.trim()
+
+      if (trimmed.startsWith('@media')) return false
+      if (/\b(?:1|2)px\b/.test(trimmed) && !/\b\d{2,}(?:\.\d+)?px\b/.test(trimmed)) return false
+
+      return /(?:width|height|min-width|min-height|max-width|max-height|grid-template-columns|flex|inset):\s*[^;]*\b\d+(?:\.\d+)?px\b/.test(trimmed)
+    },
+  },
+  {
     name: 'raw typography values',
     test: (line) => /(?:font-size|font-weight|line-height|letter-spacing):/.test(line) && !line.includes('var('),
   },

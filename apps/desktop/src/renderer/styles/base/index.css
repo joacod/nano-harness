@@ -1,9 +1,8 @@
 :root {
   color-scheme: dark;
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  font-size: 15px;
-  background: oklch(31% 0.038 266deg);
-  color: oklch(94% 0.018 252deg);
+  font-family: var(--font-family-sans);
+  background: var(--background);
+  color: var(--foreground);
 }
 
 body {
@@ -20,6 +19,6 @@ samp {
 }
 
 ::selection {
-  background: oklch(76% 0.14 288deg / 0.34);
+  background: var(--color-primary-alpha-38);
   color: var(--text-strong);
 }
