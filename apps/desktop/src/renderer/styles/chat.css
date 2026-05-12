@@ -6,7 +6,7 @@
 .transcript-list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
   min-height: 100%;
 }
 
@@ -16,46 +16,50 @@
 
 .message-bubble {
   position: relative;
-  padding: 12px 14px;
+  padding: 13px 15px;
   border: 1px solid var(--border);
-  background: rgba(4, 18, 13, 0.82);
+  border-radius: 1rem;
+  background: oklch(39% 0.04 260deg / 0.84);
   overflow-wrap: anywhere;
   font-size: 0.9rem;
   line-height: 1.55;
   min-width: 0;
-  clip-path: polygon(0 10px, 10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%);
+  box-shadow: inset 0 1px 0 oklch(100% 0.01 250deg / 0.08);
 }
 
 .message-bubble::before {
   position: absolute;
-  inset: 0 auto 0 0;
-  width: 3px;
+  top: 12px;
+  right: 12px;
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
   background: var(--primary);
-  opacity: 0.8;
+  opacity: 0.64;
   content: "";
 }
 
 .message-user {
   align-self: flex-end;
   max-width: min(74%, 700px);
-  border-color: rgba(67, 255, 157, 0.34);
-  background: linear-gradient(135deg, rgba(13, 62, 43, 0.9), rgba(4, 24, 17, 0.88));
+  border-color: oklch(76% 0.14 288deg / 0.42);
+  background: oklch(45% 0.06 278deg / 0.86);
 }
 
 .message-assistant {
   max-width: min(88%, 860px);
-  border-color: rgba(67, 231, 255, 0.26);
-  background: linear-gradient(135deg, rgba(5, 28, 28, 0.92), rgba(3, 15, 12, 0.86));
+  border-color: oklch(76% 0.105 188deg / 0.34);
+  background: oklch(38% 0.045 236deg / 0.9);
 }
 
 .message-assistant::before {
-  background: var(--secondary);
+  background: var(--signal);
 }
 
 .message-tool {
   max-width: min(88%, 860px);
-  border-color: rgba(255, 209, 102, 0.3);
-  background: linear-gradient(135deg, rgba(52, 38, 9, 0.72), rgba(12, 12, 7, 0.84));
+  border-color: oklch(80% 0.115 66deg / 0.38);
+  background: oklch(40% 0.05 88deg / 0.82);
 }
 
 .message-tool::before {
@@ -64,13 +68,13 @@
 
 .message-system {
   max-width: min(88%, 860px);
-  border-color: rgba(191, 255, 219, 0.22);
-  background: rgba(8, 24, 18, 0.76);
+  border-color: oklch(100% 0.01 250deg / 0.16);
+  background: oklch(36% 0.04 264deg / 0.72);
 }
 
 .message-streaming {
   border-style: dashed;
-  box-shadow: 0 0 28px rgba(67, 231, 255, 0.13), inset 0 0 26px rgba(67, 231, 255, 0.04);
+  box-shadow: 0 0 28px oklch(76% 0.105 188deg / 0.14), inset 0 1px 0 oklch(100% 0.01 250deg / 0.08);
   animation: signal-pulse 1.8s ease-in-out infinite;
 }
 
@@ -90,7 +94,7 @@
 
 .message-meta {
   margin-bottom: 8px;
-  color: #8ffff0;
+  color: var(--signal);
   font-family: var(--font-mono);
   font-size: 0.66rem;
   letter-spacing: 0.1em;
@@ -109,8 +113,9 @@
   flex-direction: column;
   gap: 4px;
   padding: 8px 10px;
-  border: 1px solid rgba(255, 209, 102, 0.34);
-  background: rgba(37, 28, 8, 0.72);
+  border: 1px solid oklch(80% 0.115 66deg / 0.38);
+  border-radius: 0.72rem;
+  background: oklch(49% 0.08 66deg / 0.24);
 }
 
 .message-tool-call-chip span {
@@ -125,8 +130,9 @@
   gap: 8px;
   margin-bottom: 12px;
   padding: 10px 12px;
-  border: 1px solid rgba(67, 231, 255, 0.18);
-  background: rgba(2, 18, 18, 0.58);
+  border: 1px solid oklch(76% 0.105 188deg / 0.24);
+  border-radius: 0.82rem;
+  background: oklch(45% 0.06 190deg / 0.28);
 }
 
 .message-activity-item {
@@ -138,7 +144,7 @@
 }
 
 .message-activity-item strong {
-  color: #d6fff0;
+  color: var(--text-strong);
   overflow-wrap: anywhere;
 }
 
@@ -148,8 +154,9 @@
 
 .thinking-panel {
   margin-bottom: 10px;
-  border: 1px solid rgba(67, 255, 157, 0.16);
-  background: rgba(4, 26, 18, 0.5);
+  border: 1px solid oklch(76% 0.14 288deg / 0.22);
+  border-radius: 0.82rem;
+  background: oklch(43% 0.055 276deg / 0.34);
 }
 
 .thinking-panel-open {
@@ -165,7 +172,7 @@
   padding: 8px 10px;
   border: 0;
   background: transparent;
-  color: #d6fff0;
+  color: var(--text-strong);
   cursor: pointer;
   font-family: var(--font-mono);
   font-size: 0.7rem;
@@ -174,9 +181,9 @@
 }
 
 .thinking-summary:focus-visible {
-  outline: 2px solid rgba(67, 255, 157, 0.88);
+  outline: 2px solid oklch(76% 0.14 288deg / 0.9);
   outline-offset: 3px;
-  box-shadow: 0 0 0 5px rgba(67, 255, 157, 0.16), 0 0 28px rgba(67, 255, 157, 0.2);
+  box-shadow: 0 0 0 5px oklch(76% 0.14 288deg / 0.16), 0 0 28px oklch(76% 0.14 288deg / 0.2);
 }
 
 .thinking-count {
@@ -201,14 +208,14 @@
   margin: 0;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
-  color: #c6fff0;
+  color: var(--foreground);
   line-height: 1.55;
   font-size: 0.82rem;
 }
 
 .streaming-placeholder {
   margin: 0;
-  color: #d6fff0;
+  color: var(--text-strong);
 }
 
 .message-pre {
@@ -248,15 +255,15 @@
 }
 
 .message-link {
-  color: #9df6ff;
+  color: oklch(89% 0.055 188deg);
   text-decoration: underline;
-  text-decoration-color: rgba(157, 246, 255, 0.42);
+  text-decoration-color: oklch(89% 0.055 188deg / 0.42);
   text-underline-offset: 0.18em;
 }
 
 .message-link:hover,
 .message-link:focus-visible {
-  color: #ffffff;
+  color: oklch(98% 0.01 154deg);
   text-decoration-color: var(--primary);
 }
 
@@ -264,10 +271,10 @@
 .message-markdown code:not(pre code),
 .message-pre code {
   padding: 0.12em 0.34em;
-  border: 1px solid rgba(67, 231, 255, 0.18);
+  border: 1px solid oklch(76% 0.105 188deg / 0.18);
   border-radius: 3px;
-  background: rgba(1, 9, 7, 0.68);
-  color: #d7fff2;
+  background: oklch(32% 0.04 266deg / 0.62);
+  color: var(--foreground);
   font-size: 0.86em;
 }
 
@@ -282,15 +289,13 @@
 .sd-root pre,
 .message-markdown pre {
   padding: 12px 14px;
-  border: 1px solid rgba(67, 231, 255, 0.2);
-  border-left: 3px solid rgba(67, 231, 255, 0.5);
-  background:
-    linear-gradient(180deg, rgba(2, 18, 18, 0.92), rgba(1, 8, 7, 0.94)),
-    radial-gradient(circle at top right, rgba(67, 231, 255, 0.08), transparent 34%);
-  color: #e4fff6;
+  border: 1px solid oklch(76% 0.105 188deg / 0.24);
+  border-radius: 0.82rem;
+  background: oklch(32% 0.04 266deg / 0.86);
+  color: var(--foreground);
   font-size: 0.82rem;
   line-height: 1.48;
-  box-shadow: inset 0 0 22px rgba(67, 231, 255, 0.05);
+  box-shadow: inset 0 0 22px oklch(76% 0.105 188deg / 0.06);
 }
 
 .sd-root pre code,
@@ -314,20 +319,16 @@
 .message-markdown pre:has(code[class*="language-sh"]),
 .message-markdown pre:has(code[class*="language-shell"]),
 .message-markdown pre:has(code[class*="language-zsh"]) {
-  border-left-color: rgba(255, 209, 102, 0.66);
-  background:
-    linear-gradient(180deg, rgba(25, 20, 8, 0.92), rgba(1, 8, 7, 0.94)),
-    radial-gradient(circle at top right, rgba(255, 209, 102, 0.08), transparent 34%);
+  border-color: oklch(80% 0.115 66deg / 0.42);
+  background: oklch(36% 0.05 88deg / 0.84);
 }
 
 .message-markdown [data-streamdown="code-block"],
 .message-markdown [data-streamdown="table-wrapper"] {
   position: relative;
   border-radius: 2px;
-  border: 1px solid rgba(67, 231, 255, 0.24);
-  background:
-    linear-gradient(180deg, rgba(2, 18, 18, 0.9), rgba(1, 8, 7, 0.94)),
-    radial-gradient(circle at top right, rgba(67, 231, 255, 0.08), transparent 34%);
+  border: 1px solid oklch(76% 0.105 188deg / 0.24);
+  background: oklch(32% 0.04 266deg / 0.9);
 }
 
 .message-markdown [data-streamdown="code-block"] {
@@ -341,7 +342,7 @@
   z-index: 2;
   min-height: 0;
   padding-right: 0;
-  color: #9df6ff;
+  color: oklch(89% 0.055 188deg);
 }
 
 .message-markdown [data-streamdown="code-block-header"] span {
@@ -349,14 +350,13 @@
   align-items: center;
   min-height: 24px;
   padding: 3px 8px;
-  border: 1px solid rgba(67, 231, 255, 0.28);
+  border: 1px solid oklch(76% 0.105 188deg / 0.3);
   border-radius: 2px;
-  background: rgba(3, 20, 18, 0.84);
-  color: #bdfcff;
+  background: oklch(43% 0.055 276deg / 0.72);
+  color: oklch(89% 0.055 188deg);
   font-size: 0.68rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  backdrop-filter: blur(12px);
 }
 
 .message-markdown [data-streamdown="code-block"] > div:has(> [data-streamdown="code-block-actions"]) {
@@ -374,19 +374,18 @@
   align-items: center;
   pointer-events: auto;
   gap: 4px;
-  border: 1px solid rgba(67, 231, 255, 0.3);
+  border: 1px solid oklch(76% 0.105 188deg / 0.3);
   border-radius: 2px;
-  background: rgba(3, 20, 18, 0.9);
+  background: oklch(43% 0.055 276deg / 0.72);
   padding: 3px;
-  backdrop-filter: blur(12px);
-  box-shadow: 0 0 14px rgba(67, 231, 255, 0.1);
+  box-shadow: 0 0 14px oklch(76% 0.105 188deg / 0.12);
 }
 
 .message-markdown [data-streamdown="code-block"] pre {
   margin: 0;
   border: 0;
-  border-left: 3px solid rgba(67, 231, 255, 0.5);
-  background: rgba(1, 8, 7, 0.42);
+  border-radius: 0.68rem;
+  background: oklch(32% 0.04 266deg / 0.46);
   box-shadow: none;
 }
 
@@ -398,22 +397,22 @@
   min-width: 28px;
   min-height: 28px;
   padding: 5px 8px;
-  border: 1px solid rgba(67, 231, 255, 0.28);
+  border: 1px solid oklch(76% 0.105 188deg / 0.28);
   border-radius: 2px;
-  background: rgba(4, 22, 18, 0.9);
-  color: #d6fff0;
+  background: oklch(38% 0.04 262deg / 0.86);
+  color: var(--foreground);
   font: inherit;
   line-height: 1;
-  box-shadow: inset 0 0 14px rgba(67, 255, 157, 0.04);
+  box-shadow: inset 0 0 14px oklch(76% 0.14 288deg / 0.06);
 }
 
 .message-markdown [data-streamdown="code-block-actions"] button:hover,
 .message-markdown [data-streamdown="table-wrapper"] button:hover,
 .message-markdown [data-streamdown="code-block-actions"] button:focus-visible,
 .message-markdown [data-streamdown="table-wrapper"] button:focus-visible {
-  border-color: rgba(67, 255, 157, 0.58);
-  background: rgba(67, 255, 157, 0.12);
-  color: #ffffff;
+  border-color: oklch(76% 0.14 288deg / 0.62);
+  background: oklch(76% 0.14 288deg / 0.14);
+  color: var(--text-strong);
 }
 
 .message-markdown [data-streamdown="table-wrapper"] {
@@ -432,11 +431,10 @@
   justify-content: flex-end;
   gap: 4px;
   max-width: calc(100% - 16px);
-  border: 1px solid rgba(67, 231, 255, 0.3);
+  border: 1px solid oklch(76% 0.105 188deg / 0.3);
   border-radius: 2px;
-  background: rgba(3, 20, 18, 0.9);
+  background: oklch(43% 0.055 276deg / 0.72);
   padding: 3px;
-  backdrop-filter: blur(12px);
 }
 
 .message-markdown [data-streamdown="table-wrapper"] button[aria-label*="fullscreen" i],
@@ -448,11 +446,11 @@
 .message-markdown [data-streamdown="code-block-actions"] :is([role="menu"], [data-radix-popper-content-wrapper], [data-slot="dropdown-menu-content"]) {
   z-index: 6;
   min-width: max-content;
-  border: 1px solid rgba(67, 231, 255, 0.34);
+  border: 1px solid oklch(76% 0.105 188deg / 0.34);
   border-radius: 2px;
-  background: rgba(3, 20, 18, 0.98);
-  color: #d6fff0;
-  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.34), 0 0 18px rgba(67, 231, 255, 0.12);
+  background: oklch(34% 0.04 264deg / 0.98);
+  color: var(--foreground);
+  box-shadow: 0 12px 28px oklch(18% 0.05 270deg / 0.28), 0 0 18px oklch(76% 0.105 188deg / 0.12);
 }
 
 .message-markdown table {
@@ -461,8 +459,8 @@
   border-collapse: separate;
   border-spacing: 0;
   overflow: hidden;
-  border: 1px solid rgba(67, 231, 255, 0.18);
-  background: rgba(1, 9, 7, 0.38);
+  border: 1px solid oklch(76% 0.105 188deg / 0.18);
+  background: oklch(32% 0.04 266deg / 0.42);
   font-size: 0.9rem;
 }
 
@@ -470,18 +468,17 @@
   position: sticky;
   top: 0;
   z-index: 1;
-  border-bottom: 1px solid rgba(67, 231, 255, 0.3);
-  background: linear-gradient(180deg, rgba(7, 34, 28, 0.96), rgba(3, 19, 16, 0.96));
-  color: #f1fff7;
+  border-bottom: 1px solid oklch(76% 0.105 188deg / 0.3);
+  background: oklch(38% 0.04 262deg / 0.96);
+  color: var(--text-strong);
   font-weight: 800;
   text-align: left;
-  text-shadow: 0 0 14px rgba(67, 255, 157, 0.12);
 }
 
 .message-markdown th,
 .message-markdown td {
   padding: 11px 14px;
-  border-right: 1px solid rgba(67, 231, 255, 0.12);
+  border-right: 1px solid oklch(76% 0.105 188deg / 0.14);
   vertical-align: middle;
   white-space: nowrap;
 }
@@ -492,15 +489,15 @@
 }
 
 .message-markdown tbody tr:nth-child(odd) {
-  background: rgba(67, 255, 157, 0.035);
+  background: oklch(76% 0.14 288deg / 0.04);
 }
 
 .message-markdown tbody tr:hover {
-  background: rgba(67, 231, 255, 0.07);
+  background: oklch(76% 0.105 188deg / 0.08);
 }
 
 .message-markdown tbody td {
-  border-bottom: 1px solid rgba(67, 231, 255, 0.1);
+  border-bottom: 1px solid oklch(76% 0.105 188deg / 0.12);
 }
 
 .message-markdown tbody tr:last-child td {
@@ -508,7 +505,7 @@
 }
 
 .message-markdown tbody td:first-child {
-  color: #f4fff9;
+  color: var(--text-strong);
   font-weight: 700;
 }
 

@@ -12,11 +12,12 @@ test('loads the app shell with a mocked desktop bridge', async ({ page }) => {
   await page.goto('/')
 
   await expect(page.getByRole('heading', { name: 'Start new session' })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Command input' })).toBeVisible()
+  await expect(page.getByRole('textbox', { name: 'Prompt' })).toBeVisible()
 
   await page.getByRole('button', { name: 'Open sidebar' }).click()
 
-  await expect(page.getByRole('heading', { name: 'Agent deck' })).toBeVisible()
+  await expect(page.getByRole('complementary', { name: 'Workspace navigation' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Sessions' })).toBeVisible()
   await expect(page.getByText('Provider')).toBeVisible()
 })
 
@@ -24,13 +25,13 @@ test('loads the app shell from packaged index path', async ({ page }) => {
   await page.goto('/index.html')
 
   await expect(page.getByRole('heading', { name: 'Start new session' })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Command input' })).toBeVisible()
+  await expect(page.getByRole('textbox', { name: 'Prompt' })).toBeVisible()
 })
 
 test('starts a run and renders streamed output from live run events', async ({ page }) => {
   await page.goto('/')
 
-  await page.getByPlaceholder('Enter an instruction for the local harness…').fill('Summarize notes.txt')
+  await page.getByRole('textbox', { name: 'Prompt' }).fill('Summarize notes.txt')
   await page.getByRole('button', { name: 'Send prompt' }).click()
 
   await expect(page).toHaveURL(/#\/conversations\//)
@@ -161,7 +162,7 @@ test('shows an approval request and lets the user grant it', async ({ page }) =>
   await expect(page.getByRole('heading', { name: 'Review approval' })).toBeVisible()
 
   await page.getByRole('button', { name: 'Open sidebar' }).click()
-  await page.getByRole('switch', { name: 'Telemetry' }).click()
+  await page.getByRole('switch', { name: 'Advanced' }).click()
 
   await expect(page.getByRole('heading', { name: 'Confirm to continue' })).toBeVisible()
   await expect(page.getByText('Write access requires confirmation')).toBeVisible()

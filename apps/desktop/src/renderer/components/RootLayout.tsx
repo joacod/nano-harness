@@ -59,13 +59,6 @@ export function RootLayout() {
 
       {!isSidebarCollapsed ? (
         <aside className="sidebar" aria-label="Workspace navigation">
-          <div className="sidebar-section sidebar-brand-section">
-            <div className="sidebar-collapsible-content">
-              <p className="eyebrow">nano-harness</p>
-              <h1 className="sidebar-title">Agent deck</h1>
-            </div>
-          </div>
-
           <ConversationNav />
 
           <div className="sidebar-section sidebar-footer sidebar-collapsible-content">
@@ -84,7 +77,7 @@ export function RootLayout() {
                 checked={showTechnicalInfo}
                 onClick={toggleTechnicalInfo}
               >
-                Telemetry
+                Advanced
               </Switch>
               <RuntimePill className="sidebar-provider-pill" tone={providerStatus?.isReady ? 'ready' : 'warning'} aria-live="polite">
                 Provider

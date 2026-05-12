@@ -28,7 +28,6 @@ export function SettingsFormCard({
   return (
     <Card className="settings-card">
       <p className="eyebrow">Settings</p>
-      <h2>Configuration</h2>
 
       <Tabs
         ariaLabel="Settings sections"

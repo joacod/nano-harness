@@ -27,7 +27,6 @@ Nano is intentionally small and opinionated. It is not a marketplace or a genera
 - `packages/infra`: provider adapters, SQLite persistence, built-in actions, skills loading, MCP adapters, and other side effects.
 - `packages/shared`: shared Zod schemas, bridge contracts, settings, events, runs, memory, skills, MCP, and spec/harness artifacts.
 - `benchmarks`: tracked regression scenarios for agent behavior, safety, and evidence quality.
-- `docs`: ignored local planning notes and roadmap-completion docs.
 
 ## Development
 

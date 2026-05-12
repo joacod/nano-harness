@@ -68,7 +68,6 @@ export function ComposerCard({ conversationId }: { conversationId: string | null
   return (
     <Card className="composer-card">
       <div className="sidebar-header-row">
-        <h2>Command input</h2>
         {startRunMutation.isPending ? (
           <RuntimePill aria-live="polite">
             Sending…
@@ -84,12 +83,19 @@ export function ComposerCard({ conversationId }: { conversationId: string | null
           void form.handleSubmit()
         }}
       >
+        <div className="composer-command-strip" aria-hidden="true">
+          <span>/plan</span>
+          <span>/build</span>
+          <span>/review</span>
+          <span>/spec</span>
+        </div>
         <div className="composer-input-row">
           <form.Field
             name="prompt"
             children={(field) => (
               <TextArea
                 className="composer-input"
+                aria-label="Prompt"
                 name="prompt"
                 value={field.state.value}
                 onChange={(event) => field.handleChange(event.target.value)}
@@ -101,7 +107,7 @@ export function ComposerCard({ conversationId }: { conversationId: string | null
                   event.preventDefault()
                   void form.handleSubmit()
                 }}
-                placeholder="Enter an instruction for the local harness…"
+                placeholder="Describe the next task..."
                 rows={3}
               />
             )}
