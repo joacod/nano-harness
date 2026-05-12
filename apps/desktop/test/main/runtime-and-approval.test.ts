@@ -88,7 +88,7 @@ describe('desktop runtime helpers', () => {
     const result = await buildProviderStatus(runtime, {
       provider: {
         provider: 'openrouter',
-        model: 'grok-4.1-fast',
+        model: 'deepseek-v4-pro',
       },
       workspace: {
         rootPath: '/workspace',

@@ -37,7 +37,7 @@ export const reasoningSettingsSchema = z.discriminatedUnion('mode', [
 export type ReasoningSettings = z.infer<typeof reasoningSettingsSchema>
 
 export const providerDefaultModels = {
-  openrouter: 'x-ai/grok-4.1-fast',
+  openrouter: 'deepseek/deepseek-v4-pro',
   'llama-cpp': 'ggml-org/gemma-3-1b-it-GGUF',
   openai: 'gpt-5.4-mini',
 } as const satisfies Record<ProviderKey, string>
