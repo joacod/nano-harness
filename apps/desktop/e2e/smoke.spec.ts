@@ -162,7 +162,7 @@ test('shows an approval request and lets the user grant it', async ({ page }) =>
   await expect(page.getByRole('heading', { name: 'Review approval' })).toBeVisible()
 
   await page.getByRole('button', { name: 'Open sidebar' }).click()
-  await page.getByRole('switch', { name: 'Telemetry' }).click()
+  await page.getByRole('switch', { name: 'Advanced' }).click()
 
   await expect(page.getByRole('heading', { name: 'Confirm to continue' })).toBeVisible()
   await expect(page.getByText('Write access requires confirmation')).toBeVisible()

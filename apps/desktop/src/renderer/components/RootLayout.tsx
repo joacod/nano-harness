@@ -59,7 +59,6 @@ export function RootLayout() {
 
       {!isSidebarCollapsed ? (
         <aside className="sidebar" aria-label="Workspace navigation">
-          
           <ConversationNav />
 
           <div className="sidebar-section sidebar-footer sidebar-collapsible-content">

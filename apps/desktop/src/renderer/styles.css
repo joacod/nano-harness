@@ -1381,7 +1381,7 @@ a {
 }
 
 .text-input::placeholder {
-  color: oklch(67% 0.026 74deg);
+  color: oklch(72% 0.028 252deg);
 }
 
 .text-input:focus {
