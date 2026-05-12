@@ -34,10 +34,10 @@
 .sidebar-section,
 .panel-card {
   position: relative;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: oklch(39% 0.04 260deg / 0.9);
-  box-shadow: var(--shadow-glow);
+  border: 1px solid var(--surface-card-border);
+  border-radius: var(--surface-card-radius);
+  background: var(--surface-card-bg);
+  box-shadow: var(--surface-card-shadow);
 }
 
 .sidebar-section {
@@ -173,8 +173,10 @@
 .custom-select-option:focus-visible,
 .text-input:focus-visible {
   outline: 2px solid oklch(76% 0.14 288deg / 0.9);
-  outline-offset: 3px;
-  box-shadow: 0 0 0 5px oklch(76% 0.14 288deg / 0.16), 0 0 28px oklch(76% 0.14 288deg / 0.14);
+  outline-color: var(--focus-outline-color);
+  outline-width: var(--focus-outline-width);
+  outline-offset: var(--focus-outline-offset);
+  box-shadow: var(--focus-ring-shadow);
 }
 
 .ghost-link,
@@ -184,10 +186,10 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 40px;
-  border-radius: 0.72rem;
-  font-size: 0.78rem;
-  letter-spacing: 0.06em;
+  min-height: var(--button-min-height);
+  border-radius: var(--button-radius);
+  font-size: var(--button-font-size);
+  letter-spacing: var(--button-letter-spacing);
   text-transform: uppercase;
 }
 
@@ -1240,23 +1242,23 @@
 
 .text-input {
   width: 100%;
-  padding: 10px 12px;
-  border: 1px solid var(--input);
-  border-radius: 0.76rem;
-  background: oklch(32% 0.04 266deg / 0.78);
+  padding: var(--input-padding-block) var(--input-padding-inline);
+  border: 1px solid var(--input-border);
+  border-radius: var(--input-radius);
+  background: var(--input-bg);
   color: var(--foreground);
   caret-color: var(--primary);
   box-shadow: inset 0 1px 0 oklch(100% 0.01 250deg / 0.08);
 }
 
 .text-input::placeholder {
-  color: oklch(72% 0.028 252deg);
+  color: var(--input-placeholder-color);
 }
 
 .text-input:focus {
   outline: 2px solid oklch(76% 0.14 288deg / 0.22);
-  border-color: oklch(76% 0.14 288deg / 0.72);
-  background: oklch(43% 0.055 276deg / 0.88);
+  border-color: var(--input-border-focus);
+  background: var(--input-bg-focus);
 }
 
 .custom-select {
@@ -1425,12 +1427,12 @@
 }
 
 .primary-button {
-  border: 1px solid oklch(76% 0.14 288deg / 0.76);
-  padding: 10px 16px;
-  background: var(--primary);
-  color: var(--primary-foreground);
+  border: 1px solid var(--button-primary-border);
+  padding: var(--button-padding-block) var(--button-padding-inline);
+  background: var(--button-primary-bg);
+  color: var(--button-primary-fg);
   font-weight: 800;
-  box-shadow: 0 14px 34px oklch(76% 0.14 288deg / 0.18), inset 0 1px 0 oklch(100% 0.01 250deg / 0.28);
+  box-shadow: var(--button-primary-shadow);
 }
 
 .primary-button:hover {
@@ -1446,17 +1448,17 @@
 }
 
 .ghost-button {
-  border: 1px solid oklch(63% 0.04 252deg / 0.48);
-  padding: 10px 16px;
-  background: var(--surface-1);
-  color: var(--text-soft);
+  border: 1px solid var(--button-ghost-border);
+  padding: var(--button-padding-block) var(--button-padding-inline);
+  background: var(--button-ghost-bg);
+  color: var(--button-ghost-fg);
 }
 
 .ghost-button:hover {
-  border-color: oklch(76% 0.14 288deg / 0.72);
-  color: var(--text-strong);
-  background: oklch(48% 0.075 282deg / 0.92);
-  box-shadow: 0 12px 30px oklch(76% 0.14 288deg / 0.12), inset 0 1px 0 oklch(100% 0.01 250deg / 0.1);
+  border-color: var(--button-ghost-border-hover);
+  color: var(--button-ghost-fg-hover);
+  background: var(--button-ghost-bg-hover);
+  box-shadow: var(--button-ghost-shadow);
   transform: translateY(-1px);
 }
 

@@ -16,10 +16,10 @@
 
 .message-bubble {
   position: relative;
-  padding: 13px 15px;
+  padding: var(--message-padding-block) var(--message-padding-inline);
   border: 1px solid var(--border);
-  border-radius: 1rem;
-  background: oklch(39% 0.04 260deg / 0.84);
+  border-radius: var(--message-radius);
+  background: var(--message-bg);
   overflow-wrap: anywhere;
   font-size: 0.9rem;
   line-height: 1.55;
@@ -42,14 +42,14 @@
 .message-user {
   align-self: flex-end;
   max-width: min(74%, 700px);
-  border-color: oklch(76% 0.14 288deg / 0.42);
-  background: oklch(45% 0.06 278deg / 0.86);
+  border-color: var(--message-user-border);
+  background: var(--message-user-bg);
 }
 
 .message-assistant {
   max-width: min(88%, 860px);
-  border-color: oklch(76% 0.105 188deg / 0.34);
-  background: oklch(38% 0.045 236deg / 0.9);
+  border-color: var(--message-assistant-border);
+  background: var(--message-assistant-bg);
 }
 
 .message-assistant::before {
@@ -58,8 +58,8 @@
 
 .message-tool {
   max-width: min(88%, 860px);
-  border-color: oklch(80% 0.115 66deg / 0.38);
-  background: oklch(40% 0.05 88deg / 0.82);
+  border-color: var(--message-tool-border);
+  background: var(--message-tool-bg);
 }
 
 .message-tool::before {
@@ -68,8 +68,8 @@
 
 .message-system {
   max-width: min(88%, 860px);
-  border-color: oklch(100% 0.01 250deg / 0.16);
-  background: oklch(36% 0.04 264deg / 0.72);
+  border-color: var(--message-system-border);
+  background: var(--message-system-bg);
 }
 
 .message-streaming {
@@ -181,9 +181,9 @@
 }
 
 .thinking-summary:focus-visible {
-  outline: 2px solid oklch(76% 0.14 288deg / 0.9);
-  outline-offset: 3px;
-  box-shadow: 0 0 0 5px oklch(76% 0.14 288deg / 0.16), 0 0 28px oklch(76% 0.14 288deg / 0.2);
+  outline: var(--focus-outline-width) solid var(--focus-outline-color);
+  outline-offset: var(--focus-outline-offset);
+  box-shadow: var(--focus-ring-shadow-strong);
 }
 
 .thinking-count {
