@@ -1,6 +1,6 @@
 .workspace-shell {
   position: relative;
-  z-index: 2;
+  z-index: var(--z-index-shell);
   display: grid;
   grid-template-columns: 18.25rem minmax(0, 1fr);
   height: 100vh;
@@ -74,7 +74,7 @@
   position: fixed;
   top: var(--space-5);
   left: var(--space-5);
-  z-index: 10;
+  z-index: var(--z-index-chrome);
   flex-direction: column;
   gap: var(--space-1);
   width: 2.625rem;
@@ -559,9 +559,9 @@
   height: 100%;
 }
 
-.inspector-panel-stack {
+.conversation-grid > .inspector-panel-stack {
   min-height: 0;
-  overflow: hidden !important;
+  overflow: hidden;
 }
 
 .panel-card {
@@ -775,7 +775,7 @@
 .composer-sticky-shell {
   position: sticky;
   bottom: 0;
-  z-index: 3;
+  z-index: var(--z-index-sticky);
   padding-top: var(--space-2);
   background: var(--background);
 }
@@ -964,7 +964,7 @@
 
 .timeline-dot {
   position: relative;
-  z-index: 1;
+  z-index: var(--z-index-raised);
   width: 0.8125rem;
   height: 0.8125rem;
   margin-top: var(--space-4-5);
@@ -1307,7 +1307,7 @@
 
 .custom-select-options {
   position: fixed;
-  z-index: 100;
+  z-index: var(--z-index-popover);
   display: grid;
   gap: var(--space-1);
   max-height: 15rem;
@@ -1525,7 +1525,7 @@
   position: fixed;
   top: var(--space-5);
   left: var(--space-5);
-  z-index: 10;
+  z-index: var(--z-index-chrome);
   display: inline-flex;
   flex-direction: column;
   align-items: center;

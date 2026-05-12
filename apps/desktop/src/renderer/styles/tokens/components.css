@@ -51,6 +51,14 @@
   --message-radius: var(--radius-card);
   --message-padding-block: 0.8125rem;
   --message-padding-inline: 0.9375rem;
+
+  --z-index-raised: 1;
+  --z-index-shell: 2;
+  --z-index-sticky: 3;
+  --z-index-markdown-menu: 6;
+  --z-index-chrome: 10;
+  --z-index-popover: 100;
+
   --switch-thumb-active-offset: 1.4375rem;
   --code-block-header-actions-offset: 6.5rem;
 }

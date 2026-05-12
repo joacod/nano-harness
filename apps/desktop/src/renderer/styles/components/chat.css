@@ -305,7 +305,7 @@
 
 .sd-root pre code > span,
 .message-markdown pre code > span {
-  display: block !important;
+  display: block;
   min-height: 1.48em;
 }
 
@@ -339,7 +339,7 @@
   position: absolute;
   top: var(--space-2);
   right: var(--code-block-header-actions-offset);
-  z-index: 2;
+  z-index: var(--z-index-shell);
   min-height: 0;
   padding-right: 0;
   color: var(--color-text-link);
@@ -360,12 +360,12 @@
 }
 
 .message-markdown [data-streamdown="code-block"] > div:has(> [data-streamdown="code-block-actions"]) {
-  position: absolute !important;
-  top: var(--space-2) !important;
-  right: var(--space-2) !important;
-  z-index: 2;
-  margin: 0 !important;
-  height: auto !important;
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-2);
+  z-index: var(--z-index-shell);
+  margin: 0;
+  height: auto;
   pointer-events: none;
 }
 
@@ -424,7 +424,7 @@
   position: absolute;
   top: var(--space-2);
   right: var(--space-2);
-  z-index: 2;
+  z-index: var(--z-index-shell);
   display: flex;
   flex-wrap: wrap;
   align-items: flex-start;
@@ -444,7 +444,7 @@
 
 .message-markdown [data-streamdown="table-wrapper"] :is([role="menu"], [data-radix-popper-content-wrapper], [data-slot="dropdown-menu-content"]),
 .message-markdown [data-streamdown="code-block-actions"] :is([role="menu"], [data-radix-popper-content-wrapper], [data-slot="dropdown-menu-content"]) {
-  z-index: 6;
+  z-index: var(--z-index-markdown-menu);
   min-width: max-content;
   border: var(--border-width-default) solid var(--color-secondary-alpha-36);
   border-radius: var(--radius-xs);
@@ -467,7 +467,7 @@
 .message-markdown thead th {
   position: sticky;
   top: 0;
-  z-index: 1;
+  z-index: var(--z-index-raised);
   border-bottom: var(--border-width-default) solid var(--color-secondary-alpha-30);
   background: var(--color-bg-surface-table-head);
   color: var(--text-strong);
