@@ -26,7 +26,7 @@ import {
   runEventSchema,
   runSchema,
 } from '@nano-harness/shared'
-import { and, asc, eq, inArray } from 'drizzle-orm'
+import { and, asc, desc, eq, inArray } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/libsql'
 
 import {
@@ -136,7 +136,7 @@ export class SqliteStore implements Store {
   }
 
   async listSessions() {
-    const sessionRows = await this.db.select().from(sessionsTable).orderBy(asc(sessionsTable.createdAt))
+    const sessionRows = await this.db.select().from(sessionsTable).orderBy(desc(sessionsTable.updatedAt))
     return sessionRows.map((session) => sessionSchema.parse(normalizeNullableSessionRow(session)))
   }
 

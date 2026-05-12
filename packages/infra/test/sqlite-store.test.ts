@@ -197,7 +197,7 @@ describe('SqliteStore', () => {
         'conversation-2',
         'conversation-1',
       ])
-      expect((await store.listSessions()).map((session) => session.id)).toEqual(['conversation-1', 'conversation-2'])
+      expect((await store.listSessions()).map((session) => session.id)).toEqual(['conversation-2', 'conversation-1'])
       expect((await store.listRuns()).map((storedRun) => storedRun.id)).toEqual(['run-1', 'run-2'])
       expect((await store.listRuns(['started'])).map((storedRun) => storedRun.id)).toEqual(['run-2'])
       expect(await store.listRunEvents('run-2')).toEqual([createdEvent, providerEvent])
