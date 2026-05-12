@@ -17,7 +17,7 @@
 .message-bubble {
   position: relative;
   padding: var(--message-padding-block) var(--message-padding-inline);
-  border: 1px solid var(--border);
+  border: var(--border-width-default) solid var(--border);
   border-radius: var(--message-radius);
   background: var(--message-bg);
   overflow-wrap: anywhere;
@@ -33,7 +33,7 @@
   right: 12px;
   width: 7px;
   height: 7px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--primary);
   opacity: 0.64;
   content: "";
@@ -113,8 +113,8 @@
   flex-direction: column;
   gap: 4px;
   padding: 8px 10px;
-  border: 1px solid var(--color-warning-alpha-38);
-  border-radius: 0.72rem;
+  border: var(--border-width-default) solid var(--color-warning-alpha-38);
+  border-radius: var(--radius-lg);
   background: var(--color-warning-alpha-24);
 }
 
@@ -130,8 +130,8 @@
   gap: 8px;
   margin-bottom: 12px;
   padding: 10px 12px;
-  border: 1px solid var(--color-secondary-alpha-24);
-  border-radius: 0.82rem;
+  border: var(--border-width-default) solid var(--color-secondary-alpha-24);
+  border-radius: var(--radius-2xl);
   background: var(--color-bg-cyan-subtle);
 }
 
@@ -154,8 +154,8 @@
 
 .thinking-panel {
   margin-bottom: 10px;
-  border: 1px solid var(--color-primary-alpha-22);
-  border-radius: 0.82rem;
+  border: var(--border-width-default) solid var(--color-primary-alpha-22);
+  border-radius: var(--radius-2xl);
   background: var(--color-bg-purple-subtle);
 }
 
@@ -271,8 +271,8 @@
 .message-markdown code:not(pre code),
 .message-pre code {
   padding: 0.12em 0.34em;
-  border: 1px solid var(--color-secondary-alpha-18);
-  border-radius: 3px;
+  border: var(--border-width-default) solid var(--color-secondary-alpha-18);
+  border-radius: var(--radius-xs);
   background: var(--color-bg-app-alpha-62);
   color: var(--foreground);
   font-size: 0.86em;
@@ -289,8 +289,8 @@
 .sd-root pre,
 .message-markdown pre {
   padding: 12px 14px;
-  border: 1px solid var(--color-secondary-alpha-24);
-  border-radius: 0.82rem;
+  border: var(--border-width-default) solid var(--color-secondary-alpha-24);
+  border-radius: var(--radius-2xl);
   background: var(--color-bg-app-alpha-86);
   color: var(--foreground);
   font-size: 0.82rem;
@@ -326,8 +326,8 @@
 .message-markdown [data-streamdown="code-block"],
 .message-markdown [data-streamdown="table-wrapper"] {
   position: relative;
-  border-radius: 2px;
-  border: 1px solid var(--color-secondary-alpha-24);
+  border-radius: var(--radius-2xs);
+  border: var(--border-width-default) solid var(--color-secondary-alpha-24);
   background: var(--color-bg-app-alpha-90);
 }
 
@@ -350,8 +350,8 @@
   align-items: center;
   min-height: 24px;
   padding: 3px 8px;
-  border: 1px solid var(--color-secondary-alpha-30);
-  border-radius: 2px;
+  border: var(--border-width-default) solid var(--color-secondary-alpha-30);
+  border-radius: var(--radius-2xs);
   background: var(--color-bg-purple-popover);
   color: var(--color-text-link);
   font-size: 0.68rem;
@@ -374,8 +374,8 @@
   align-items: center;
   pointer-events: auto;
   gap: 4px;
-  border: 1px solid var(--color-secondary-alpha-30);
-  border-radius: 2px;
+  border: var(--border-width-default) solid var(--color-secondary-alpha-30);
+  border-radius: var(--radius-2xs);
   background: var(--color-bg-purple-popover);
   padding: 3px;
   box-shadow: 0 0 14px var(--color-secondary-alpha-12);
@@ -384,7 +384,7 @@
 .message-markdown [data-streamdown="code-block"] pre {
   margin: 0;
   border: 0;
-  border-radius: 0.68rem;
+  border-radius: var(--radius-md);
   background: var(--color-bg-app-alpha-46);
   box-shadow: none;
 }
@@ -397,8 +397,8 @@
   min-width: 28px;
   min-height: 28px;
   padding: 5px 8px;
-  border: 1px solid var(--color-secondary-alpha-28);
-  border-radius: 2px;
+  border: var(--border-width-default) solid var(--color-secondary-alpha-28);
+  border-radius: var(--radius-2xs);
   background: var(--color-bg-surface-code-action);
   color: var(--foreground);
   font: inherit;
@@ -431,8 +431,8 @@
   justify-content: flex-end;
   gap: 4px;
   max-width: calc(100% - 16px);
-  border: 1px solid var(--color-secondary-alpha-30);
-  border-radius: 2px;
+  border: var(--border-width-default) solid var(--color-secondary-alpha-30);
+  border-radius: var(--radius-2xs);
   background: var(--color-bg-purple-popover);
   padding: 3px;
 }
@@ -446,8 +446,8 @@
 .message-markdown [data-streamdown="code-block-actions"] :is([role="menu"], [data-radix-popper-content-wrapper], [data-slot="dropdown-menu-content"]) {
   z-index: 6;
   min-width: max-content;
-  border: 1px solid var(--color-secondary-alpha-34);
-  border-radius: 2px;
+  border: var(--border-width-default) solid var(--color-secondary-alpha-34);
+  border-radius: var(--radius-2xs);
   background: var(--color-surface-alpha-98);
   color: var(--foreground);
   box-shadow: 0 12px 28px var(--color-alpha-shadow-28), 0 0 18px var(--color-secondary-alpha-12);
@@ -459,7 +459,7 @@
   border-collapse: separate;
   border-spacing: 0;
   overflow: hidden;
-  border: 1px solid var(--color-secondary-alpha-18);
+  border: var(--border-width-default) solid var(--color-secondary-alpha-18);
   background: var(--color-bg-app-alpha-42);
   font-size: 0.9rem;
 }
@@ -468,7 +468,7 @@
   position: sticky;
   top: 0;
   z-index: 1;
-  border-bottom: 1px solid var(--color-secondary-alpha-30);
+  border-bottom: var(--border-width-default) solid var(--color-secondary-alpha-30);
   background: var(--color-bg-surface-table-head);
   color: var(--text-strong);
   font-weight: 800;
@@ -478,7 +478,7 @@
 .message-markdown th,
 .message-markdown td {
   padding: 11px 14px;
-  border-right: 1px solid var(--color-secondary-alpha-14);
+  border-right: var(--border-width-default) solid var(--color-secondary-alpha-14);
   vertical-align: middle;
   white-space: nowrap;
 }
@@ -497,7 +497,7 @@
 }
 
 .message-markdown tbody td {
-  border-bottom: 1px solid var(--color-secondary-alpha-12);
+  border-bottom: var(--border-width-default) solid var(--color-secondary-alpha-12);
 }
 
 .message-markdown tbody tr:last-child td {

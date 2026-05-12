@@ -26,15 +26,15 @@
   min-height: 0;
   overflow-x: hidden;
   overflow-y: hidden;
-  border-right: 1px solid var(--color-alpha-white-12);
+  border-right: var(--border-width-default) solid var(--color-alpha-white-12);
   background: var(--color-surface-alpha-96);
-  box-shadow: inset -1px 0 0 var(--color-secondary-alpha-10), 20px 0 48px var(--color-alpha-shadow-20);
+  box-shadow: inset calc(-1 * var(--border-width-default)) 0 0 var(--color-secondary-alpha-10), 20px 0 48px var(--color-alpha-shadow-20);
 }
 
 .sidebar-section,
 .panel-card {
   position: relative;
-  border: 1px solid var(--surface-card-border);
+  border: var(--border-width-default) solid var(--surface-card-border);
   border-radius: var(--surface-card-radius);
   background: var(--surface-card-bg);
   box-shadow: var(--surface-card-shadow);
@@ -85,7 +85,7 @@
   display: block;
   width: 16px;
   height: 2px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: currentColor;
 }
 
@@ -195,7 +195,7 @@
 
 .ghost-link {
   padding: 10px 14px;
-  border: 1px solid var(--button-ghost-border);
+  border: var(--border-width-default) solid var(--button-ghost-border);
   color: var(--text-soft);
   background: var(--surface-1);
   box-shadow: var(--surface-card-inset);
@@ -230,8 +230,8 @@
   padding: 10px 12px 10px 14px;
   min-height: 58px;
   min-width: 0;
-  border: 1px solid var(--color-alpha-white-11);
-  border-radius: 0.8rem;
+  border: var(--border-width-default) solid var(--color-alpha-white-11);
+  border-radius: var(--radius-2xl-tight);
   background: var(--color-surface-alpha-72);
   color: var(--foreground);
   overflow: hidden;
@@ -243,7 +243,7 @@
   right: 12px;
   width: 7px;
   height: 7px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--signal);
   opacity: 0.68;
   content: "";
@@ -304,8 +304,8 @@
   width: 100%;
   min-height: 40px;
   padding: 9px 10px 9px 12px;
-  border: 1px solid var(--button-ghost-border);
-  border-radius: 0.72rem;
+  border: var(--border-width-default) solid var(--button-ghost-border);
+  border-radius: var(--button-radius);
   background: var(--surface-1);
   color: var(--text-soft);
   font-size: 0.78rem;
@@ -325,8 +325,8 @@
   position: relative;
   width: 42px;
   height: 22px;
-  border: 1px solid var(--color-secondary-alpha-36);
-  border-radius: 999px;
+  border: var(--border-width-default) solid var(--color-secondary-alpha-36);
+  border-radius: var(--radius-pill);
   background: var(--background);
   box-shadow: inset 0 1px 8px var(--color-switch-track-shadow);
 }
@@ -337,7 +337,7 @@
   left: 3px;
   width: 14px;
   height: 14px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--muted-foreground);
   box-shadow: 0 0 10px var(--color-switch-thumb-shadow);
   transition: left 140ms var(--ease-out), background-color 140ms var(--ease-out), box-shadow 140ms var(--ease-out);
@@ -354,8 +354,8 @@
   align-items: center;
   gap: 8px;
   padding: 7px 10px;
-  border: 1px solid var(--color-secondary-alpha-34);
-  border-radius: 999px;
+  border: var(--border-width-default) solid var(--color-secondary-alpha-34);
+  border-radius: var(--radius-pill);
   background: var(--color-bg-cyan-pill);
   color: var(--color-text-link);
   font-family: var(--font-mono);
@@ -368,7 +368,7 @@
 .runtime-pill::before {
   width: 7px;
   height: 7px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--secondary);
   box-shadow: 0 0 12px var(--secondary);
   content: "";
@@ -461,7 +461,7 @@
   justify-content: space-between;
   gap: 12px;
   padding: 10px 0;
-  border-top: 1px solid var(--color-alpha-white-10);
+  border-top: var(--border-width-default) solid var(--color-alpha-white-10);
 }
 
 .event-list-item > div {
@@ -492,7 +492,7 @@
   flex-direction: column;
   gap: 6px;
   padding: 10px 0;
-  border-top: 1px solid var(--color-alpha-white-10);
+  border-top: var(--border-width-default) solid var(--color-alpha-white-10);
 }
 
 .summary-list dt {
@@ -584,7 +584,7 @@
 .conversation-hero-card {
   min-height: auto;
   padding: 14px 16px;
-  border-radius: 1.25rem;
+  border-radius: var(--radius-hero);
 }
 
 .conversation-hero-content {
@@ -601,7 +601,7 @@
   justify-content: flex-end;
   gap: 8px;
   padding-top: 10px;
-  border-top: 1px solid var(--color-alpha-white-10);
+  border-top: var(--border-width-default) solid var(--color-alpha-white-10);
 }
 
 .conversation-hero-title {
@@ -623,8 +623,8 @@
   max-width: 42%;
   gap: 4px;
   padding: 9px 11px;
-  border: 1px solid var(--color-secondary-alpha-34);
-  border-radius: 0.9rem;
+  border: var(--border-width-default) solid var(--color-secondary-alpha-34);
+  border-radius: var(--radius-3xl);
   background: var(--color-bg-cyan-chip);
   color: var(--color-text-link);
   box-shadow: var(--surface-card-inset);
@@ -636,7 +636,7 @@
   left: 12px;
   width: 7px;
   height: 7px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--signal);
   box-shadow: 0 0 12px var(--color-secondary-alpha-50);
   transform: translateY(-50%);
@@ -690,8 +690,8 @@
   width: 92px;
   height: 28px;
   pointer-events: none;
-  border-top: 1px solid var(--color-primary-alpha-24);
-  border-right: 1px solid var(--color-primary-alpha-24);
+  border-top: var(--border-width-default) solid var(--color-primary-alpha-24);
+  border-right: var(--border-width-default) solid var(--color-primary-alpha-24);
   opacity: 0.36;
   content: "";
 }
@@ -735,8 +735,8 @@
   flex-wrap: wrap;
   gap: 8px;
   padding: 6px;
-  border: 1px solid var(--color-alpha-white-12);
-  border-radius: 1rem;
+  border: var(--border-width-default) solid var(--color-alpha-white-12);
+  border-radius: var(--radius-4xl);
   background: var(--color-bg-app-alpha-58);
 }
 
@@ -746,8 +746,8 @@
   justify-content: center;
   min-height: 36px;
   padding: 8px 14px;
-  border: 1px solid transparent;
-  border-radius: 0.68rem;
+  border: var(--border-width-default) solid transparent;
+  border-radius: var(--radius-md);
   background: transparent;
   color: var(--text-soft);
   font-family: var(--font-mono);
@@ -795,8 +795,8 @@
 .inspector-summary > div,
 .timeline-card,
 .run-card {
-  border: 1px solid var(--border);
-  border-radius: 0.9rem;
+  border: var(--border-width-default) solid var(--border);
+  border-radius: var(--radius-3xl);
   background: var(--color-surface-alpha-78);
   box-shadow: var(--surface-card-inset);
 }
@@ -885,8 +885,8 @@
   align-items: center;
   justify-content: center;
   padding: 5px 9px;
-  border: 1px solid transparent;
-  border-radius: 999px;
+  border: var(--border-width-default) solid transparent;
+  border-radius: var(--radius-pill);
   font-family: var(--font-mono);
   font-size: 0.7rem;
   letter-spacing: 0.1em;
@@ -968,8 +968,8 @@
   width: 13px;
   height: 13px;
   margin-top: 18px;
-  border: 1px solid var(--color-alpha-white-28);
-  border-radius: 999px;
+  border: var(--border-width-default) solid var(--color-alpha-white-28);
+  border-radius: var(--radius-pill);
   box-shadow: 0 0 0 4px var(--color-alpha-white-06);
 }
 
@@ -1103,8 +1103,8 @@
   display: grid;
   gap: 12px;
   padding: 14px;
-  border: 1px solid var(--color-alpha-white-12);
-  border-radius: 0.84rem;
+  border: var(--border-width-default) solid var(--color-alpha-white-12);
+  border-radius: var(--radius-2xl-loose);
   background: var(--color-surface-alpha-50);
 }
 
@@ -1119,8 +1119,8 @@
   gap: 12px;
   min-width: 0;
   padding: 14px;
-  border: 1px solid var(--color-alpha-white-12);
-  border-radius: 0.84rem;
+  border: var(--border-width-default) solid var(--color-alpha-white-12);
+  border-radius: var(--radius-2xl-loose);
   background: var(--color-surface-alpha-50);
 }
 
@@ -1188,8 +1188,8 @@
   display: grid;
   gap: 10px;
   padding: 12px;
-  border: 1px solid var(--color-alpha-white-12);
-  border-radius: 0.72rem;
+  border: var(--border-width-default) solid var(--color-alpha-white-12);
+  border-radius: var(--radius-lg);
   background: var(--color-bg-purple-subtle);
 }
 
@@ -1224,8 +1224,8 @@
   align-items: center;
   min-height: 24px;
   padding: 3px 8px;
-  border: 1px solid var(--color-alpha-white-12);
-  border-radius: 999px;
+  border: var(--border-width-default) solid var(--color-alpha-white-12);
+  border-radius: var(--radius-pill);
   background: var(--color-surface-alpha-48);
   color: var(--text-soft);
   font-family: var(--font-mono);
@@ -1243,7 +1243,7 @@
 .text-input {
   width: 100%;
   padding: var(--input-padding-block) var(--input-padding-inline);
-  border: 1px solid var(--input-border);
+  border: var(--border-width-default) solid var(--input-border);
   border-radius: var(--input-radius);
   background: var(--input-bg);
   color: var(--foreground);
@@ -1256,7 +1256,7 @@
 }
 
 .text-input:focus {
-  outline: 2px solid var(--color-primary-alpha-22);
+  outline: var(--focus-outline-width) solid var(--color-primary-alpha-22);
   border-color: var(--input-border-focus);
   background: var(--input-bg-focus);
 }
@@ -1275,8 +1275,8 @@
   justify-content: space-between;
   gap: 12px;
   padding: 10px 12px;
-  border: 1px solid var(--input);
-  border-radius: 0.76rem;
+  border: var(--border-width-default) solid var(--input);
+  border-radius: var(--input-radius);
   color: var(--foreground);
   background: var(--color-surface-alpha-94);
   box-shadow: var(--surface-card-inset);
@@ -1300,8 +1300,8 @@
   width: 8px;
   height: 8px;
   flex: 0 0 auto;
-  border-right: 1px solid var(--color-chevron-border);
-  border-bottom: 1px solid var(--color-chevron-border);
+  border-right: var(--border-width-default) solid var(--color-chevron-border);
+  border-bottom: var(--border-width-default) solid var(--color-chevron-border);
   transform: translateY(-2px) rotate(45deg);
 }
 
@@ -1313,8 +1313,8 @@
   max-height: 240px;
   overflow: auto;
   padding: 6px;
-  border: 1px solid var(--color-primary-alpha-38);
-  border-radius: 0.82rem;
+  border: var(--border-width-default) solid var(--color-primary-alpha-38);
+  border-radius: var(--radius-2xl);
   background: var(--color-bg-app-alpha-98);
   box-shadow: 0 18px 42px var(--color-alpha-shadow-32), 0 0 28px var(--color-primary-alpha-12);
 }
@@ -1323,8 +1323,8 @@
   width: 100%;
   min-height: 36px;
   padding: 8px 10px;
-  border: 1px solid transparent;
-  border-radius: 0.58rem;
+  border: var(--border-width-default) solid transparent;
+  border-radius: var(--radius-sm);
   color: var(--color-select-option-fg);
   background: transparent;
   text-align: left;
@@ -1338,7 +1338,7 @@
 }
 
 .custom-select-option-active {
-  box-shadow: inset 0 0 0 1px var(--color-primary-alpha-46);
+  box-shadow: inset 0 0 0 var(--border-width-default) var(--color-primary-alpha-46);
 }
 
 .composer-input {
@@ -1355,7 +1355,7 @@
   height: 46px;
   min-height: 46px;
   padding: 0;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
 }
 
 .composer-send-button svg {
@@ -1372,8 +1372,8 @@
 
 .data-backup-summary div {
   padding: 12px;
-  border: 1px solid var(--color-alpha-white-12);
-  border-radius: 0.72rem;
+  border: var(--border-width-default) solid var(--color-alpha-white-12);
+  border-radius: var(--radius-lg);
   background: var(--color-surface-alpha-50);
 }
 
@@ -1393,8 +1393,8 @@
   display: grid;
   gap: 6px;
   padding: 12px 14px;
-  border: 1px solid var(--color-warning-alpha-36);
-  border-radius: 0.82rem;
+  border: var(--border-width-default) solid var(--color-warning-alpha-36);
+  border-radius: var(--radius-2xl);
   background: var(--color-warning-alpha-24);
   color: var(--color-text-warning);
   box-shadow: var(--surface-card-inset);
@@ -1423,11 +1423,11 @@
 .data-backup-actions {
   margin-top: 2px;
   padding-top: 12px;
-  border-top: 1px solid var(--color-alpha-white-12);
+  border-top: var(--border-width-default) solid var(--color-alpha-white-12);
 }
 
 .primary-button {
-  border: 1px solid var(--button-primary-border);
+  border: var(--border-width-default) solid var(--button-primary-border);
   padding: var(--button-padding-block) var(--button-padding-inline);
   background: var(--button-primary-bg);
   color: var(--button-primary-fg);
@@ -1448,7 +1448,7 @@
 }
 
 .ghost-button {
-  border: 1px solid var(--button-ghost-border);
+  border: var(--border-width-default) solid var(--button-ghost-border);
   padding: var(--button-padding-block) var(--button-padding-inline);
   background: var(--button-ghost-bg);
   color: var(--button-ghost-fg);
@@ -1614,7 +1614,7 @@
     max-height: none;
     overflow-y: visible;
     border-right: 0;
-    border-bottom: 1px solid var(--border);
+    border-bottom: var(--border-width-default) solid var(--border);
   }
 
   .conversation-nav {
