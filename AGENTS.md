@@ -11,6 +11,7 @@
 - Add desktop bridge APIs in both `apps/desktop/src/preload/index.ts` and `packages/shared/src/bridge/`.
 - The renderer uses TanStack Router, TanStack Query, TanStack Form, and Streamdown. Extend those patterns instead of adding alternatives.
 - For renderer UI changes, preserve desktop accessibility conventions: visible `:focus-visible` states for interactive controls, `aria-live="polite"` for async feedback, meaningful form `name`/`autocomplete` metadata, `Intl`-based formatting helpers, and CSS overflow handling for long model names, paths, tool IDs, and event details.
+- Renderer CSS is layered through `apps/desktop/src/renderer/styles/index.css`; keep raw design values in `styles/tokens/`, prefer semantic/component tokens in component CSS, use `rem` for scalable sizes, and reserve `px` for hairlines, breakpoints, shadows, and crisp decorative geometry. Run `pnpm --filter @nano-harness/desktop check:styles` after renderer style changes.
 - `packages/shared` owns Zod schemas and cross-process contracts. Change shared contracts first, then update main/preload/renderer callers.
 - `packages/core` owns orchestration. `CoreRunEngine` coordinates focused runtime seams in `provider-turn-runner.ts`, `action-invocation-pipeline.ts`, `approval-gate.ts`, and `dry-run-preview-builder.ts`; supporting contracts live in `provider.ts`, `actions.ts`, `policy.ts`, `event-bus.ts`, `approvals.ts`, `hooks.ts`, and `run-status.ts`. `packages/infra` owns side effects: providers, built-in actions, MCP adapters, skills loading, and SQLite persistence.
 
