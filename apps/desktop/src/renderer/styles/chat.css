@@ -43,13 +43,13 @@
   align-self: flex-end;
   max-width: min(74%, 700px);
   border-color: oklch(76% 0.14 288deg / 0.42);
-  background: linear-gradient(135deg, oklch(48% 0.075 282deg / 0.9), oklch(40% 0.045 260deg / 0.9));
+  background: oklch(45% 0.06 278deg / 0.86);
 }
 
 .message-assistant {
   max-width: min(88%, 860px);
   border-color: oklch(76% 0.105 188deg / 0.34);
-  background: linear-gradient(135deg, oklch(44% 0.06 190deg / 0.48), oklch(38% 0.04 262deg / 0.9));
+  background: oklch(38% 0.045 236deg / 0.9);
 }
 
 .message-assistant::before {
@@ -59,7 +59,7 @@
 .message-tool {
   max-width: min(88%, 860px);
   border-color: oklch(80% 0.115 66deg / 0.38);
-  background: linear-gradient(135deg, oklch(49% 0.08 66deg / 0.28), oklch(38% 0.04 262deg / 0.9));
+  background: oklch(40% 0.05 88deg / 0.82);
 }
 
 .message-tool::before {
@@ -291,9 +291,7 @@
   padding: 12px 14px;
   border: 1px solid oklch(76% 0.105 188deg / 0.24);
   border-radius: 0.82rem;
-  background:
-    linear-gradient(180deg, oklch(43% 0.055 276deg / 0.46), oklch(32% 0.04 266deg / 0.86)),
-    radial-gradient(circle at top right, oklch(76% 0.105 188deg / 0.08), transparent 34%);
+  background: oklch(32% 0.04 266deg / 0.86);
   color: var(--foreground);
   font-size: 0.82rem;
   line-height: 1.48;
@@ -322,9 +320,7 @@
 .message-markdown pre:has(code[class*="language-shell"]),
 .message-markdown pre:has(code[class*="language-zsh"]) {
   border-color: oklch(80% 0.115 66deg / 0.42);
-  background:
-    linear-gradient(180deg, oklch(49% 0.08 66deg / 0.3), oklch(32% 0.04 266deg / 0.86)),
-    radial-gradient(circle at top right, oklch(80% 0.115 66deg / 0.1), transparent 34%);
+  background: oklch(36% 0.05 88deg / 0.84);
 }
 
 .message-markdown [data-streamdown="code-block"],
@@ -332,9 +328,7 @@
   position: relative;
   border-radius: 2px;
   border: 1px solid oklch(76% 0.105 188deg / 0.24);
-  background:
-    linear-gradient(180deg, oklch(43% 0.055 276deg / 0.44), oklch(32% 0.04 266deg / 0.9)),
-    radial-gradient(circle at top right, oklch(76% 0.105 188deg / 0.08), transparent 34%);
+  background: oklch(32% 0.04 266deg / 0.9);
 }
 
 .message-markdown [data-streamdown="code-block"] {
@@ -475,7 +469,7 @@
   top: 0;
   z-index: 1;
   border-bottom: 1px solid oklch(76% 0.105 188deg / 0.3);
-  background: linear-gradient(180deg, oklch(43% 0.055 276deg / 0.86), oklch(38% 0.04 262deg / 0.96));
+  background: oklch(38% 0.04 262deg / 0.96);
   color: var(--text-strong);
   font-weight: 800;
   text-align: left;

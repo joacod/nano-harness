@@ -48,35 +48,7 @@ body,
 body {
   min-height: 100vh;
   overflow: hidden;
-  background:
-    radial-gradient(circle at 16% 0%, oklch(74% 0.11 288deg / 0.2), transparent 32%),
-    radial-gradient(circle at 92% 8%, oklch(76% 0.105 188deg / 0.16), transparent 34%),
-    radial-gradient(circle at 54% 100%, oklch(72% 0.12 232deg / 0.12), transparent 42%),
-    linear-gradient(145deg, oklch(35% 0.045 268deg) 0%, oklch(29% 0.038 260deg) 50%, oklch(37% 0.036 236deg) 100%);
-}
-
-body::before,
-body::after {
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  content: "";
-}
-
-body::before {
-  z-index: 0;
-  background-image:
-    linear-gradient(135deg, oklch(100% 0.01 250deg / 0.055) 0 1px, transparent 1px 22px),
-    radial-gradient(circle at 24px 24px, oklch(100% 0.01 250deg / 0.05) 0 1px, transparent 1px);
-  background-size: 48px 48px;
-  mask-image: radial-gradient(circle at 50% 42%, oklch(0% 0 0deg / 0.86) 0%, oklch(0% 0 0deg / 0.46) 48%, transparent 100%);
-}
-
-body::after {
-  z-index: 1;
-  opacity: 0.32;
-  background:
-    linear-gradient(180deg, oklch(100% 0.01 250deg / 0.04), transparent 34%, oklch(21% 0.05 270deg / 0.22));
+  background: var(--background);
 }
 
 button,
@@ -120,15 +92,6 @@ a {
   grid-template-columns: minmax(0, 1fr);
 }
 
-.workspace-shell::before {
-  position: absolute;
-  inset: 12px;
-  z-index: -1;
-  border: 1px solid oklch(100% 0.01 250deg / 0.08);
-  border-radius: 28px;
-  content: "";
-}
-
 .workspace-shell-single {
   grid-template-columns: minmax(0, 1fr);
   place-items: center;
@@ -145,9 +108,7 @@ a {
   overflow-x: hidden;
   overflow-y: hidden;
   border-right: 1px solid oklch(100% 0.01 250deg / 0.12);
-  background:
-    linear-gradient(180deg, oklch(43% 0.04 258deg / 0.94), oklch(31% 0.038 266deg / 0.9)),
-    radial-gradient(circle at 0% 0%, oklch(76% 0.14 288deg / 0.12), transparent 42%);
+  background: oklch(35% 0.04 264deg / 0.96);
   box-shadow: inset -1px 0 0 oklch(76% 0.105 188deg / 0.1), 20px 0 48px oklch(18% 0.05 270deg / 0.2);
 }
 
@@ -156,9 +117,7 @@ a {
   position: relative;
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  background:
-    linear-gradient(135deg, oklch(45% 0.038 255deg / 0.94), oklch(36% 0.04 264deg / 0.9)),
-    radial-gradient(circle at top right, oklch(76% 0.14 288deg / 0.08), transparent 34%);
+  background: oklch(39% 0.04 260deg / 0.9);
   box-shadow: var(--shadow-glow);
 }
 
@@ -698,10 +657,7 @@ a {
 
 .panel-card-hero {
   min-height: auto;
-  background:
-    linear-gradient(135deg, oklch(50% 0.04 252deg / 0.94), oklch(38% 0.04 264deg / 0.9)),
-    radial-gradient(circle at 86% 12%, oklch(76% 0.14 288deg / 0.13), transparent 30%),
-    radial-gradient(circle at 8% 100%, oklch(76% 0.105 188deg / 0.11), transparent 36%);
+  background: oklch(43% 0.04 258deg / 0.94);
 }
 
 .conversation-hero-card {
@@ -829,9 +785,7 @@ a {
 
 .composer-card {
   border-color: oklch(76% 0.14 288deg / 0.26);
-  background:
-    linear-gradient(135deg, oklch(48% 0.04 252deg / 0.95), oklch(36% 0.04 264deg / 0.92)),
-    radial-gradient(circle at 90% 0%, oklch(76% 0.14 288deg / 0.12), transparent 30%);
+  background: oklch(38% 0.04 264deg / 0.94);
 }
 
 .composer-card:focus-within {
@@ -840,16 +794,12 @@ a {
 }
 
 .transcript-panel {
-  background:
-    linear-gradient(180deg, oklch(37% 0.04 262deg / 0.86), oklch(33% 0.038 266deg / 0.9)),
-    radial-gradient(circle at 0% 0%, oklch(76% 0.105 188deg / 0.08), transparent 34%);
+  background: oklch(34% 0.04 264deg / 0.88);
 }
 
 .inspector-card {
   border-color: oklch(76% 0.105 188deg / 0.22);
-  background:
-    linear-gradient(180deg, oklch(42% 0.04 255deg / 0.94), oklch(34% 0.04 264deg / 0.9)),
-    radial-gradient(circle at 100% 0%, oklch(76% 0.105 188deg / 0.12), transparent 34%);
+  background: oklch(37% 0.04 262deg / 0.94);
 }
 
 .tabs {
@@ -906,7 +856,7 @@ a {
   bottom: 0;
   z-index: 3;
   padding-top: 8px;
-  background: linear-gradient(180deg, transparent, oklch(31% 0.038 266deg / 0.94) 34%);
+  background: var(--background);
 }
 
 .composer-sticky-shell .composer-card {
@@ -1080,7 +1030,7 @@ a {
   position: absolute;
   inset: 18px auto 18px 6px;
   width: 1px;
-  background: linear-gradient(180deg, transparent, oklch(76% 0.14 288deg / 0.42), transparent);
+  background: oklch(76% 0.14 288deg / 0.24);
   content: "";
 }
 
@@ -1407,14 +1357,14 @@ a {
   border: 1px solid var(--input);
   border-radius: 0.76rem;
   color: var(--foreground);
-  background: linear-gradient(135deg, oklch(32% 0.04 266deg / 0.94), oklch(45% 0.038 255deg / 0.88));
+  background: oklch(34% 0.04 264deg / 0.94);
   box-shadow: inset 0 1px 0 oklch(100% 0.01 250deg / 0.08);
 }
 
 .custom-select-trigger:hover,
 .custom-select-trigger[aria-expanded='true'] {
   border-color: oklch(76% 0.14 288deg / 0.72);
-  background: linear-gradient(135deg, oklch(45% 0.038 255deg / 0.96), oklch(48% 0.075 282deg / 0.84));
+  background: oklch(48% 0.075 282deg / 0.84);
 }
 
 .custom-select-value {
@@ -1558,9 +1508,7 @@ a {
 .primary-button {
   border: 1px solid oklch(76% 0.14 288deg / 0.76);
   padding: 10px 16px;
-  background:
-    linear-gradient(135deg, oklch(80% 0.135 288deg), oklch(70% 0.13 236deg)),
-    linear-gradient(90deg, oklch(100% 0.01 250deg / 0.18), transparent);
+  background: var(--primary);
   color: var(--primary-foreground);
   font-weight: 800;
   box-shadow: 0 14px 34px oklch(76% 0.14 288deg / 0.18), inset 0 1px 0 oklch(100% 0.01 250deg / 0.28);
