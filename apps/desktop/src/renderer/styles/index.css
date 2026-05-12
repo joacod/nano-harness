@@ -1,5 +1,10 @@
-@import '../styles.css';
-@import './chat.css';
+@layer reset, tokens, base, components, utilities;
+
+@import './reset.css' layer(reset);
+@import './tokens/index.css' layer(tokens);
+@import './base/index.css' layer(base);
+@import './components/index.css' layer(components);
+@import './utilities/index.css' layer(utilities);
 
 /*
  * Renderer styles now load through this entrypoint so global CSS can be

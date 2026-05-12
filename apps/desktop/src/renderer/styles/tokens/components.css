@@ -1,0 +1,56 @@
+:root {
+  --focus-outline-color: oklch(from var(--color-accent-primary) l c h / 0.9);
+  --focus-outline-width: var(--border-width-focus);
+  --focus-outline-offset: 0.1875rem;
+  --focus-ring-shadow: var(--shadow-focus);
+  --focus-ring-shadow-strong: var(--shadow-focus-strong);
+
+  --surface-card-bg: oklch(from var(--color-bg-surface) l c h / 0.9);
+  --surface-card-border: var(--color-border-default);
+  --surface-card-radius: var(--radius-surface);
+  --surface-card-shadow: var(--shadow-elevation-glow);
+  --surface-card-inset: var(--shadow-inset-highlight);
+
+  --button-radius: var(--radius-lg);
+  --button-min-height: 2.5rem;
+  --button-padding-block: var(--space-2-5);
+  --button-padding-inline: var(--space-4);
+  --button-font-size: var(--font-size-md);
+  --button-letter-spacing: var(--letter-spacing-label);
+  --button-primary-bg: var(--color-accent-primary);
+  --button-primary-fg: var(--color-text-on-accent);
+  --button-primary-border: oklch(from var(--color-accent-primary) l c h / 0.76);
+  --button-primary-shadow: 0 14px 34px oklch(from var(--color-accent-primary) l c h / 0.18), inset 0 1px 0 oklch(from var(--color-neutral-100) l c h / 0.28);
+
+  --button-ghost-bg: var(--color-bg-surface);
+  --button-ghost-bg-hover: var(--color-accent-primary-hover);
+  --button-ghost-fg: var(--color-text-secondary);
+  --button-ghost-fg-hover: var(--color-text-strong);
+  --button-ghost-border: oklch(from var(--color-slate-600) l c h / 0.48);
+  --button-ghost-border-hover: oklch(from var(--color-accent-primary) l c h / 0.72);
+  --button-ghost-shadow: var(--shadow-glow-sm);
+
+  --input-bg: oklch(from var(--color-slate-925) l c h / 0.78);
+  --input-bg-focus: oklch(from var(--color-purple-950) l c h / 0.88);
+  --input-border: var(--color-border-input);
+  --input-border-focus: oklch(from var(--color-accent-primary) l c h / 0.72);
+  --input-radius: var(--radius-xl);
+  --input-padding-block: var(--space-2-5);
+  --input-padding-inline: var(--space-3);
+  --input-placeholder-color: oklch(72% 0.028 252deg);
+
+  --message-bg: oklch(from var(--color-bg-surface) l c h / 0.84);
+  --message-user-bg: oklch(from var(--color-purple-900) l c h / 0.86);
+  --message-user-border: oklch(from var(--color-accent-primary) l c h / 0.42);
+  --message-assistant-bg: oklch(from var(--color-cyan-900) l c h / 0.9);
+  --message-assistant-border: oklch(from var(--color-accent-secondary) l c h / 0.34);
+  --message-tool-bg: oklch(from var(--color-amber-950) l c h / 0.82);
+  --message-tool-border: oklch(from var(--color-status-warning) l c h / 0.38);
+  --message-system-bg: oklch(from var(--color-bg-surface-raised) l c h / 0.72);
+  --message-system-border: oklch(from var(--color-neutral-100) l c h / 0.16);
+  --message-radius: var(--radius-card);
+  --message-padding-block: 0.8125rem;
+  --message-padding-inline: 0.9375rem;
+  --switch-thumb-active-offset: 1.4375rem;
+  --code-block-header-actions-offset: 6.5rem;
+}

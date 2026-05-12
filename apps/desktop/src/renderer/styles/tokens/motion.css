@@ -1,0 +1,12 @@
+:root {
+  --duration-fast: 140ms;
+  --duration-normal: 180ms;
+  --duration-pulse: 1.8s;
+  --duration-pulse-slow: 2s;
+
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out: ease-in-out;
+  --motion-raise-y: -1px;
+  --motion-chevron-y: -2px;
+  --motion-center-y: -50%;
+}

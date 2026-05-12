@@ -1,0 +1,12 @@
+:root {
+  --border-width-default: 1px;
+  --border-width-focus: 2px;
+
+  --radius-xs: 0.125rem;
+  --radius-sm: 0.375rem;
+  --radius-md: 0.625rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 0.875rem;
+  --radius-card: 1.25rem;
+  --radius-pill: 999px;
+}

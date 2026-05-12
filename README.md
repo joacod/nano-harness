@@ -57,10 +57,12 @@ pnpm test
 pnpm test:e2e
 pnpm typecheck
 pnpm lint
+pnpm --filter @nano-harness/desktop check:styles
 ```
 
 - `pnpm test` covers shared/core/infra packages plus desktop main, preload, and renderer behavior.
 - `pnpm test:e2e` covers renderer smoke flows with a mocked desktop bridge.
+- `pnpm --filter @nano-harness/desktop check:styles` guards renderer component CSS against raw design values and non-scalable sizing regressions.
 - The Vite renderer alone does not include the Electron preload bridge, so browser-only checks and tests may mock `window.desktop`.
 
 Note: run `pnpm exec playwright install chromium` on first-time setup or after Playwright upgrades.

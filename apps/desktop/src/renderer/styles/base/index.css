@@ -1,0 +1,24 @@
+:root {
+  color-scheme: dark;
+  font-family: var(--font-family-sans);
+  background: var(--background);
+  color: var(--foreground);
+}
+
+body {
+  min-height: 100vh;
+  overflow: hidden;
+  background: var(--background);
+}
+
+pre,
+code,
+kbd,
+samp {
+  font-family: var(--font-mono);
+}
+
+::selection {
+  background: var(--color-primary-alpha-38);
+  color: var(--text-strong);
+}
