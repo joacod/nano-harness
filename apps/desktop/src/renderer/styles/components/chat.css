@@ -21,8 +21,8 @@
   border-radius: var(--message-radius);
   background: var(--message-bg);
   overflow-wrap: anywhere;
-  font-size: 0.9rem;
-  line-height: 1.55;
+  font-size: var(--font-size-xl);
+  line-height: var(--line-height-relaxed);
   min-width: 0;
   box-shadow: var(--surface-card-inset);
 }
@@ -96,8 +96,8 @@
   margin-bottom: var(--space-2);
   color: var(--signal);
   font-family: var(--font-mono);
-  font-size: 0.66rem;
-  letter-spacing: 0.1em;
+  font-size: var(--font-size-xs);
+  letter-spacing: var(--letter-spacing-wide);
   text-transform: uppercase;
 }
 
@@ -120,7 +120,7 @@
 
 .message-tool-call-chip span {
   color: var(--muted-foreground);
-  font-size: 0.76rem;
+  font-size: var(--font-size-sm-plus);
   overflow-wrap: anywhere;
 }
 
@@ -140,7 +140,7 @@
   grid-template-columns: minmax(120px, 0.36fr) minmax(0, 1fr);
   gap: var(--space-2-5);
   color: var(--muted-foreground);
-  font-size: 0.8rem;
+  font-size: var(--font-size-md-plus);
 }
 
 .message-activity-item strong {
@@ -175,8 +175,8 @@
   color: var(--text-strong);
   cursor: pointer;
   font-family: var(--font-mono);
-  font-size: 0.7rem;
-  letter-spacing: 0.08em;
+  font-size: var(--font-size-status);
+  letter-spacing: var(--letter-spacing-emphasis);
   text-transform: uppercase;
 }
 
@@ -188,7 +188,7 @@
 
 .thinking-count {
   color: var(--muted-foreground);
-  font-size: 0.68rem;
+  font-size: var(--font-size-xs-plus);
 }
 
 .thinking-body {
@@ -201,7 +201,7 @@
 
 .thinking-body p {
   margin: 0;
-  line-height: 1.55;
+  line-height: var(--line-height-relaxed);
 }
 
 .thinking-body pre {
@@ -209,8 +209,8 @@
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   color: var(--foreground);
-  line-height: 1.55;
-  font-size: 0.82rem;
+  line-height: var(--line-height-relaxed);
+  font-size: var(--font-size-code);
 }
 
 .streaming-placeholder {
@@ -221,14 +221,14 @@
 .message-pre {
   margin: 0;
   white-space: pre-wrap;
-  font-size: 0.88rem;
-  line-height: 1.5;
+  font-size: var(--font-size-body-sm);
+  line-height: var(--line-height-normal);
 }
 
 .sd-root,
 .message-markdown {
   color: inherit;
-  line-height: 1.55;
+  line-height: var(--line-height-relaxed);
 }
 
 .sd-root p,
@@ -275,7 +275,7 @@
   border-radius: var(--radius-xs);
   background: var(--color-bg-app-alpha-62);
   color: var(--foreground);
-  font-size: 0.86em;
+  font-size: var(--font-size-code-inline);
 }
 
 .sd-root pre,
@@ -293,8 +293,8 @@
   border-radius: var(--radius-2xl);
   background: var(--color-bg-app-alpha-86);
   color: var(--foreground);
-  font-size: 0.82rem;
-  line-height: 1.48;
+  font-size: var(--font-size-code);
+  line-height: var(--line-height-code);
   box-shadow: inset 0 0 22px var(--color-secondary-alpha-06);
 }
 
@@ -354,8 +354,8 @@
   border-radius: var(--radius-2xs);
   background: var(--color-bg-purple-popover);
   color: var(--color-text-link);
-  font-size: 0.68rem;
-  letter-spacing: 0.08em;
+  font-size: var(--font-size-xs-plus);
+  letter-spacing: var(--letter-spacing-emphasis);
   text-transform: uppercase;
 }
 
@@ -402,7 +402,7 @@
   background: var(--color-bg-surface-code-action);
   color: var(--foreground);
   font: inherit;
-  line-height: 1;
+  line-height: var(--line-height-none);
   box-shadow: inset 0 0 14px var(--color-primary-alpha-04);
 }
 
@@ -461,7 +461,7 @@
   overflow: hidden;
   border: var(--border-width-default) solid var(--color-secondary-alpha-18);
   background: var(--color-bg-app-alpha-42);
-  font-size: 0.9rem;
+  font-size: var(--font-size-xl);
 }
 
 .message-markdown thead th {
@@ -471,7 +471,7 @@
   border-bottom: var(--border-width-default) solid var(--color-secondary-alpha-30);
   background: var(--color-bg-surface-table-head);
   color: var(--text-strong);
-  font-weight: 800;
+  font-weight: var(--font-weight-extrabold);
   text-align: left;
 }
 
@@ -506,7 +506,7 @@
 
 .message-markdown tbody td:first-child {
   color: var(--text-strong);
-  font-weight: 700;
+  font-weight: var(--font-weight-bold);
 }
 
 @media (max-width: 640px) {

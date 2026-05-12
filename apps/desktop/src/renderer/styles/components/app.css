@@ -94,27 +94,27 @@
 .sidebar-section h2 {
   margin: 0;
   color: var(--text-strong);
-  font-size: 1.14rem;
-  letter-spacing: -0.026em;
-  line-height: 1.16;
+  font-size: var(--font-size-4xl);
+  letter-spacing: var(--letter-spacing-tight-title);
+  line-height: var(--line-height-tight);
 }
 
 .sidebar-title {
-  font-size: clamp(1.05rem, 1.24vw, 1.24rem);
+  font-size: var(--font-size-title-fluid);
 }
 
 .muted-copy {
   color: var(--muted-foreground);
-  line-height: 1.58;
-  font-size: 0.9rem;
+  line-height: var(--line-height-loose);
+  font-size: var(--font-size-xl);
 }
 
 .eyebrow {
   margin: 0 0 var(--space-2-5);
   color: var(--primary);
   font-family: var(--font-mono);
-  font-size: 0.66rem;
-  letter-spacing: 0.14em;
+  font-size: var(--font-size-xs);
+  letter-spacing: var(--letter-spacing-widest);
   text-transform: uppercase;
 }
 
@@ -258,14 +258,14 @@
 }
 
 .conversation-link span {
-  font-weight: 700;
-  line-height: 1.25;
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-snug);
 }
 
 .conversation-link small {
   color: var(--muted-foreground);
-  font-size: 0.72rem;
-  line-height: 1.25;
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-snug);
 }
 
 .conversation-link:hover,
@@ -308,8 +308,8 @@
   border-radius: var(--button-radius);
   background: var(--surface-1);
   color: var(--text-soft);
-  font-size: 0.78rem;
-  letter-spacing: 0.06em;
+  font-size: var(--font-size-md);
+  letter-spacing: var(--letter-spacing-label);
   text-transform: uppercase;
 }
 
@@ -359,8 +359,8 @@
   background: var(--color-bg-cyan-pill);
   color: var(--color-text-link);
   font-family: var(--font-mono);
-  font-size: 0.78rem;
-  letter-spacing: 0.08em;
+  font-size: var(--font-size-md);
+  letter-spacing: var(--letter-spacing-emphasis);
   text-transform: uppercase;
   box-shadow: var(--surface-card-inset);
 }
@@ -401,9 +401,9 @@
   min-height: 36px;
   gap: var(--space-1-25);
   padding: 0 var(--space-1-75);
-  font-size: 0.5rem;
-  letter-spacing: 0.035em;
-  line-height: 1;
+  font-size: var(--font-size-2xs);
+  letter-spacing: var(--letter-spacing-compact);
+  line-height: var(--line-height-none);
 }
 
 .sidebar-compact-switch > span:first-child {
@@ -437,9 +437,9 @@
   min-height: 36px;
   min-width: 0;
   padding: 0 var(--space-1-75);
-  font-size: 0.5rem;
-  letter-spacing: 0.035em;
-  line-height: 1;
+  font-size: var(--font-size-2xs);
+  letter-spacing: var(--letter-spacing-compact);
+  line-height: var(--line-height-none);
   white-space: nowrap;
 }
 
@@ -473,7 +473,7 @@
 
 .event-list-item strong {
   color: var(--foreground);
-  font-size: 0.88rem;
+  font-size: var(--font-size-body-sm);
 }
 
 .event-list-item small {
@@ -498,15 +498,15 @@
 .summary-list dt {
   color: var(--signal);
   font-family: var(--font-mono);
-  font-size: 0.72rem;
-  letter-spacing: 0.12em;
+  font-size: var(--font-size-sm);
+  letter-spacing: var(--letter-spacing-wider);
   text-transform: uppercase;
 }
 
 .summary-list dd {
   margin: 0;
   color: var(--foreground);
-  font-size: 0.88rem;
+  font-size: var(--font-size-body-sm);
   overflow-wrap: anywhere;
 }
 
@@ -610,8 +610,8 @@
 
 .conversation-hero-card h2 {
   max-width: min(860px, 100%);
-  font-size: 1.05rem;
-  line-height: 1.2;
+  font-size: var(--font-size-3xl);
+  line-height: var(--line-height-title);
   overflow-wrap: anywhere;
 }
 
@@ -654,14 +654,14 @@
 
 .session-provider-chip span {
   font-family: var(--font-mono);
-  font-size: 0.68rem;
-  letter-spacing: 0.12em;
+  font-size: var(--font-size-xs-plus);
+  letter-spacing: var(--letter-spacing-wider);
   text-transform: uppercase;
 }
 
 .session-provider-chip strong {
   color: var(--foreground);
-  font-size: 0.82rem;
+  font-size: var(--font-size-code);
 }
 
 .session-provider-chip-ready {
@@ -751,8 +751,8 @@
   background: transparent;
   color: var(--text-soft);
   font-family: var(--font-mono);
-  font-size: 0.72rem;
-  letter-spacing: 0.12em;
+  font-size: var(--font-size-sm);
+  letter-spacing: var(--letter-spacing-wider);
   text-transform: uppercase;
 }
 
@@ -856,8 +856,8 @@
 
 .run-provider-label {
   color: var(--text-strong);
-  font-size: 0.84rem;
-  font-weight: 700;
+  font-size: var(--font-size-label);
+  font-weight: var(--font-weight-bold);
 }
 
 .run-card-header,
@@ -888,8 +888,8 @@
   border: var(--border-width-default) solid transparent;
   border-radius: var(--radius-pill);
   font-family: var(--font-mono);
-  font-size: 0.7rem;
-  letter-spacing: 0.1em;
+  font-size: var(--font-size-status);
+  letter-spacing: var(--letter-spacing-wide);
   text-transform: uppercase;
 }
 
@@ -1031,8 +1031,8 @@
   background: var(--color-success-alpha-12);
   color: var(--color-text-success);
   font-family: var(--font-mono);
-  font-size: 0.7rem;
-  letter-spacing: 0.1em;
+  font-size: var(--font-size-status);
+  letter-spacing: var(--letter-spacing-wide);
 }
 
 .skill-status-switch:not(.switch-button-active) {
@@ -1059,8 +1059,8 @@
 
 .timeline-type {
   color: var(--signal);
-  font-size: 0.78rem;
-  letter-spacing: 0.06em;
+  font-size: var(--font-size-md);
+  letter-spacing: var(--letter-spacing-label);
 }
 
 .approval-card {
@@ -1137,8 +1137,8 @@
 .settings-section-heading p:not(.eyebrow) {
   margin: 0;
   color: var(--muted-foreground);
-  font-size: 0.86rem;
-  line-height: 1.45;
+  font-size: var(--font-size-lg);
+  line-height: var(--line-height-form);
 }
 
 .settings-field-grid {
@@ -1177,7 +1177,7 @@
   gap: var(--space-2-5);
   min-height: 38px;
   color: var(--foreground);
-  font-size: 0.86rem;
+  font-size: var(--font-size-lg);
 }
 
 .settings-checkbox-row input {
@@ -1229,8 +1229,8 @@
   background: var(--color-surface-alpha-48);
   color: var(--text-soft);
   font-family: var(--font-mono);
-  font-size: 0.68rem;
-  letter-spacing: 0.04em;
+  font-size: var(--font-size-xs-plus);
+  letter-spacing: var(--letter-spacing-subtle);
 }
 
 .composer-input-row {
@@ -1345,8 +1345,8 @@
   min-height: 72px;
   max-height: 180px;
   resize: vertical;
-  font-size: 0.94rem;
-  line-height: 1.5;
+  font-size: var(--font-size-2xl);
+  line-height: var(--line-height-normal);
 }
 
 .composer-send-button {
@@ -1379,7 +1379,7 @@
 
 .data-backup-summary dd {
   font-family: var(--font-mono);
-  font-size: 0.8rem;
+  font-size: var(--font-size-md-plus);
 }
 
 .data-backup-notices {
@@ -1403,16 +1403,16 @@
 .data-backup-notice strong {
   color: var(--color-amber-100);
   font-family: var(--font-mono);
-  font-size: 0.72rem;
-  letter-spacing: 0.12em;
+  font-size: var(--font-size-sm);
+  letter-spacing: var(--letter-spacing-wider);
   text-transform: uppercase;
 }
 
 .data-backup-notice p {
   margin: 0;
   color: var(--color-amber-400);
-  font-size: 0.84rem;
-  line-height: 1.45;
+  font-size: var(--font-size-label);
+  line-height: var(--line-height-form);
 }
 
 .data-backup-notice-warning {
@@ -1431,7 +1431,7 @@
   padding: var(--button-padding-block) var(--button-padding-inline);
   background: var(--button-primary-bg);
   color: var(--button-primary-fg);
-  font-weight: 800;
+  font-weight: var(--font-weight-extrabold);
   box-shadow: var(--button-primary-shadow);
 }
 
@@ -1471,7 +1471,7 @@
 .button-sm {
   min-height: 34px;
   padding: var(--space-2) var(--space-3);
-  font-size: 0.72rem;
+  font-size: var(--font-size-sm);
 }
 
 .button-full-width {
@@ -1555,14 +1555,14 @@
 .field-label {
   color: var(--signal);
   font-family: var(--font-mono);
-  font-size: 0.78rem;
-  letter-spacing: 0.12em;
+  font-size: var(--font-size-md);
+  letter-spacing: var(--letter-spacing-wider);
   text-transform: uppercase;
 }
 
 .field-hint {
   color: var(--muted-foreground);
-  line-height: 1.5;
+  line-height: var(--line-height-normal);
 }
 
 .field-error,
