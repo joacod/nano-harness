@@ -56,6 +56,14 @@ export function ProviderSettingsForm({
     },
   })
 
+  function handleCancel() {
+    form.reset(savedSettings)
+    setDraftSettings(savedSettings)
+    setSelectedProvider(savedSettings.provider.provider)
+    onProviderChange(savedSettings.provider.provider)
+    setSaveMessage(null)
+  }
+
   useEffect(() => {
     if (!hasUnsavedChanges) {
       return undefined
@@ -274,6 +282,11 @@ export function ProviderSettingsForm({
           <Button type="submit" variant="primary" disabled={isSaving || !hasUnsavedChanges}>
             {isSaving ? 'Saving…' : hasUnsavedChanges ? 'Save settings' : 'Saved'}
           </Button>
+          {hasUnsavedChanges ? (
+            <Button type="button" onClick={handleCancel} disabled={isSaving}>
+              Cancel
+            </Button>
+          ) : null}
           {hasUnsavedChanges ? <FeedbackText variant="warning">Unsaved provider changes. Save to make them active.</FeedbackText> : null}
         </div>
       </form>

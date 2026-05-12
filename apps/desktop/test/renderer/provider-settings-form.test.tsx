@@ -111,6 +111,31 @@ describe('ProviderSettingsForm', () => {
     expect(screen.queryByText('Unsaved provider changes. Save to make them active.')).toBeNull()
   })
 
+  it('discards unsaved provider changes when canceled', async () => {
+    const user = userEvent.setup()
+    const onSubmit = vi.fn(async () => undefined)
+
+    const { container } = render(
+      <ProviderSettingsForm
+        initialSettings={createSettings()}
+        isSaving={false}
+        saveError={null}
+        onProviderChange={() => undefined}
+        onSubmit={onSubmit}
+      />,
+    )
+
+    const modelInput = getRequiredElement<HTMLInputElement>(container, 'input[name="model"]')
+    await user.clear(modelInput)
+    await user.type(modelInput, 'changed/model')
+
+    await user.click(screen.getByRole('button', { name: 'Cancel' }))
+
+    expect(modelInput.value).toBe('custom/model')
+    expect(onSubmit).not.toHaveBeenCalled()
+    expect(screen.queryByText('Unsaved provider changes. Save to make them active.')).toBeNull()
+  })
+
   it('switches to llama.cpp defaults', async () => {
     const user = userEvent.setup()
     const onProviderChange = vi.fn()

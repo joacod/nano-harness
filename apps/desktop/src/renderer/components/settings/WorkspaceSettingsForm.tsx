@@ -49,6 +49,12 @@ export function WorkspaceSettingsForm({
     },
   })
 
+  function handleCancel() {
+    form.reset(savedSettings)
+    setDraftSettings(savedSettings)
+    setSaveMessage(null)
+  }
+
   useEffect(() => {
     if (!hasUnsavedChanges) {
       return undefined
@@ -249,6 +255,11 @@ export function WorkspaceSettingsForm({
           <Button type="submit" variant="primary" disabled={isSaving || !hasUnsavedChanges}>
             {isSaving ? 'Saving...' : hasUnsavedChanges ? 'Save workspace settings' : 'Saved'}
           </Button>
+          {hasUnsavedChanges ? (
+            <Button type="button" onClick={handleCancel} disabled={isSaving}>
+              Cancel
+            </Button>
+          ) : null}
           {hasUnsavedChanges ? <FeedbackText variant="warning">Unsaved workspace changes. Save to make them active.</FeedbackText> : null}
         </div>
       </form>
