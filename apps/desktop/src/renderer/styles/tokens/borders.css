@@ -1,0 +1,17 @@
+:root {
+  --border-width-default: 1px;
+  --border-width-focus: 2px;
+
+  --radius-2xs: 2px;
+  --radius-xs: 3px;
+  --radius-sm: 0.58rem;
+  --radius-md: 0.68rem;
+  --radius-lg: 0.72rem;
+  --radius-xl: 0.76rem;
+  --radius-2xl: 0.82rem;
+  --radius-3xl: 0.9rem;
+  --radius-4xl: 1rem;
+  --radius-card: 1.2rem;
+  --radius-hero: 1.25rem;
+  --radius-pill: 999px;
+}

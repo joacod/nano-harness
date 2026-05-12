@@ -1,0 +1,48 @@
+:root {
+  --color-neutral-100: oklch(100% 0.01 250deg);
+  --color-neutral-950: oklch(18% 0.05 270deg);
+
+  --color-slate-300: oklch(78% 0.032 252deg);
+  --color-slate-400: oklch(74% 0.08 286deg);
+  --color-slate-500: oklch(66% 0.05 252deg);
+  --color-slate-600: oklch(61% 0.035 252deg);
+  --color-slate-700: oklch(53% 0.04 248deg);
+  --color-slate-800: oklch(45% 0.038 255deg);
+  --color-slate-850: oklch(39% 0.04 260deg);
+  --color-slate-900: oklch(34% 0.04 264deg);
+  --color-slate-925: oklch(31% 0.038 266deg);
+  --color-slate-975: oklch(21% 0.05 270deg);
+
+  --color-ink-50: oklch(98% 0.012 250deg);
+  --color-ink-100: oklch(94% 0.018 252deg);
+  --color-ink-200: oklch(89% 0.055 188deg);
+
+  --color-purple-300: oklch(76% 0.14 288deg);
+  --color-purple-700: oklch(48% 0.075 282deg);
+  --color-purple-800: oklch(47% 0.07 282deg);
+  --color-purple-900: oklch(45% 0.06 278deg);
+  --color-purple-950: oklch(43% 0.055 276deg);
+  --color-purple-975: oklch(22% 0.05 272deg);
+
+  --color-cyan-300: oklch(76% 0.105 188deg);
+  --color-cyan-700: oklch(45% 0.06 190deg);
+  --color-cyan-900: oklch(38% 0.045 236deg);
+
+  --color-amber-100: oklch(94% 0.055 66deg);
+  --color-amber-200: oklch(90% 0.08 66deg);
+  --color-amber-300: oklch(88% 0.08 66deg);
+  --color-amber-400: oklch(86% 0.065 66deg);
+  --color-amber-500: oklch(80% 0.115 66deg);
+  --color-amber-900: oklch(49% 0.08 66deg);
+  --color-amber-950: oklch(40% 0.05 88deg);
+  --color-amber-975: oklch(36% 0.05 88deg);
+
+  --color-green-300: oklch(82% 0.055 138deg);
+  --color-green-400: oklch(74% 0.08 152deg);
+  --color-green-500: oklch(70% 0.07 138deg);
+
+  --color-red-300: oklch(86% 0.08 352deg);
+  --color-red-500: oklch(72% 0.14 352deg);
+  --color-red-900: oklch(42% 0.09 352deg);
+  --color-red-800: oklch(48% 0.11 352deg);
+}

@@ -1,0 +1,8 @@
+:root {
+  --shadow-none: none;
+  --shadow-glow-sm: 0 12px 30px oklch(76% 0.14 288deg / 0.12), inset 0 1px 0 oklch(100% 0.01 250deg / 0.1);
+  --shadow-glow-md: 0 18px 48px oklch(18% 0.05 270deg / 0.28), 0 1px 0 oklch(100% 0.01 250deg / 0.08);
+  --shadow-focus: 0 0 0 5px oklch(76% 0.14 288deg / 0.16), 0 0 28px oklch(76% 0.14 288deg / 0.14);
+  --shadow-focus-strong: 0 0 0 5px oklch(76% 0.14 288deg / 0.16), 0 0 28px oklch(76% 0.14 288deg / 0.2);
+  --shadow-inset-highlight: inset 0 1px 0 oklch(100% 0.01 250deg / 0.08);
+}
