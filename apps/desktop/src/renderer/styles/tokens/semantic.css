@@ -1,0 +1,61 @@
+:root {
+  --color-bg-app: var(--color-slate-925);
+  --color-bg-surface: var(--color-slate-850);
+  --color-bg-surface-muted: var(--color-slate-800);
+  --color-bg-surface-raised: var(--color-slate-900);
+  --color-bg-surface-strong: var(--color-slate-700);
+
+  --color-text-primary: var(--color-ink-100);
+  --color-text-strong: var(--color-ink-50);
+  --color-text-secondary: var(--color-slate-300);
+  --color-text-on-accent: var(--color-purple-975);
+
+  --color-border-default: oklch(from var(--color-slate-600) l c h / 0.42);
+  --color-border-strong: oklch(from var(--color-slate-400) l c h / 0.72);
+  --color-border-input: oklch(from var(--color-slate-500) l c h / 0.56);
+  --color-border-subtle: oklch(from var(--color-neutral-100) l c h / 0.12);
+
+  --color-accent-primary: var(--color-purple-300);
+  --color-accent-primary-hover: oklch(from var(--color-purple-700) l c h / 0.92);
+  --color-accent-secondary: var(--color-cyan-300);
+
+  --color-status-info: var(--color-cyan-300);
+  --color-status-warning: var(--color-amber-500);
+  --color-status-danger: var(--color-red-500);
+  --color-status-success: var(--color-green-400);
+
+  --color-panel-bg: var(--color-bg-surface);
+  --color-panel-bg-strong: var(--color-bg-surface-muted);
+  --shadow-elevation-glow: var(--shadow-glow-md);
+  --radius-surface: var(--radius-card);
+}
+
+:root {
+  --background: var(--color-bg-app);
+  --surface-0: var(--color-bg-surface-raised);
+  --surface-1: var(--color-bg-surface);
+  --surface-2: var(--color-bg-surface-muted);
+  --surface-3: var(--color-bg-surface-strong);
+  --foreground: var(--color-text-primary);
+  --text-strong: var(--color-text-strong);
+  --text-soft: var(--color-text-secondary);
+  --card: var(--surface-1);
+  --card-foreground: var(--foreground);
+  --muted: var(--surface-2);
+  --muted-foreground: var(--text-soft);
+  --border: var(--color-border-default);
+  --border-strong: var(--color-border-strong);
+  --input: var(--color-border-input);
+  --primary: var(--color-accent-primary);
+  --primary-foreground: var(--color-text-on-accent);
+  --secondary: var(--color-accent-secondary);
+  --signal: var(--color-status-info);
+  --warning: var(--color-status-warning);
+  --danger: var(--color-status-danger);
+  --success: var(--color-status-success);
+  --panel: var(--color-panel-bg);
+  --panel-strong: var(--color-panel-bg-strong);
+  --shadow-glow: var(--shadow-elevation-glow);
+  --radius: var(--radius-surface);
+  --font-mono: var(--font-family-mono);
+}

@@ -1,34 +1,3 @@
-:root {
-  --background: oklch(31% 0.038 266deg);
-  --surface-0: oklch(34% 0.04 264deg);
-  --surface-1: oklch(39% 0.04 260deg);
-  --surface-2: oklch(45% 0.038 255deg);
-  --surface-3: oklch(53% 0.04 248deg);
-  --foreground: oklch(94% 0.018 252deg);
-  --text-strong: oklch(98% 0.012 250deg);
-  --text-soft: oklch(78% 0.032 252deg);
-  --card: var(--surface-1);
-  --card-foreground: var(--foreground);
-  --muted: var(--surface-2);
-  --muted-foreground: var(--text-soft);
-  --border: oklch(61% 0.035 252deg / 0.42);
-  --border-strong: oklch(74% 0.08 286deg / 0.72);
-  --input: oklch(66% 0.05 252deg / 0.56);
-  --primary: oklch(76% 0.14 288deg);
-  --primary-foreground: oklch(22% 0.05 272deg);
-  --secondary: oklch(76% 0.105 188deg);
-  --signal: oklch(76% 0.105 188deg);
-  --warning: oklch(80% 0.115 66deg);
-  --danger: oklch(72% 0.14 352deg);
-  --success: oklch(74% 0.08 152deg);
-  --panel: var(--surface-1);
-  --panel-strong: var(--surface-2);
-  --shadow-glow: 0 18px 48px oklch(18% 0.05 270deg / 0.28), 0 1px 0 oklch(100% 0.01 250deg / 0.08);
-  --radius: 1.2rem;
-  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
-  --font-mono: "SFMono-Regular", "Cascadia Code", "Liberation Mono", "Menlo", monospace;
-}
-
 .workspace-shell {
   position: relative;
   z-index: 2;
