@@ -1,2 +1,2 @@
-@import '../../styles.css';
-@import '../chat.css';
+@import './app.css';
+@import './chat.css';
