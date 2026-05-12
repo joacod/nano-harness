@@ -74,8 +74,8 @@
 
 .message-streaming {
   border-style: dashed;
-  box-shadow: 0 0 28px var(--color-secondary-alpha-14), var(--surface-card-inset);
-  animation: signal-pulse 1.8s ease-in-out infinite;
+  box-shadow: var(--shadow-message-streaming);
+  animation: signal-pulse var(--duration-pulse-medium) var(--ease-in-out) infinite;
 }
 
 .chat-approval-card {
@@ -295,7 +295,7 @@
   color: var(--foreground);
   font-size: var(--font-size-code);
   line-height: var(--line-height-code);
-  box-shadow: inset 0 0 22px var(--color-secondary-alpha-06);
+  box-shadow: var(--shadow-code-block);
 }
 
 .sd-root pre code,
@@ -378,7 +378,7 @@
   border-radius: var(--radius-2xs);
   background: var(--color-bg-purple-popover);
   padding: var(--space-0-75);
-  box-shadow: 0 0 14px var(--color-secondary-alpha-12);
+  box-shadow: var(--shadow-code-actions);
 }
 
 .message-markdown [data-streamdown="code-block"] pre {
@@ -386,7 +386,7 @@
   border: 0;
   border-radius: var(--radius-md);
   background: var(--color-bg-app-alpha-46);
-  box-shadow: none;
+  box-shadow: var(--shadow-none);
 }
 
 .message-markdown [data-streamdown="code-block-actions"] button,
@@ -403,7 +403,7 @@
   color: var(--foreground);
   font: inherit;
   line-height: var(--line-height-none);
-  box-shadow: inset 0 0 14px var(--color-primary-alpha-04);
+  box-shadow: var(--shadow-code-action-button);
 }
 
 .message-markdown [data-streamdown="code-block-actions"] button:hover,
@@ -450,7 +450,7 @@
   border-radius: var(--radius-2xs);
   background: var(--color-surface-alpha-98);
   color: var(--foreground);
-  box-shadow: 0 12px 28px var(--color-alpha-shadow-28), 0 0 18px var(--color-secondary-alpha-12);
+  box-shadow: var(--shadow-markdown-menu);
 }
 
 .message-markdown table {
