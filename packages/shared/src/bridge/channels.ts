@@ -26,5 +26,6 @@ export const desktopBridgeChannels = {
   cancelRun: 'desktop:cancel-run',
   resolveApproval: 'desktop:resolve-approval',
   openExternalUrl: 'desktop:open-external-url',
+  showItemInFolder: 'desktop:show-item-in-folder',
   runEvent: 'desktop:run-event',
 } as const

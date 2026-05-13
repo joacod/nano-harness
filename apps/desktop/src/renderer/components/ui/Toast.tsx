@@ -3,6 +3,10 @@ import { useEffect, type ReactNode } from 'react'
 import { cn } from './classnames'
 
 export type ToastMessage = {
+  action?: {
+    label: string
+    onClick: () => void
+  }
   id: string
   message?: ReactNode
   title: ReactNode
@@ -10,7 +14,7 @@ export type ToastMessage = {
 }
 
 export function Toast({
-  autoDismissMs = 6000,
+  autoDismissMs = 10000,
   onDismiss,
   toast,
 }: {
@@ -40,6 +44,11 @@ export function Toast({
         <div className="toast-content">
           <strong>{toast.title}</strong>
           {toast.message ? <p>{toast.message}</p> : null}
+          {toast.action ? (
+            <button type="button" className="toast-action" onClick={toast.action.onClick}>
+              {toast.action.label}
+            </button>
+          ) : null}
         </div>
         <button type="button" className="toast-close" aria-label="Dismiss notification" onClick={onDismiss}>
           ×

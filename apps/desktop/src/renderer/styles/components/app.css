@@ -711,6 +711,32 @@
   white-space: nowrap;
 }
 
+.toast-action {
+  justify-self: start;
+  margin-top: var(--space-1);
+  padding: var(--space-1-5) var(--space-2-5);
+  border: var(--border-width-default) solid var(--button-ghost-border);
+  border-radius: var(--radius-pill);
+  color: var(--button-ghost-fg);
+  background: var(--button-ghost-bg);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  letter-spacing: var(--letter-spacing-wide);
+  text-transform: uppercase;
+}
+
+.toast-action:hover,
+.toast-action:focus-visible {
+  border-color: var(--button-ghost-border-hover);
+  color: var(--button-ghost-fg-hover);
+  background: var(--button-ghost-bg-hover);
+}
+
+.toast-action:focus-visible {
+  outline: var(--focus-outline-width) solid var(--focus-outline-color);
+  outline-offset: var(--focus-outline-offset);
+}
+
 .toast-close {
   flex: 0 0 auto;
   width: 1.75rem;

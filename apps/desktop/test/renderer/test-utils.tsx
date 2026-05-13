@@ -59,6 +59,7 @@ export function createDesktopMock(overrides?: Partial<DesktopApi>): DesktopApi {
     cancelRun: async () => undefined,
     resolveApproval: async () => undefined,
     openExternalUrl: async () => undefined,
+    showItemInFolder: async () => undefined,
     onRunEvent: () => () => undefined,
     ...overrides,
   }

@@ -30,6 +30,7 @@ import {
   sessionListSchema,
   sessionMutationResultSchema,
   saveProviderAuthInputSchema,
+  showItemInFolderInputSchema,
   startProviderOauthInputSchema,
   startProviderOauthResultSchema,
   startRunResultSchema,
@@ -133,6 +134,9 @@ const desktopApi: DesktopApi = {
   },
   async openExternalUrl(input) {
     await ipcRenderer.invoke(desktopBridgeChannels.openExternalUrl, openExternalUrlInputSchema.parse(input))
+  },
+  async showItemInFolder(input) {
+    await ipcRenderer.invoke(desktopBridgeChannels.showItemInFolder, showItemInFolderInputSchema.parse(input))
   },
   onRunEvent(listener) {
     const wrappedListener = (_event: Electron.IpcRendererEvent, payload: unknown) => {

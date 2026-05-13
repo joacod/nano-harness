@@ -31,6 +31,27 @@ describe('Toast', () => {
     expect(onDismiss).toHaveBeenCalledTimes(1)
   })
 
+  it('runs an optional toast action', async () => {
+    const user = userEvent.setup()
+    const onAction = vi.fn()
+
+    render(
+      <Toast
+        autoDismissMs={0}
+        toast={{
+          id: 'toast-1',
+          title: 'Session exported',
+          action: { label: 'Open folder', onClick: onAction },
+        }}
+        onDismiss={() => undefined}
+      />,
+    )
+
+    await user.click(screen.getByRole('button', { name: 'Open folder' }))
+
+    expect(onAction).toHaveBeenCalledTimes(1)
+  })
+
   it('auto-dismisses after the configured timeout', async () => {
     const onDismiss = vi.fn()
 

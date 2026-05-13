@@ -133,6 +133,12 @@ export function ConversationRoute() {
         id: `session-export-${Date.now()}`,
         title: 'Session exported',
         message: `Saved ${getFileName(result.exportedFilePath)} locally.`,
+        action: {
+          label: 'Open folder',
+          onClick: () => {
+            void window.desktop.showItemInFolder({ filePath: result.exportedFilePath })
+          },
+        },
         variant: 'success',
       })
     },

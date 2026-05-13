@@ -72,6 +72,7 @@ describe('desktop preload bridge', () => {
     await desktop.saveProviderAuth({ provider: 'openrouter', authMethod: 'api-key', apiKey: 'secret' })
     await desktop.clearProviderAuth({ provider: 'openrouter', authMethod: 'api-key' })
     await desktop.openExternalUrl({ url: 'https://example.com' })
+    await desktop.showItemInFolder({ filePath: '/tmp/session.json' })
     await desktop.cancelRun({ runId: 'run-1' })
     await desktop.exportRunEvidence({ runId: 'run-1' })
     await desktop.resolveApproval({ runId: 'run-1', approvalRequestId: 'approval-1', decision: 'granted' })
@@ -86,9 +87,10 @@ describe('desktop preload bridge', () => {
       authMethod: 'api-key',
     })
     expect(invoke).toHaveBeenNthCalledWith(3, desktopBridgeChannels.openExternalUrl, { url: 'https://example.com' })
-    expect(invoke).toHaveBeenNthCalledWith(4, desktopBridgeChannels.cancelRun, { runId: 'run-1' })
-    expect(invoke).toHaveBeenNthCalledWith(5, desktopBridgeChannels.exportRunEvidence, { runId: 'run-1' })
-    expect(invoke).toHaveBeenNthCalledWith(6, desktopBridgeChannels.resolveApproval, {
+    expect(invoke).toHaveBeenNthCalledWith(4, desktopBridgeChannels.showItemInFolder, { filePath: '/tmp/session.json' })
+    expect(invoke).toHaveBeenNthCalledWith(5, desktopBridgeChannels.cancelRun, { runId: 'run-1' })
+    expect(invoke).toHaveBeenNthCalledWith(6, desktopBridgeChannels.exportRunEvidence, { runId: 'run-1' })
+    expect(invoke).toHaveBeenNthCalledWith(7, desktopBridgeChannels.resolveApproval, {
       runId: 'run-1',
       approvalRequestId: 'approval-1',
       decision: 'granted',

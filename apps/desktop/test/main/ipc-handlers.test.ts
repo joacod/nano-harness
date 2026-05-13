@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { createDefaultProviderSettings, providerDefaultModels, type AppSettings, type ConversationSnapshot } from '@nano-harness/shared'
 
-const { handlers, handle, openExternal, exportData, importData, exportRunEvidence, buildProviderStatus, encryptCredentialPayload, startOpenAIChatGptOAuth } = vi.hoisted(() => {
+const { handlers, handle, openExternal, showItemInFolder, exportData, importData, exportRunEvidence, buildProviderStatus, encryptCredentialPayload, startOpenAIChatGptOAuth } = vi.hoisted(() => {
   const handlers = new Map<string, (_event: unknown, payload?: unknown) => Promise<unknown>>()
 
   return {
@@ -11,6 +11,7 @@ const { handlers, handle, openExternal, exportData, importData, exportRunEvidenc
       handlers.set(channel, callback)
     }),
     openExternal: vi.fn(async () => {}),
+    showItemInFolder: vi.fn(),
     exportData: vi.fn(async () => ({ exportedFilePath: '/tmp/export.db' })),
     importData: vi.fn(async () => ({ imported: true, backupFilePath: '/tmp/backup.db' })),
     exportRunEvidence: vi.fn(async () => ({ exportedFilePath: '/tmp/run-evidence.json', changedFiles: [], validationOutputs: 0 })),
@@ -45,6 +46,7 @@ vi.mock('electron', () => ({
   },
   shell: {
     openExternal,
+    showItemInFolder,
   },
 }))
 
@@ -68,6 +70,7 @@ describe('setupIpcHandlers', () => {
     handlers.clear()
     handle.mockClear()
     openExternal.mockClear()
+    showItemInFolder.mockClear()
     exportData.mockClear()
     importData.mockClear()
     exportRunEvidence.mockClear()
@@ -83,6 +86,7 @@ describe('setupIpcHandlers', () => {
     expect(handlers.has(desktopBridgeChannels.saveSettings)).toBe(true)
     expect(handlers.has(desktopBridgeChannels.startRun)).toBe(true)
     expect(handlers.has(desktopBridgeChannels.openExternalUrl)).toBe(true)
+    expect(handlers.has(desktopBridgeChannels.showItemInFolder)).toBe(true)
   })
 
   it('validates and saves settings', async () => {
@@ -263,6 +267,16 @@ describe('setupIpcHandlers', () => {
         url: 'file:///tmp/secret.txt',
       }),
     ).rejects.toThrow('Only http and https links can be opened externally.')
+  })
+
+  it('reveals a file in the system folder', async () => {
+    setupIpcHandlers(createRuntime())
+
+    await invokeHandler(desktopBridgeChannels.showItemInFolder, {
+      filePath: '/tmp/session.json',
+    })
+
+    expect(showItemInFolder).toHaveBeenCalledWith('/tmp/session.json')
   })
 
   it('rejects invalid IPC payloads before delegating', async () => {
