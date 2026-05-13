@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 
-import type { ApprovalRequest, ConversationSnapshot, RunEvent } from '../../../../../packages/shared/src'
+import type { ApprovalRequest, ConversationSnapshot, ExportRunEvidenceResult, RunEvent } from '../../../../../packages/shared/src'
 import { formatPreciseTimestamp } from '../utils/formatting'
 import { describeRunEvent, getEventTone, getRecoverableRunAction, type StreamingRunState } from '../utils/run-events'
 import { Button, Card, FeedbackText, StatusBadge } from './ui'
@@ -10,11 +10,15 @@ export function RunInspectorCard({
   events,
   pendingApproval,
   streamingState,
+  onEvidenceExported,
+  onEvidenceExportError,
 }: {
   run: ConversationSnapshot['runs'][number] | null
   events: RunEvent[]
   pendingApproval: ApprovalRequest | null
   streamingState: StreamingRunState | null
+  onEvidenceExported: (result: ExportRunEvidenceResult) => void
+  onEvidenceExportError: (error: unknown) => void
 }) {
   const queryClient = useQueryClient()
   const recoverableAction = run ? getRecoverableRunAction(run, pendingApproval) : null
@@ -45,6 +49,8 @@ export function RunInspectorCard({
 
       return await window.desktop.exportRunEvidence({ runId: run.id })
     },
+    onSuccess: onEvidenceExported,
+    onError: onEvidenceExportError,
   })
   return (
     <Card className="inspector-card">
@@ -110,17 +116,6 @@ export function RunInspectorCard({
               {exportEvidenceMutation.isPending ? 'Exporting...' : 'Export evidence'}
             </Button>
           </div>
-          {exportEvidenceMutation.data ? (
-            <FeedbackText live>
-              Exported evidence to {exportEvidenceMutation.data.exportedFilePath}
-            </FeedbackText>
-          ) : null}
-          {exportEvidenceMutation.error instanceof Error ? (
-            <FeedbackText variant="error" live>
-              {exportEvidenceMutation.error.message}
-            </FeedbackText>
-          ) : null}
-
           {!run.failureMessage && streamingState?.errorMessage ? (
             <FeedbackText variant="error" live>
               {streamingState.errorMessage}

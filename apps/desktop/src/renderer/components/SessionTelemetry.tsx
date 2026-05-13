@@ -1,4 +1,4 @@
-import type { ApprovalRequest, ConversationSnapshot, RunEvent } from '../../../../../packages/shared/src'
+import type { ApprovalRequest, ConversationSnapshot, ExportRunEvidenceResult, RunEvent } from '../../../../../packages/shared/src'
 import type { StreamingRunState } from '../utils/run-events'
 import { RunInspectorCard } from './RunInspectorCard'
 import { RunListCard } from './RunListCard'
@@ -6,6 +6,8 @@ import { RunListCard } from './RunListCard'
 export function SessionTelemetry({
   events,
   onSelectRun,
+  onRunEvidenceExported,
+  onRunEvidenceExportError,
   pendingApproval,
   runs,
   selectedRun,
@@ -15,6 +17,8 @@ export function SessionTelemetry({
 }: {
   events: RunEvent[]
   onSelectRun: (runId: string) => void
+  onRunEvidenceExported: (result: ExportRunEvidenceResult) => void
+  onRunEvidenceExportError: (error: unknown) => void
   pendingApproval: ApprovalRequest | null
   runs: ConversationSnapshot['runs']
   selectedRun: ConversationSnapshot['runs'][number] | null
@@ -30,6 +34,8 @@ export function SessionTelemetry({
         events={selectedRunEvents}
         pendingApproval={pendingApproval}
         streamingState={streamingState}
+        onEvidenceExported={onRunEvidenceExported}
+        onEvidenceExportError={onRunEvidenceExportError}
       />
     </>
   )

@@ -20,6 +20,8 @@ export function HomeRoute() {
           selectedRunEvents={[]}
           pendingApproval={null}
           streamingState={null}
+          onRunEvidenceExported={() => undefined}
+          onRunEvidenceExportError={() => undefined}
         />
       )}
     />

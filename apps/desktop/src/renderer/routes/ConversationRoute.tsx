@@ -202,6 +202,28 @@ export function ConversationRoute() {
             selectedRunEvents={selectedRunEvents}
             pendingApproval={pendingApproval}
             streamingState={selectedRun ? streamingRuns[selectedRun.id] ?? null : null}
+            onRunEvidenceExported={(result) => {
+              setToast({
+                id: `run-evidence-export-${Date.now()}`,
+                title: 'Evidence exported',
+                message: `Saved ${getFileName(result.exportedFilePath)} locally.`,
+                action: {
+                  label: 'Open folder',
+                  onClick: () => {
+                    void window.desktop.showItemInFolder({ filePath: result.exportedFilePath })
+                  },
+                },
+                variant: 'success',
+              })
+            }}
+            onRunEvidenceExportError={(error) => {
+              setToast({
+                id: `run-evidence-export-error-${Date.now()}`,
+                title: 'Evidence export failed',
+                message: error instanceof Error ? error.message : 'The run evidence could not be exported.',
+                variant: 'error',
+              })
+            }}
           />
         )}
       />
