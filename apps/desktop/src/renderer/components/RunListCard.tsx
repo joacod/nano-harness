@@ -1,5 +1,5 @@
 import type { ConversationSnapshot, RunEvent } from '../../../../../packages/shared/src'
-import { formatTimestamp } from '../utils/formatting'
+import { formatPreciseTimestamp } from '../utils/formatting'
 import { getProviderRequestForRun } from '../utils/run-events'
 import { Button, Card, FeedbackText, RuntimePill, StatusBadge, cn } from './ui'
 
@@ -44,7 +44,7 @@ export function RunListCard({
                 <strong>{run.status}</strong>
                 <StatusBadge status={run.status}>{run.status}</StatusBadge>
               </div>
-              <small>{formatTimestamp(run.createdAt)}</small>
+              <small>{formatPreciseTimestamp(run.createdAt)}</small>
               {providerRequest ? <span className="run-provider-label">{providerRequest.payload.provider}</span> : null}
               {providerRequest ? <span className="muted-copy">{providerRequest.payload.model}</span> : null}
             </Button>
