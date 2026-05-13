@@ -205,6 +205,33 @@ describe('ProviderSettingsForm', () => {
       })
     })
   })
+
+  it('switches to Google Gemini defaults', async () => {
+    const user = userEvent.setup()
+    const onProviderChange = vi.fn()
+
+    const { container } = render(
+      <ProviderSettingsForm
+        initialSettings={createSettings()}
+        isSaving={false}
+        saveError={null}
+        onProviderChange={onProviderChange}
+        onSubmit={vi.fn(async () => undefined)}
+      />,
+    )
+
+    const providerSelect = getRequiredElement<HTMLButtonElement>(container, '[data-select-trigger="provider"]')
+    const modelInput = getRequiredElement<HTMLInputElement>(container, 'input[name="model"]')
+    const baseUrlInput = getRequiredElement<HTMLInputElement>(container, 'input[name="provider-base-url"]')
+
+    await selectCustomOption(user, providerSelect, 'Google')
+
+    expect(onProviderChange).toHaveBeenCalledWith('google')
+    expect(modelInput.value).toBe(providerDefaultModels.google)
+    expect(baseUrlInput.value).toBe('https://generativelanguage.googleapis.com/v1beta')
+    expect(baseUrlInput.readOnly).toBe(false)
+    expect(screen.getByText('Gemini API root.')).toBeTruthy()
+  })
 })
 
 function createSettings(overrides?: {

@@ -12,6 +12,7 @@ export function createProviderInstructions(input: { workspaceRoot: string; role?
     'Do not pass absolute file paths unless a tool explicitly asks for one.',
     'Use list_directory before assuming project or file paths, especially when the user names a folder or project.',
     'If read_file fails because a path is missing, use list_directory to discover the correct path and continue.',
+    'For current time or date questions, use get_current_time with an IANA time zone when possible; do not use run_command or ask the user for the time unless the location is ambiguous.',
   ]
 
   const sections = [...baseInstructions]

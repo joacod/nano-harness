@@ -6,12 +6,14 @@ import { fileActionCommands } from './actions/file-actions'
 import { networkActionCommands } from './actions/network-actions'
 import { processActionCommands } from './actions/process-actions'
 import { searchActionCommands } from './actions/search-actions'
+import { timeActionCommands } from './actions/time-actions'
 import { createActionResult, type BuiltInActionCommand } from './actions/types'
 
 const actionDefinitions: Record<string, ActionDefinition> = {
   ...Object.fromEntries(fileActionCommands.map((command) => [command.definition.id, command.definition])),
   ...Object.fromEntries(searchActionCommands.map((command) => [command.definition.id, command.definition])),
   ...Object.fromEntries(networkActionCommands.map((command) => [command.definition.id, command.definition])),
+  ...Object.fromEntries(timeActionCommands.map((command) => [command.definition.id, command.definition])),
   ...Object.fromEntries(processActionCommands.map((command) => [command.definition.id, command.definition])),
   ...Object.fromEntries(artifactActionCommands.map((command) => [command.definition.id, command.definition])),
 } satisfies Record<string, ActionDefinition>
@@ -20,6 +22,7 @@ const commandRegistry = new Map<string, BuiltInActionCommand>([
   ...fileActionCommands,
   ...searchActionCommands,
   ...networkActionCommands,
+  ...timeActionCommands,
   ...processActionCommands,
   ...artifactActionCommands,
 ].map((command) => [command.definition.id, command]))

@@ -75,9 +75,27 @@ describe('shared contracts', () => {
         hint: 'Managed by the ChatGPT subscription provider.',
       },
     })
+
+    expect(getProviderDefinition('google')).toMatchObject({
+      key: 'google',
+      label: 'Google',
+      adapterId: 'google-gemini',
+      baseUrl: 'https://generativelanguage.googleapis.com/v1beta',
+      defaultModel: providerDefaultModels.google,
+      requiresApiKey: true,
+      authMethods: ['api-key'],
+      defaultAuthMethod: 'api-key',
+      authLabels: { 'api-key': 'Google AI Studio API key' },
+      apiKeyLabel: 'Google AI Studio API key',
+      apiKeyMissingIssue: 'Add your Google AI Studio API key before starting a Google run.',
+      endpoint: {
+        editable: true,
+        hint: 'Gemini API root.',
+      },
+    })
   })
 
-  it('includes OpenAI in provider options', () => {
+  it('includes hosted providers in provider options', () => {
     expect(providerOptions).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -85,12 +103,17 @@ describe('shared contracts', () => {
           label: 'OpenAI',
           defaultModel: providerDefaultModels.openai,
         }),
+        expect.objectContaining({
+          key: 'google',
+          label: 'Google',
+          defaultModel: providerDefaultModels.google,
+        }),
       ]),
     )
   })
 
   it('keeps provider adapter ids explicit', () => {
-    expect(providerAdapterIdSchema.options).toEqual(['openai-compatible', 'chatgpt-subscription'])
+    expect(providerAdapterIdSchema.options).toEqual(['openai-compatible', 'chatgpt-subscription', 'google-gemini'])
   })
 
   it('validates harness component registry and change manifests', () => {

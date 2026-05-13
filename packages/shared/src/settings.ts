@@ -9,7 +9,7 @@ export const approvalPolicySchema = z.enum(['always', 'on-request', 'never'])
 
 export type ApprovalPolicy = z.infer<typeof approvalPolicySchema>
 
-export const providerKeySchema = z.enum(['openrouter', 'llama-cpp', 'openai'])
+export const providerKeySchema = z.enum(['openrouter', 'llama-cpp', 'openai', 'google'])
 
 export type ProviderKey = z.infer<typeof providerKeySchema>
 
@@ -17,7 +17,7 @@ export const providerAuthMethodSchema = z.enum(['api-key', 'none', 'oauth'])
 
 export type ProviderAuthMethod = z.infer<typeof providerAuthMethodSchema>
 
-export const providerAdapterIdSchema = z.enum(['openai-compatible', 'chatgpt-subscription'])
+export const providerAdapterIdSchema = z.enum(['openai-compatible', 'chatgpt-subscription', 'google-gemini'])
 
 export type ProviderAdapterId = z.infer<typeof providerAdapterIdSchema>
 
@@ -40,6 +40,7 @@ export const providerDefaultModels = {
   openrouter: 'deepseek/deepseek-v4-pro',
   'llama-cpp': 'ggml-org/gemma-3-1b-it-GGUF',
   openai: 'gpt-5.4-mini',
+  google: 'gemini-3.1-flash-lite',
 } as const satisfies Record<ProviderKey, string>
 
 type ProviderEndpointDefinition = {
@@ -122,6 +123,25 @@ export const providerCatalog = {
       editable: false,
       description: 'Model and fixed ChatGPT subscription endpoint.',
       hint: 'Managed by the ChatGPT subscription provider.',
+    },
+  },
+  google: {
+    key: 'google',
+    label: 'Google',
+    adapterId: 'google-gemini',
+    baseUrl: 'https://generativelanguage.googleapis.com/v1beta',
+    defaultModel: providerDefaultModels.google,
+    requiresApiKey: true,
+    authMethods: ['api-key'],
+    defaultAuthMethod: 'api-key',
+    authLabels: { 'api-key': 'Google AI Studio API key' },
+    apiKeyLabel: 'Google AI Studio API key',
+    apiKeyMissingIssue: 'Add your Google AI Studio API key before starting a Google run.',
+    statusHints: ['Create or copy a Gemini API key from Google AI Studio: https://aistudio.google.com/app/apikey'],
+    endpoint: {
+      editable: true,
+      description: 'Model and Gemini API endpoint.',
+      hint: 'Gemini API root.',
     },
   },
 } as const satisfies Record<ProviderKey, ProviderCatalogDefinition>

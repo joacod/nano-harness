@@ -24,6 +24,7 @@ export function ConversationRoute() {
   const transcriptPanelRef = useRef<HTMLElement | null>(null)
   const transcriptEndRef = useRef<HTMLDivElement | null>(null)
   const isTranscriptPinnedRef = useRef(true)
+  const wasShowingTechnicalInfoRef = useRef(showTechnicalInfo)
 
   useEffect(() => {
     const runs = snapshotQuery.data?.runs ?? []
@@ -41,6 +42,16 @@ export function ConversationRoute() {
   useEffect(() => {
     setToast(null)
   }, [conversationId])
+
+  useEffect(() => {
+    const latestRunId = snapshotQuery.data?.runs.at(-1)?.id ?? null
+
+    if (showTechnicalInfo && !wasShowingTechnicalInfoRef.current && latestRunId) {
+      setSelectedRunId(latestRunId)
+    }
+
+    wasShowingTechnicalInfoRef.current = showTechnicalInfo
+  }, [showTechnicalInfo, snapshotQuery.data?.runs])
 
   const streamingEntry = useMemo(() => {
     return Object.entries(streamingRuns).find(([, run]) => run.conversationId === conversationId)

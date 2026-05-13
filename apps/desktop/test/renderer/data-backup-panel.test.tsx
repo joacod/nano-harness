@@ -24,7 +24,6 @@ describe('DataBackupPanel', () => {
       <DataBackupPanel
         dataPath="/Users/test/Library/Application Support/nano-harness.db"
         dataError={null}
-        exportDataResult={null}
         importDataResult={null}
         isExportingData={false}
         isImportingData={false}
@@ -52,7 +51,6 @@ describe('DataBackupPanel', () => {
       <DataBackupPanel
         dataPath="/Users/test/Library/Application Support/nano-harness.db"
         dataError={null}
-        exportDataResult={null}
         importDataResult={null}
         isExportingData={false}
         isImportingData={false}
@@ -70,14 +68,13 @@ describe('DataBackupPanel', () => {
     })
   })
 
-  it('renders backup results and data errors', () => {
+  it('renders import backup results and data errors', () => {
     vi.stubGlobal('confirm', vi.fn(() => true))
 
     render(
       <DataBackupPanel
         dataPath="/Users/test/Library/Application Support/nano-harness.db"
         dataError="Import failed"
-        exportDataResult="/tmp/nano-harness-export.zip"
         importDataResult="/tmp/nano-harness-safety-backup.zip"
         isExportingData={false}
         isImportingData={false}
@@ -86,7 +83,6 @@ describe('DataBackupPanel', () => {
       />,
     )
 
-    expect(screen.getByText('Exported to /tmp/nano-harness-export.zip')).toBeTruthy()
     expect(screen.getByText('Safety backup created at /tmp/nano-harness-safety-backup.zip')).toBeTruthy()
     expect(screen.getByText('Import failed')).toBeTruthy()
   })
