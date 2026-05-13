@@ -9,6 +9,7 @@ import { SessionTelemetry } from '../components/SessionTelemetry'
 import { Card, FeedbackText, Toast, type ToastMessage } from '../components/ui'
 import { conversationQueryOptions } from '../queries'
 import { useRuntimeUi, useTechnicalUi } from '../runtime-ui'
+import { getFileName } from '../utils/files'
 import { getLatestConversationPendingApproval, getPendingApproval, mergeRunEvents } from '../utils/run-events'
 
 export function ConversationRoute() {
@@ -239,8 +240,4 @@ function showSessionActionToast(error: unknown, setToast: (toast: ToastMessage) 
     message: error instanceof Error ? error.message : 'The session action could not be completed.',
     variant: 'error',
   })
-}
-
-function getFileName(filePath: string) {
-  return filePath.split(/[\\/]/).at(-1) ?? filePath
 }
