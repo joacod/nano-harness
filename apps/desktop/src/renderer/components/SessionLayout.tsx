@@ -1,4 +1,5 @@
 import type { ReactNode, Ref, UIEventHandler } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 
 import { providerStatusQueryOptions } from '../queries'
@@ -36,6 +37,54 @@ export function SessionLayout({
 }) {
   const providerStatusQuery = useQuery(providerStatusQueryOptions)
   const providerStatus = providerStatusQuery.data
+  const menuId = useId()
+  const actionsMenuRef = useRef<HTMLDivElement>(null)
+  const [isActionsMenuOpen, setIsActionsMenuOpen] = useState(false)
+  const hasSessionActions = Boolean(onForkSession || onCloneSession || onExportSession)
+  const showSessionActions = Boolean(conversationId && hasSessionActions)
+
+  useEffect(() => {
+    if (!isActionsMenuOpen) {
+      return undefined
+    }
+
+    function handlePointerDown(event: PointerEvent) {
+      if (actionsMenuRef.current?.contains(event.target as Node)) {
+        return
+      }
+
+      setIsActionsMenuOpen(false)
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        setIsActionsMenuOpen(false)
+      }
+    }
+
+    document.addEventListener('pointerdown', handlePointerDown)
+    document.addEventListener('keydown', handleKeyDown)
+
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [isActionsMenuOpen])
+
+  useEffect(() => {
+    if (!showSessionActions) {
+      setIsActionsMenuOpen(false)
+    }
+  }, [showSessionActions])
+
+  function runSessionAction(action?: () => void) {
+    if (!action || isSessionActionPending) {
+      return
+    }
+
+    setIsActionsMenuOpen(false)
+    action()
+  }
 
   return (
     <div className={`conversation-grid ${showTechnicalInfo ? 'conversation-grid-technical' : 'conversation-grid-simple'}`}>
@@ -46,21 +95,45 @@ export function SessionLayout({
               <p className="eyebrow">Session</p>
               <h2>{title}</h2>
             </div>
-            {providerStatus ? (
-              <div
-                className={`session-provider-chip ${providerStatus.isReady ? 'session-provider-chip-ready' : 'session-provider-chip-warning'}`}
-                aria-live="polite"
-                title={`${providerStatus.providerLabel} · ${providerStatus.model}`}
-              >
-                <span>{providerStatus.providerLabel}</span>
-                <strong>{providerStatus.model}</strong>
-              </div>
-            ) : null}
-          </div>
-          <div className="session-actions">
-            <Button type="button" size="sm" disabled={isSessionActionPending || !onForkSession} onClick={onForkSession}>Fork</Button>
-            <Button type="button" size="sm" disabled={isSessionActionPending || !onCloneSession} onClick={onCloneSession}>Clone</Button>
-            <Button type="button" size="sm" disabled={isSessionActionPending || !onExportSession} onClick={onExportSession}>Export session</Button>
+            <div className="session-hero-meta">
+              {providerStatus ? (
+                <div
+                  className={`session-provider-chip ${providerStatus.isReady ? 'session-provider-chip-ready' : 'session-provider-chip-warning'}`}
+                  aria-live="polite"
+                  title={`${providerStatus.providerLabel} · ${providerStatus.model}`}
+                >
+                  <span>{providerStatus.providerLabel}</span>
+                  <strong>{providerStatus.model}</strong>
+                </div>
+              ) : null}
+              {showSessionActions ? (
+                <div className="session-actions-menu" ref={actionsMenuRef}>
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="session-actions-trigger"
+                    aria-label="Session options"
+                    aria-controls={isActionsMenuOpen ? menuId : undefined}
+                    aria-expanded={isActionsMenuOpen}
+                    aria-haspopup="menu"
+                    onClick={() => setIsActionsMenuOpen((current) => !current)}
+                  >
+                    <span className="session-actions-dots" aria-hidden="true">
+                      <span />
+                      <span />
+                      <span />
+                    </span>
+                  </Button>
+                  {isActionsMenuOpen ? (
+                    <div className="session-actions-list" id={menuId} role="menu" aria-label="Session options">
+                      <button type="button" role="menuitem" disabled={isSessionActionPending || !onForkSession} onClick={() => runSessionAction(onForkSession)}>Fork</button>
+                      <button type="button" role="menuitem" disabled={isSessionActionPending || !onCloneSession} onClick={() => runSessionAction(onCloneSession)}>Clone</button>
+                      <button type="button" role="menuitem" disabled={isSessionActionPending || !onExportSession} onClick={() => runSessionAction(onExportSession)}>Export session</button>
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
           </div>
           {sessionExportPath ? <FeedbackText live>Exported session to {sessionExportPath}</FeedbackText> : null}
           {sessionActionError ? <FeedbackText variant="error" live>{sessionActionError}</FeedbackText> : null}

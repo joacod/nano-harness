@@ -1,7 +1,10 @@
 import { Card, FeedbackText } from './components/ui'
+import { installDevDesktopMock } from './dev-desktop-mock'
 import { RuntimeUiProvider } from './runtime-ui'
 
 export function App() {
+  installDevDesktopMock()
+
   if (typeof window === 'undefined' || !('desktop' in window) || !window.desktop) {
     return (
       <main className="workspace-shell workspace-shell-single">
