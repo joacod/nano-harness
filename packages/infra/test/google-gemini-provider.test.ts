@@ -117,10 +117,7 @@ describe('GoogleGeminiProvider', () => {
       { role: 'user', parts: [{ text: 'Read notes.txt' }] },
       {
         role: 'model',
-        parts: [
-          { text: 'Calling the tool.' },
-          { functionCall: { name: 'read_file', args: { path: 'notes.txt' } } },
-        ],
+        parts: [{ text: 'Calling the tool.' }],
       },
       {
         role: 'user',
@@ -133,11 +130,19 @@ describe('GoogleGeminiProvider', () => {
           {
             name: 'read_file',
             description: 'Read a file from disk',
-            parameters: actions[0].inputSchema,
+            parameters: {
+              type: 'object',
+              properties: {
+                path: { type: 'string' },
+              },
+              required: ['path'],
+            },
           },
         ],
       },
     ])
+    expect(JSON.stringify(body.tools)).not.toContain('additionalProperties')
+    expect(JSON.stringify(body.contents)).not.toContain('functionCall')
   })
 
   it('streams content deltas to the caller', async () => {
@@ -164,6 +169,31 @@ describe('GoogleGeminiProvider', () => {
     expect(onDelta).toHaveBeenNthCalledWith(1, 'Hello ')
     expect(onDelta).toHaveBeenNthCalledWith(2, 'world')
     expect(result.content).toBe('Hello world')
+  })
+
+  it('ignores empty text deltas', async () => {
+    const onDelta = vi.fn()
+    const provider = new GoogleGeminiProvider({
+      fetch: vi.fn<FetchLike>(async () =>
+        createSseResponse([
+          toDataLine({ candidates: [{ content: { parts: [{ text: '' }, { text: 'Hello' }] } }] }),
+        ]),
+      ),
+    })
+
+    const result = await provider.generate({
+      run,
+      messages: [messages[0]],
+      actions: [],
+      settings,
+      providerAuth: { authMethod: 'api-key', apiKey: 'google-key' },
+      signal: new AbortController().signal,
+      onDelta,
+    })
+
+    expect(onDelta).toHaveBeenCalledTimes(1)
+    expect(onDelta).toHaveBeenCalledWith('Hello')
+    expect(result.content).toBe('Hello')
   })
 
   it('parses Gemini function calls', async () => {

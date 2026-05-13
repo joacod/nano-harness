@@ -1,4 +1,4 @@
-import type { ActionDefinition, AssistantToolCall, JsonValue, Message } from '@nano-harness/shared'
+import type { ActionDefinition, JsonValue, Message } from '@nano-harness/shared'
 import { createProviderInstructions, type Provider, type ProviderActionRequest, type ProviderGenerateInput, type ProviderGenerateResult } from '@nano-harness/core'
 
 import { parseSseData, splitSseEvents } from './sse'
@@ -54,15 +54,6 @@ function getToolCallNames(messages: Message[]): Map<string, string> {
   return names
 }
 
-function toGeminiFunctionCalls(toolCalls: AssistantToolCall[]): GeminiPart[] {
-  return toolCalls.map((toolCall) => ({
-    functionCall: {
-      name: toolCall.actionId,
-      args: toolCall.input,
-    },
-  }))
-}
-
 function toGeminiContents(messages: Message[]): GeminiContent[] {
   const toolCallNames = getToolCallNames(messages)
 
@@ -86,10 +77,7 @@ function toGeminiContents(messages: Message[]): GeminiContent[] {
     if (message.role === 'assistant') {
       return [{
         role: 'model',
-        parts: [
-          ...(message.content ? [{ text: message.content }] : []),
-          ...(message.toolCalls?.length ? toGeminiFunctionCalls(message.toolCalls) : []),
-        ],
+        parts: message.content ? [{ text: message.content }] : [],
       }]
     }
 
@@ -106,9 +94,41 @@ function toGeminiTools(actions: ActionDefinition[]): Array<{ functionDeclaration
     functionDeclarations: actions.map((action) => ({
       name: action.id,
       description: action.description,
-      parameters: action.inputSchema,
+      parameters: toGeminiSchema(action.inputSchema),
     })),
   }]
+}
+
+function toGeminiSchema(schema: unknown): Record<string, unknown> {
+  const sanitized = sanitizeGeminiSchema(schema)
+
+  if (!sanitized || Array.isArray(sanitized) || typeof sanitized !== 'object') {
+    return { type: 'object' }
+  }
+
+  return sanitized as Record<string, unknown>
+}
+
+function sanitizeGeminiSchema(value: unknown): unknown {
+  if (!value || typeof value !== 'object') {
+    return value
+  }
+
+  if (Array.isArray(value)) {
+    return value.map(sanitizeGeminiSchema)
+  }
+
+  const sanitized: Record<string, unknown> = {}
+
+  for (const [key, nestedValue] of Object.entries(value)) {
+    if (key === 'additionalProperties' || key === '$schema' || key === '$id') {
+      continue
+    }
+
+    sanitized[key] = sanitizeGeminiSchema(nestedValue)
+  }
+
+  return sanitized
 }
 
 function toProviderActionRequest(part: Extract<GeminiPart, { functionCall: unknown }>, index: number): ProviderActionRequest {
@@ -154,6 +174,10 @@ async function handleChunk(input: ProviderGenerateInput, chunk: GeminiStreamChun
   for (const candidate of chunk.candidates ?? []) {
     for (const part of candidate.content?.parts ?? []) {
       if ('text' in part) {
+        if (!part.text) {
+          continue
+        }
+
         state.message += part.text
         await input.onDelta?.(part.text)
         continue
