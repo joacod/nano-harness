@@ -1009,14 +1009,22 @@
   min-width: 0;
 }
 
+.timeline-header {
+  justify-content: flex-start;
+}
+
 .run-card-header strong,
 .timeline-header strong {
   min-width: 0;
   overflow-wrap: anywhere;
 }
 
-.timeline-header small {
+.timeline-timestamp {
+  display: block;
+  margin-top: var(--space-1);
   color: var(--muted-foreground);
+  font-variant-numeric: tabular-nums;
+  line-height: var(--line-height-snug);
 }
 
 .status-badge {
@@ -1143,9 +1151,19 @@
 }
 
 .timeline-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
   padding: var(--space-4);
   min-width: 0;
   overflow-wrap: anywhere;
+}
+
+.timeline-card .timeline-header,
+.timeline-card .timeline-timestamp,
+.timeline-card .timeline-type,
+.timeline-card .timeline-detail {
+  margin: 0;
 }
 
 .settings-card-list {

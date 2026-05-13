@@ -139,10 +139,10 @@ export function RunInspectorCard({
                   <div className="timeline-card">
                     <div className="timeline-header">
                       <strong>{description.title}</strong>
-                      <small>{formatPreciseTimestamp(event.timestamp)}</small>
                     </div>
+                    <small className="timeline-timestamp">{formatPreciseTimestamp(event.timestamp)}</small>
                     <p className="timeline-type">{event.type}</p>
-                    <FeedbackText>{description.detail}</FeedbackText>
+                    <FeedbackText className="timeline-detail">{description.detail}</FeedbackText>
                   </div>
                 </li>
               )
