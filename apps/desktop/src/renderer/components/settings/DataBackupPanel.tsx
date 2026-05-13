@@ -3,7 +3,6 @@ import { Button, FeedbackText } from '../ui'
 export function DataBackupPanel({
   dataPath,
   dataError,
-  exportDataResult,
   importDataResult,
   isExportingData,
   isImportingData,
@@ -12,11 +11,10 @@ export function DataBackupPanel({
 }: {
   dataPath: string | null
   dataError: string | null
-  exportDataResult: string | null
   importDataResult: string | null
   isExportingData: boolean
   isImportingData: boolean
-  onExportData: () => Promise<void>
+  onExportData: () => void
   onImportData: () => Promise<void>
 }) {
   return (
@@ -72,11 +70,6 @@ export function DataBackupPanel({
           {isImportingData ? 'Importing…' : 'Import data'}
         </Button>
       </div>
-      {exportDataResult ? (
-        <FeedbackText variant="success" live>
-          Exported to {exportDataResult}
-        </FeedbackText>
-      ) : null}
       {importDataResult ? (
         <FeedbackText variant="success" live>
           Safety backup created at {importDataResult}

@@ -60,3 +60,9 @@ export const openExternalUrlInputSchema = z.object({
 })
 
 export type OpenExternalUrlInput = z.infer<typeof openExternalUrlInputSchema>
+
+export const showItemInFolderInputSchema = z.object({
+  filePath: z.string().min(1),
+})
+
+export type ShowItemInFolderInput = z.infer<typeof showItemInFolderInputSchema>

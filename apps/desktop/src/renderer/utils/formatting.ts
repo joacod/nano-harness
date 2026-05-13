@@ -3,8 +3,17 @@ const timestampFormatter = new Intl.DateTimeFormat(undefined, {
   timeStyle: 'short',
 })
 
+const preciseTimestampFormatter = new Intl.DateTimeFormat(undefined, {
+  dateStyle: 'medium',
+  timeStyle: 'medium',
+})
+
 export function formatTimestamp(value: string) {
   return timestampFormatter.format(new Date(value))
+}
+
+export function formatPreciseTimestamp(value: string) {
+  return preciseTimestampFormatter.format(new Date(value))
 }
 
 export function formatRelativeTimestamp(value: string) {

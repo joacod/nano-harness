@@ -3,7 +3,8 @@ import { useQuery } from '@tanstack/react-query'
 
 import { providerStatusQueryOptions } from '../queries'
 import { ComposerCard } from './ComposerCard'
-import { Button, Card, FeedbackText } from './ui'
+import { SessionActionsMenu } from './SessionActionsMenu'
+import { Card } from './ui'
 
 export function SessionLayout({
   conversationId,
@@ -16,8 +17,6 @@ export function SessionLayout({
   onCloneSession,
   onExportSession,
   onForkSession,
-  sessionActionError,
-  sessionExportPath,
   isSessionActionPending,
 }: {
   conversationId: string | null
@@ -30,12 +29,12 @@ export function SessionLayout({
   onCloneSession?: () => void
   onExportSession?: () => void
   onForkSession?: () => void
-  sessionActionError?: string | null
-  sessionExportPath?: string | null
   isSessionActionPending?: boolean
 }) {
   const providerStatusQuery = useQuery(providerStatusQueryOptions)
   const providerStatus = providerStatusQuery.data
+  const hasSessionActions = Boolean(onForkSession || onCloneSession || onExportSession)
+  const showSessionActions = Boolean(conversationId && hasSessionActions)
 
   return (
     <div className={`conversation-grid ${showTechnicalInfo ? 'conversation-grid-technical' : 'conversation-grid-simple'}`}>
@@ -46,24 +45,27 @@ export function SessionLayout({
               <p className="eyebrow">Session</p>
               <h2>{title}</h2>
             </div>
-            {providerStatus ? (
-              <div
-                className={`session-provider-chip ${providerStatus.isReady ? 'session-provider-chip-ready' : 'session-provider-chip-warning'}`}
-                aria-live="polite"
-                title={`${providerStatus.providerLabel} · ${providerStatus.model}`}
-              >
-                <span>{providerStatus.providerLabel}</span>
-                <strong>{providerStatus.model}</strong>
-              </div>
-            ) : null}
+            <div className="session-hero-meta">
+              {providerStatus ? (
+                <div
+                  className={`session-provider-chip ${providerStatus.isReady ? 'session-provider-chip-ready' : 'session-provider-chip-warning'}`}
+                  aria-live="polite"
+                  title={`${providerStatus.providerLabel} · ${providerStatus.model}`}
+                >
+                  <span>{providerStatus.providerLabel}</span>
+                  <strong>{providerStatus.model}</strong>
+                </div>
+              ) : null}
+              {showSessionActions ? (
+                <SessionActionsMenu
+                  isPending={isSessionActionPending}
+                  onCloneSession={onCloneSession}
+                  onExportSession={onExportSession}
+                  onForkSession={onForkSession}
+                />
+              ) : null}
+            </div>
           </div>
-          <div className="session-actions">
-            <Button type="button" size="sm" disabled={isSessionActionPending || !onForkSession} onClick={onForkSession}>Fork</Button>
-            <Button type="button" size="sm" disabled={isSessionActionPending || !onCloneSession} onClick={onCloneSession}>Clone</Button>
-            <Button type="button" size="sm" disabled={isSessionActionPending || !onExportSession} onClick={onExportSession}>Export session</Button>
-          </div>
-          {sessionExportPath ? <FeedbackText live>Exported session to {sessionExportPath}</FeedbackText> : null}
-          {sessionActionError ? <FeedbackText variant="error" live>{sessionActionError}</FeedbackText> : null}
         </Card>
 
         <Card ref={transcriptRef} className="transcript-panel" onScroll={onTranscriptScroll}>

@@ -1,6 +1,6 @@
 import type { AppSettings, ApprovalRequest, ConversationSnapshot, RunEvent } from '../../../../../packages/shared/src'
 import { createDefaultProviderSettings } from '../../../../../packages/shared/src'
-import { formatTimestamp, previewText } from './formatting'
+import { formatPreciseTimestamp, previewText } from './formatting'
 
 export type StreamingRunState = {
   conversationId: string
@@ -221,7 +221,7 @@ export function describeRunEvent(event: RunEvent) {
     case 'run.created':
       return { title: 'Run created', detail: `${event.payload.run.role ?? 'build'} role · Conversation ${event.payload.run.conversationId}` }
     case 'run.started':
-      return { title: 'Run started', detail: `Execution began at ${formatTimestamp(event.payload.startedAt)}` }
+      return { title: 'Run started', detail: `Execution began at ${formatPreciseTimestamp(event.payload.startedAt)}` }
     case 'run.dry_run_preview':
       return {
         title: 'Dry-run preview captured',
@@ -232,7 +232,7 @@ export function describeRunEvent(event: RunEvent) {
     case 'run.waiting_approval':
       return { title: 'Waiting for approval', detail: `Approval request ${event.payload.approvalRequestId}` }
     case 'run.completed':
-      return { title: 'Run completed', detail: `Finished at ${formatTimestamp(event.payload.finishedAt)}` }
+      return { title: 'Run completed', detail: `Finished at ${formatPreciseTimestamp(event.payload.finishedAt)}` }
     case 'run.failed':
       return { title: 'Run failed', detail: event.payload.message }
     case 'run.cancelled':
@@ -279,9 +279,9 @@ export function describeRunEvent(event: RunEvent) {
     case 'approval.required':
       return { title: 'Approval required', detail: event.payload.approvalRequest.reason }
     case 'approval.granted':
-      return { title: 'Approval granted', detail: `Resolved at ${formatTimestamp(event.payload.resolution.decidedAt)}` }
+      return { title: 'Approval granted', detail: `Resolved at ${formatPreciseTimestamp(event.payload.resolution.decidedAt)}` }
     case 'approval.rejected':
-      return { title: 'Approval rejected', detail: `Resolved at ${formatTimestamp(event.payload.resolution.decidedAt)}` }
+      return { title: 'Approval rejected', detail: `Resolved at ${formatPreciseTimestamp(event.payload.resolution.decidedAt)}` }
     case 'message.created':
       return { title: `${event.payload.message.role} message persisted`, detail: previewText(event.payload.message.content, 160) }
   }

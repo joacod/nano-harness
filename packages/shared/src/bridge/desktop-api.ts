@@ -7,7 +7,7 @@ import type { SkillInventory } from '../skills'
 import type { McpInventory } from '../mcp'
 import type { MemoryProposalList, MemoryRecordList, ResolveMemoryProposalInput } from '../memory'
 import type { SessionExportResult, SessionInput, SessionList, SessionMutationResult } from '../sessions'
-import type { ClearProviderAuthInput, ExportRunEvidenceInput, GetConversationInput, OpenExternalUrlInput, ProviderCredentialInput, ResolveApprovalInput, RunIdInput, SaveProviderAuthInput, StartProviderOauthInput } from './inputs'
+import type { ClearProviderAuthInput, ExportRunEvidenceInput, GetConversationInput, OpenExternalUrlInput, ProviderCredentialInput, ResolveApprovalInput, RunIdInput, SaveProviderAuthInput, ShowItemInFolderInput, StartProviderOauthInput } from './inputs'
 import type {
   ConversationList,
   ConversationSnapshot,
@@ -49,5 +49,6 @@ export type DesktopApi = {
   cancelRun(input: RunIdInput): Promise<void>
   resolveApproval(input: ResolveApprovalInput): Promise<void>
   openExternalUrl(input: OpenExternalUrlInput): Promise<void>
+  showItemInFolder(input: ShowItemInFolderInput): Promise<void>
   onRunEvent(listener: (event: z.infer<typeof runEventSchema>) => void): () => void
 }

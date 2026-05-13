@@ -15,6 +15,7 @@ import {
   runCreateInputSchema,
   runIdInputSchema,
   saveProviderAuthInputSchema,
+  showItemInFolderInputSchema,
   clearProviderAuthInputSchema,
   startProviderOauthInputSchema,
   startProviderOauthResultSchema,
@@ -268,5 +269,10 @@ export function setupIpcHandlers(runtime: IpcRuntime): void {
 
   ipcMain.handle(desktopBridgeChannels.openExternalUrl, async (_event, payload) => {
     await shell.openExternal(parseExternalUrl(payload))
+  })
+
+  ipcMain.handle(desktopBridgeChannels.showItemInFolder, async (_event, payload) => {
+    const input = showItemInFolderInputSchema.parse(payload)
+    shell.showItemInFolder(input.filePath)
   })
 }
