@@ -19,7 +19,14 @@ describe('RunInspectorCard', () => {
     window.desktop = createDesktopMock()
 
     renderWithQueryClient(
-      <RunInspectorCard run={null} events={[]} pendingApproval={null} streamingState={null} />,
+      <RunInspectorCard
+        run={null}
+        events={[]}
+        pendingApproval={null}
+        streamingState={null}
+        onEvidenceExported={() => undefined}
+        onEvidenceExportError={() => undefined}
+      />,
     )
 
     expect(screen.getByText('Choose a run to inspect its persisted and live event sequence.')).toBeTruthy()
@@ -38,6 +45,8 @@ describe('RunInspectorCard', () => {
         events={[event('provider.requested', { provider: 'OpenRouter', model: providerDefaultModels.openrouter })]}
         pendingApproval={null}
         streamingState={createStreamingState()}
+        onEvidenceExported={() => undefined}
+        onEvidenceExportError={() => undefined}
       />,
     )
 
@@ -66,6 +75,8 @@ describe('RunInspectorCard', () => {
         events={[event('approval.required', { approvalRequest: pendingApproval })]}
         pendingApproval={pendingApproval}
         streamingState={createStreamingState({ isStreaming: false, phase: 'waiting_approval' })}
+        onEvidenceExported={() => undefined}
+        onEvidenceExportError={() => undefined}
       />,
     )
 
@@ -89,6 +100,8 @@ describe('RunInspectorCard', () => {
         ]}
         pendingApproval={null}
         streamingState={null}
+        onEvidenceExported={() => undefined}
+        onEvidenceExportError={() => undefined}
       />,
     )
 
@@ -111,6 +124,8 @@ describe('RunInspectorCard', () => {
         events={[]}
         pendingApproval={null}
         streamingState={createStreamingState({ isStreaming: false })}
+        onEvidenceExported={() => undefined}
+        onEvidenceExportError={() => undefined}
       />,
     )
 
