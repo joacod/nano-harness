@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 
 import type { ApprovalRequest, ConversationSnapshot, RunEvent } from '../../../../../packages/shared/src'
-import { formatTimestamp } from '../utils/formatting'
+import { formatPreciseTimestamp } from '../utils/formatting'
 import { describeRunEvent, getEventTone, getRecoverableRunAction, type StreamingRunState } from '../utils/run-events'
 import { Button, Card, FeedbackText, StatusBadge } from './ui'
 
@@ -93,15 +93,15 @@ export function RunInspectorCard({
             </div>
             <div>
               <span className="field-label">Created</span>
-              <p>{formatTimestamp(run.createdAt)}</p>
+              <p>{formatPreciseTimestamp(run.createdAt)}</p>
             </div>
             <div>
               <span className="field-label">Started</span>
-              <p>{run.startedAt ? formatTimestamp(run.startedAt) : 'Not started yet'}</p>
+              <p>{run.startedAt ? formatPreciseTimestamp(run.startedAt) : 'Not started yet'}</p>
             </div>
             <div>
               <span className="field-label">Finished</span>
-              <p>{run.finishedAt ? formatTimestamp(run.finishedAt) : 'Still active'}</p>
+              <p>{run.finishedAt ? formatPreciseTimestamp(run.finishedAt) : 'Still active'}</p>
             </div>
           </div>
 
@@ -144,7 +144,7 @@ export function RunInspectorCard({
                   <div className="timeline-card">
                     <div className="timeline-header">
                       <strong>{description.title}</strong>
-                      <small>{formatTimestamp(event.timestamp)}</small>
+                      <small>{formatPreciseTimestamp(event.timestamp)}</small>
                     </div>
                     <p className="timeline-type">{event.type}</p>
                     <FeedbackText>{description.detail}</FeedbackText>
