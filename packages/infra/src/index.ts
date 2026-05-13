@@ -1,6 +1,7 @@
 export * from './built-in-actions'
 export * from './chatgpt-subscription-provider'
 export * from './composite-action-executor'
+export * from './google-gemini-provider'
 export * from './mcp-registry'
 export * from './schema'
 export * from './openai-compatible-provider'
