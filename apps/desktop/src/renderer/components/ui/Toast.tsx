@@ -2,11 +2,14 @@ import { useEffect, type ReactNode } from 'react'
 
 import { cn } from './classnames'
 
+export type ToastAction = {
+  ariaLabel?: string
+  label: string
+  onClick: () => void
+}
+
 export type ToastMessage = {
-  action?: {
-    label: string
-    onClick: () => void
-  }
+  action?: ToastAction
   id: string
   message?: ReactNode
   title: ReactNode
@@ -45,7 +48,7 @@ export function Toast({
           <strong>{toast.title}</strong>
           {toast.message ? <p>{toast.message}</p> : null}
           {toast.action ? (
-            <button type="button" className="toast-action" onClick={toast.action.onClick}>
+            <button type="button" className="toast-action" aria-label={toast.action.ariaLabel} onClick={toast.action.onClick}>
               {toast.action.label}
             </button>
           ) : null}

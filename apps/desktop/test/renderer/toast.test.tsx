@@ -52,6 +52,34 @@ describe('Toast', () => {
     expect(onAction).toHaveBeenCalledTimes(1)
   })
 
+  it('omits the action button when no action is configured', () => {
+    render(
+      <Toast
+        autoDismissMs={0}
+        toast={{ id: 'toast-1', title: 'Session exported' }}
+        onDismiss={() => undefined}
+      />,
+    )
+
+    expect(screen.queryByRole('button', { name: 'Open folder' })).toBeNull()
+  })
+
+  it('uses a configured action aria-label when provided', () => {
+    render(
+      <Toast
+        autoDismissMs={0}
+        toast={{
+          id: 'toast-1',
+          title: 'Session exported',
+          action: { label: 'Open', ariaLabel: 'Open export folder', onClick: () => undefined },
+        }}
+        onDismiss={() => undefined}
+      />,
+    )
+
+    expect(screen.getByRole('button', { name: 'Open export folder' })).toBeTruthy()
+  })
+
   it('auto-dismisses after the configured timeout', async () => {
     const onDismiss = vi.fn()
 
