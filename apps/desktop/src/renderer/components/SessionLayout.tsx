@@ -1,10 +1,10 @@
 import type { ReactNode, Ref, UIEventHandler } from 'react'
-import { useEffect, useId, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 
 import { providerStatusQueryOptions } from '../queries'
 import { ComposerCard } from './ComposerCard'
-import { Button, Card, FeedbackText } from './ui'
+import { SessionActionsMenu } from './SessionActionsMenu'
+import { Card, FeedbackText } from './ui'
 
 export function SessionLayout({
   conversationId,
@@ -37,54 +37,8 @@ export function SessionLayout({
 }) {
   const providerStatusQuery = useQuery(providerStatusQueryOptions)
   const providerStatus = providerStatusQuery.data
-  const menuId = useId()
-  const actionsMenuRef = useRef<HTMLDivElement>(null)
-  const [isActionsMenuOpen, setIsActionsMenuOpen] = useState(false)
   const hasSessionActions = Boolean(onForkSession || onCloneSession || onExportSession)
   const showSessionActions = Boolean(conversationId && hasSessionActions)
-
-  useEffect(() => {
-    if (!isActionsMenuOpen) {
-      return undefined
-    }
-
-    function handlePointerDown(event: PointerEvent) {
-      if (actionsMenuRef.current?.contains(event.target as Node)) {
-        return
-      }
-
-      setIsActionsMenuOpen(false)
-    }
-
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape') {
-        setIsActionsMenuOpen(false)
-      }
-    }
-
-    document.addEventListener('pointerdown', handlePointerDown)
-    document.addEventListener('keydown', handleKeyDown)
-
-    return () => {
-      document.removeEventListener('pointerdown', handlePointerDown)
-      document.removeEventListener('keydown', handleKeyDown)
-    }
-  }, [isActionsMenuOpen])
-
-  useEffect(() => {
-    if (!showSessionActions) {
-      setIsActionsMenuOpen(false)
-    }
-  }, [showSessionActions])
-
-  function runSessionAction(action?: () => void) {
-    if (!action || isSessionActionPending) {
-      return
-    }
-
-    setIsActionsMenuOpen(false)
-    action()
-  }
 
   return (
     <div className={`conversation-grid ${showTechnicalInfo ? 'conversation-grid-technical' : 'conversation-grid-simple'}`}>
@@ -107,31 +61,12 @@ export function SessionLayout({
                 </div>
               ) : null}
               {showSessionActions ? (
-                <div className="session-actions-menu" ref={actionsMenuRef}>
-                  <Button
-                    type="button"
-                    size="sm"
-                    className="session-actions-trigger"
-                    aria-label="Session options"
-                    aria-controls={isActionsMenuOpen ? menuId : undefined}
-                    aria-expanded={isActionsMenuOpen}
-                    aria-haspopup="menu"
-                    onClick={() => setIsActionsMenuOpen((current) => !current)}
-                  >
-                    <span className="session-actions-dots" aria-hidden="true">
-                      <span />
-                      <span />
-                      <span />
-                    </span>
-                  </Button>
-                  {isActionsMenuOpen ? (
-                    <div className="session-actions-list" id={menuId} role="menu" aria-label="Session options">
-                      <button type="button" role="menuitem" disabled={isSessionActionPending || !onForkSession} onClick={() => runSessionAction(onForkSession)}>Fork</button>
-                      <button type="button" role="menuitem" disabled={isSessionActionPending || !onCloneSession} onClick={() => runSessionAction(onCloneSession)}>Clone</button>
-                      <button type="button" role="menuitem" disabled={isSessionActionPending || !onExportSession} onClick={() => runSessionAction(onExportSession)}>Export session</button>
-                    </div>
-                  ) : null}
-                </div>
+                <SessionActionsMenu
+                  isPending={isSessionActionPending}
+                  onCloneSession={onCloneSession}
+                  onExportSession={onExportSession}
+                  onForkSession={onForkSession}
+                />
               ) : null}
             </div>
           </div>
