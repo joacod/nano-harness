@@ -28,6 +28,7 @@ const workspaceSettings: AppSettings = {
 const cleanupPaths: string[] = []
 
 afterEach(async () => {
+  vi.useRealTimers()
   vi.unstubAllGlobals()
 
   await Promise.all(
@@ -331,6 +332,35 @@ describe('BuiltInActionExecutor', () => {
       status: 'failed',
       errorMessage: 'fetch_url only supports http and https URLs',
     })
+  })
+
+  it('returns current time for a requested IANA time zone without shell access', async () => {
+    const rootPath = await createWorkspace()
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-05-13T21:30:00.000Z'))
+
+    const result = await createExecutor().execute(
+      createExecutionInput({
+        actionId: 'get_current_time',
+        settings: { ...workspaceSettings, workspace: { ...workspaceSettings.workspace, rootPath } },
+        input: { timeZone: 'America/New_York', locale: 'en-US' },
+      }),
+    )
+
+    expect(result).toMatchObject({
+      status: 'completed',
+      output: {
+        nowIso: '2026-05-13T21:30:00.000Z',
+        timeZone: 'America/New_York',
+        locale: 'en-US',
+      },
+    })
+
+    if (!result.output || Array.isArray(result.output) || typeof result.output !== 'object') {
+      throw new Error('Expected get_current_time to return an object output')
+    }
+
+    expect(result.output.formatted).toContain('2026')
   })
 
   it('runs only allow-listed commands without shell expansion', async () => {

@@ -1,4 +1,4 @@
-import type { AppSettings, Run, RunEvent, Message } from '@nano-harness/shared'
+import type { AppSettings, ActionDefinition, PermissionDecision, Run, RunEvent, Message } from '@nano-harness/shared'
 import { getProviderDefinition } from '@nano-harness/shared'
 
 import type { ActionExecutor } from './actions'
@@ -31,18 +31,22 @@ export class DryRunPreviewBuilder {
     const skills = await this.dependencies.skillResolver.resolveForRun({ settings, run, messages })
     const mcp = await this.dependencies.mcpRegistry.getInventory(settings)
     const memory = await this.dependencies.store.recallMemory({ query: messages.map((message) => message.content).join('\n'), settings })
-    const permissionDecisions = await Promise.all(actions.map((action) => this.dependencies.policy.evaluateAction({
-      run,
-      action,
-      actionCall: {
-        id: `dry-run-${action.id}`,
-        runId: run.id,
-        actionId: action.id,
-        input: {},
-        requestedAt: this.dependencies.now(),
-      },
-      settings,
-    })))
+    const permissionDecisions = await Promise.all(actions.map(async (action) => {
+      const decision = await this.dependencies.policy.evaluateAction({
+        run,
+        action,
+        actionCall: {
+          id: `dry-run-${action.id}`,
+          runId: run.id,
+          actionId: action.id,
+          input: {},
+          requestedAt: this.dependencies.now(),
+        },
+        settings,
+      })
+
+      return normalizeDryRunDecision({ action, settings, decision })
+    }))
 
     return {
       provider: {
@@ -82,5 +86,34 @@ export class DryRunPreviewBuilder {
       mcp,
       memory,
     }
+  }
+}
+
+function normalizeDryRunDecision(input: { action: ActionDefinition; settings: AppSettings; decision: PermissionDecision }): PermissionDecision {
+  const { action, settings, decision } = input
+
+  if (action.id !== 'run_command' || decision.effect !== 'deny' || decision.reason !== 'Command (missing) is denied by safety policy') {
+    return decision
+  }
+
+  const preview = {
+    summary: action.title,
+    classification: 'risky_mutation' as const,
+  }
+
+  if (settings.workspace.approvalPolicy === 'never') {
+    return {
+      effect: 'deny',
+      reason: `${action.title} requires approval, but approvals are disabled in settings`,
+      matchedRule: 'approval_policy.never',
+      preview,
+    }
+  }
+
+  return {
+    effect: 'require_approval',
+    reason: `Approval required for ${action.title}`,
+    matchedRule: settings.workspace.approvalPolicy === 'always' ? 'approval_policy.always' : 'action.requires_approval',
+    preview,
   }
 }
