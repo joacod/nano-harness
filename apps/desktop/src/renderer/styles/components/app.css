@@ -660,6 +660,81 @@
   cursor: default;
 }
 
+.toast-viewport {
+  position: fixed;
+  right: var(--space-5);
+  bottom: var(--space-5);
+  z-index: var(--z-index-chrome);
+  width: min(28rem, calc(100vw - var(--space-5) - var(--space-5)));
+  pointer-events: none;
+}
+
+.toast-card {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3-5) var(--space-4);
+  border: var(--border-width-default) solid var(--color-success-alpha-36);
+  border-radius: var(--radius-xl);
+  background: var(--color-bg-app-alpha-98);
+  box-shadow: var(--shadow-select-options);
+  pointer-events: auto;
+}
+
+.toast-card-error {
+  border-color: var(--color-danger-alpha-46);
+}
+
+.toast-content {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.toast-content strong {
+  color: var(--text-strong);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+  letter-spacing: var(--letter-spacing-wide);
+  text-transform: uppercase;
+}
+
+.toast-content p {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  color: var(--muted-foreground);
+  font-size: var(--font-size-md);
+  line-height: var(--line-height-form);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.toast-close {
+  flex: 0 0 auto;
+  width: 1.75rem;
+  height: 1.75rem;
+  border: var(--border-width-default) solid var(--button-ghost-border);
+  border-radius: var(--radius-pill);
+  color: var(--muted-foreground);
+  background: var(--button-ghost-bg);
+  font-size: var(--font-size-xl);
+  line-height: var(--line-height-tight);
+}
+
+.toast-close:hover,
+.toast-close:focus-visible {
+  border-color: var(--button-ghost-border-hover);
+  color: var(--button-ghost-fg-hover);
+  background: var(--button-ghost-bg-hover);
+}
+
+.toast-close:focus-visible {
+  outline: var(--focus-outline-width) solid var(--focus-outline-color);
+  outline-offset: var(--focus-outline-offset);
+}
+
 .conversation-hero-card h2 {
   max-width: min(53.75rem, 100%);
   font-size: var(--font-size-3xl);

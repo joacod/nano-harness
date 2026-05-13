@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { providerStatusQueryOptions } from '../queries'
 import { ComposerCard } from './ComposerCard'
 import { SessionActionsMenu } from './SessionActionsMenu'
-import { Card, FeedbackText } from './ui'
+import { Card } from './ui'
 
 export function SessionLayout({
   conversationId,
@@ -17,8 +17,6 @@ export function SessionLayout({
   onCloneSession,
   onExportSession,
   onForkSession,
-  sessionActionError,
-  sessionExportPath,
   isSessionActionPending,
 }: {
   conversationId: string | null
@@ -31,8 +29,6 @@ export function SessionLayout({
   onCloneSession?: () => void
   onExportSession?: () => void
   onForkSession?: () => void
-  sessionActionError?: string | null
-  sessionExportPath?: string | null
   isSessionActionPending?: boolean
 }) {
   const providerStatusQuery = useQuery(providerStatusQueryOptions)
@@ -70,8 +66,6 @@ export function SessionLayout({
               ) : null}
             </div>
           </div>
-          {sessionExportPath ? <FeedbackText live>Exported session to {sessionExportPath}</FeedbackText> : null}
-          {sessionActionError ? <FeedbackText variant="error" live>{sessionActionError}</FeedbackText> : null}
         </Card>
 
         <Card ref={transcriptRef} className="transcript-panel" onScroll={onTranscriptScroll}>

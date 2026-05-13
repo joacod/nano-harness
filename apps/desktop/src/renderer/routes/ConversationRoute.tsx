@@ -6,7 +6,7 @@ import { useNavigate, useParams } from '@tanstack/react-router'
 import { ChatTranscript } from '../components/ChatTranscript'
 import { SessionLayout } from '../components/SessionLayout'
 import { SessionTelemetry } from '../components/SessionTelemetry'
-import { Card, FeedbackText } from '../components/ui'
+import { Card, FeedbackText, Toast, type ToastMessage } from '../components/ui'
 import { conversationQueryOptions } from '../queries'
 import { useRuntimeUi, useTechnicalUi } from '../runtime-ui'
 import { getLatestConversationPendingApproval, getPendingApproval, mergeRunEvents } from '../utils/run-events'
@@ -19,6 +19,7 @@ export function ConversationRoute() {
   const snapshotQuery = useQuery(conversationQueryOptions(conversationId))
   const { liveRunEvents, streamingRuns } = useRuntimeUi()
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null)
+  const [toast, setToast] = useState<ToastMessage | null>(null)
   const transcriptPanelRef = useRef<HTMLElement | null>(null)
   const transcriptEndRef = useRef<HTMLDivElement | null>(null)
   const isTranscriptPinnedRef = useRef(true)
@@ -35,6 +36,10 @@ export function ConversationRoute() {
       setSelectedRunId(runs.at(-1)?.id ?? null)
     }
   }, [selectedRunId, snapshotQuery.data?.runs])
+
+  useEffect(() => {
+    setToast(null)
+  }, [conversationId])
 
   const streamingEntry = useMemo(() => {
     return Object.entries(streamingRuns).find(([, run]) => run.conversationId === conversationId)
@@ -110,6 +115,7 @@ export function ConversationRoute() {
       await queryClient.invalidateQueries({ queryKey: ['conversations'] })
       await navigate({ to: '/conversations/$conversationId', params: { conversationId: result.conversationId } })
     },
+    onError: (error) => showSessionActionToast(error, setToast),
   })
   const cloneSessionMutation = useMutation({
     mutationFn: async () => window.desktop.cloneSession({ sessionId: conversationId }),
@@ -118,17 +124,20 @@ export function ConversationRoute() {
       await queryClient.invalidateQueries({ queryKey: ['conversations'] })
       await navigate({ to: '/conversations/$conversationId', params: { conversationId: result.conversationId } })
     },
+    onError: (error) => showSessionActionToast(error, setToast),
   })
   const exportSessionMutation = useMutation({
     mutationFn: async () => window.desktop.exportSession({ sessionId: conversationId }),
+    onSuccess: (result) => {
+      setToast({
+        id: `session-export-${Date.now()}`,
+        title: 'Session exported',
+        message: `Saved ${getFileName(result.exportedFilePath)} locally.`,
+        variant: 'success',
+      })
+    },
+    onError: (error) => showSessionActionToast(error, setToast),
   })
-  const sessionActionError = forkSessionMutation.error instanceof Error
-    ? forkSessionMutation.error.message
-    : cloneSessionMutation.error instanceof Error
-      ? cloneSessionMutation.error.message
-      : exportSessionMutation.error instanceof Error
-        ? exportSessionMutation.error.message
-        : null
 
   if (snapshotQuery.isError) {
     return (
@@ -153,43 +162,57 @@ export function ConversationRoute() {
   }
 
   return (
-    <SessionLayout
-      conversationId={conversationId}
-      showTechnicalInfo={showTechnicalInfo}
-      title={snapshotQuery.data?.conversation?.title ?? 'Loading conversation…'}
-      transcriptRef={transcriptPanelRef}
-      onTranscriptScroll={handleTranscriptScroll}
-      isSessionActionPending={forkSessionMutation.isPending || cloneSessionMutation.isPending || exportSessionMutation.isPending}
-      sessionActionError={sessionActionError}
-      sessionExportPath={exportSessionMutation.data?.exportedFilePath ?? null}
-      onForkSession={() => forkSessionMutation.mutate()}
-      onCloneSession={() => cloneSessionMutation.mutate()}
-      onExportSession={() => exportSessionMutation.mutate()}
-      transcriptChildren={(
-        <>
-          {snapshotQuery.isLoading ? <FeedbackText>Loading messages…</FeedbackText> : null}
-          {!snapshotQuery.isLoading && snapshotQuery.data ? (
-            <ChatTranscript
-              snapshot={snapshotQuery.data}
-              streamingEntry={streamingEntry ?? null}
-              endRef={transcriptEndRef}
-              pendingApproval={chatPendingApproval}
-            />
-          ) : null}
-        </>
-      )}
-      inspectorChildren={(
-        <SessionTelemetry
-          runs={snapshotQuery.data?.runs ?? []}
-          events={snapshotQuery.data?.events ?? []}
-          selectedRunId={selectedRunId}
-          onSelectRun={(runId) => setSelectedRunId(runId)}
-          selectedRun={selectedRun}
-          selectedRunEvents={selectedRunEvents}
-          pendingApproval={pendingApproval}
-          streamingState={selectedRun ? streamingRuns[selectedRun.id] ?? null : null}
-        />
-      )}
-    />
+    <>
+      <SessionLayout
+        conversationId={conversationId}
+        showTechnicalInfo={showTechnicalInfo}
+        title={snapshotQuery.data?.conversation?.title ?? 'Loading conversation…'}
+        transcriptRef={transcriptPanelRef}
+        onTranscriptScroll={handleTranscriptScroll}
+        isSessionActionPending={forkSessionMutation.isPending || cloneSessionMutation.isPending || exportSessionMutation.isPending}
+        onForkSession={() => forkSessionMutation.mutate()}
+        onCloneSession={() => cloneSessionMutation.mutate()}
+        onExportSession={() => exportSessionMutation.mutate()}
+        transcriptChildren={(
+          <>
+            {snapshotQuery.isLoading ? <FeedbackText>Loading messages…</FeedbackText> : null}
+            {!snapshotQuery.isLoading && snapshotQuery.data ? (
+              <ChatTranscript
+                snapshot={snapshotQuery.data}
+                streamingEntry={streamingEntry ?? null}
+                endRef={transcriptEndRef}
+                pendingApproval={chatPendingApproval}
+              />
+            ) : null}
+          </>
+        )}
+        inspectorChildren={(
+          <SessionTelemetry
+            runs={snapshotQuery.data?.runs ?? []}
+            events={snapshotQuery.data?.events ?? []}
+            selectedRunId={selectedRunId}
+            onSelectRun={(runId) => setSelectedRunId(runId)}
+            selectedRun={selectedRun}
+            selectedRunEvents={selectedRunEvents}
+            pendingApproval={pendingApproval}
+            streamingState={selectedRun ? streamingRuns[selectedRun.id] ?? null : null}
+          />
+        )}
+      />
+      <Toast toast={toast} onDismiss={() => setToast(null)} />
+    </>
   )
+}
+
+function showSessionActionToast(error: unknown, setToast: (toast: ToastMessage) => void) {
+  setToast({
+    id: `session-action-error-${Date.now()}`,
+    title: 'Session action failed',
+    message: error instanceof Error ? error.message : 'The session action could not be completed.',
+    variant: 'error',
+  })
+}
+
+function getFileName(filePath: string) {
+  return filePath.split(/[\\/]/).at(-1) ?? filePath
 }
