@@ -6,13 +6,23 @@ import { useNavigate } from '@tanstack/react-router'
 
 import { createConversationId, providerStatusQueryOptions } from '../queries'
 import { Button, Card, FeedbackText, RuntimePill, TextArea } from './ui'
-import { parseSpecCommand, type AgentRole } from '../../../../../packages/shared/src'
+import { createSpecWorkflowPrompt, type AgentRole } from '../../../../../packages/shared/src'
+
+type ComposerMode = AgentRole | 'spec'
+
+const composerModes: Array<{ label: string; value: ComposerMode; description: string }> = [
+  { label: 'Plan', value: 'plan', description: 'Explore and outline the approach before edits.' },
+  { label: 'Build', value: 'build', description: 'Make focused implementation changes.' },
+  { label: 'Review', value: 'review', description: 'Inspect code for bugs and risks.' },
+  { label: 'Spec', value: 'spec', description: 'Create a bounded Plan, Build, Review workflow spec.' },
+]
 
 export function ComposerCard({ conversationId }: { conversationId: string | null }) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const providerStatusQuery = useQuery(providerStatusQueryOptions)
   const [submitError, setSubmitError] = useState<string | null>(null)
+  const [selectedMode, setSelectedMode] = useState<ComposerMode>('build')
   const startRunMutation = useMutation({
     mutationFn: async (input: { prompt: string; role: AgentRole }) => {
       const nextConversationId = conversationId ?? createConversationId()
@@ -46,17 +56,18 @@ export function ComposerCard({ conversationId }: { conversationId: string | null
       prompt: '',
     },
     onSubmit: async ({ value }) => {
-      const parsedCommand = parseRoleCommand(value.prompt)
-      const prompt = parsedCommand.prompt
+      const trimmedPrompt = value.prompt.trim()
 
-      if (!prompt) {
+      if (!trimmedPrompt) {
         setSubmitError('Enter a prompt before sending.')
         return
       }
 
+      const runInput = buildRunInput(trimmedPrompt, selectedMode)
+
       setSubmitError(null)
       try {
-        await startRunMutation.mutateAsync(parsedCommand)
+        await startRunMutation.mutateAsync(runInput)
       } catch {
         return
       }
@@ -83,11 +94,20 @@ export function ComposerCard({ conversationId }: { conversationId: string | null
           void form.handleSubmit()
         }}
       >
-        <div className="composer-command-strip" aria-hidden="true">
-          <span>/plan</span>
-          <span>/build</span>
-          <span>/review</span>
-          <span>/spec</span>
+        <div className="composer-mode-group" role="group" aria-label="Run mode">
+          {composerModes.map((mode) => (
+            <button
+              key={mode.value}
+              type="button"
+              className="composer-mode-button"
+              aria-pressed={selectedMode === mode.value}
+              aria-label={`${mode.label} mode: ${mode.description}`}
+              disabled={startRunMutation.isPending}
+              onClick={() => setSelectedMode(mode.value)}
+            >
+              <span>{mode.label}</span>
+            </button>
+          ))}
         </div>
         <div className="composer-input-row">
           <form.Field
@@ -145,22 +165,10 @@ export function ComposerCard({ conversationId }: { conversationId: string | null
   )
 }
 
-function parseRoleCommand(value: string): { prompt: string; role: AgentRole } {
-  const trimmed = value.trim()
-  const specCommand = parseSpecCommand(trimmed)
-
-  if (specCommand.isSpec) {
-    return { prompt: specCommand.prompt, role: 'plan' }
+function buildRunInput(prompt: string, mode: ComposerMode): { prompt: string; role: AgentRole } {
+  if (mode === 'spec') {
+    return { prompt: createSpecWorkflowPrompt(prompt), role: 'plan' }
   }
 
-  const match = /^\/(plan|build|review)(?:\s+([\s\S]*))?$/u.exec(trimmed)
-
-  if (!match) {
-    return { prompt: trimmed, role: 'build' }
-  }
-
-  return {
-    role: match[1] as AgentRole,
-    prompt: match[2]?.trim() || trimmed,
-  }
+  return { prompt, role: mode }
 }

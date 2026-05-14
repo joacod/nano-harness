@@ -27,7 +27,7 @@ export function HarnessEngineeringCard() {
         Available workflow tools: list_harness_components, propose_harness_change, compare_benchmark_results.
       </FeedbackText>
       <FeedbackText>
-        Spec capstone tools: create_spec_artifact and create_draft_pr_artifact. Use /spec in the composer to enter Plan mode with a bounded implementation spec request.
+        Spec capstone tools: create_spec_artifact and create_draft_pr_artifact. Use Spec mode in the composer to enter Plan mode with a bounded implementation spec request.
       </FeedbackText>
     </div>
   )
