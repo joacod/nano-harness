@@ -1,4 +1,8 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import path from 'node:path'
+
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { createDefaultProviderSettings, providerDefaultModels, type AppSettings, type ConversationSnapshot } from '@nano-harness/shared'
 
@@ -66,6 +70,8 @@ import { desktopBridgeChannels } from '@nano-harness/shared'
 import { setupIpcHandlers } from '../../src/main/ipc-handlers'
 
 describe('setupIpcHandlers', () => {
+  const cleanupPaths: string[] = []
+
   beforeEach(() => {
     handlers.clear()
     handle.mockClear()
@@ -77,6 +83,10 @@ describe('setupIpcHandlers', () => {
     buildProviderStatus.mockClear()
     encryptCredentialPayload.mockClear()
     startOpenAIChatGptOAuth.mockClear()
+  })
+
+  afterEach(async () => {
+    await Promise.all(cleanupPaths.splice(0).map((cleanupPath) => rm(cleanupPath, { recursive: true, force: true })))
   })
 
   it('registers the expected desktop bridge handlers', () => {
@@ -179,6 +189,43 @@ describe('setupIpcHandlers', () => {
       approvalRequestId: 'approval-1',
       decision: 'granted',
     })
+  })
+
+  it('lists, reads, and starts runs from local spec changes', async () => {
+    const workspaceRoot = await mkdtemp(path.join(tmpdir(), 'nano-harness-ipc-specs-'))
+    cleanupPaths.push(workspaceRoot)
+    await writeSpecChange(workspaceRoot, 'add-spec-workbench')
+    const runtime = createRuntime({ workspace: { rootPath: workspaceRoot, approvalPolicy: 'on-request' } })
+    setupIpcHandlers(runtime)
+
+    await expect(invokeHandler(desktopBridgeChannels.listSpecChanges)).resolves.toMatchObject({
+      changes: [expect.objectContaining({ summary: expect.objectContaining({ id: 'add-spec-workbench' }) })],
+    })
+    await expect(invokeHandler(desktopBridgeChannels.getSpecChange, { changeId: 'add-spec-workbench' })).resolves.toMatchObject({
+      change: expect.objectContaining({ summary: expect.objectContaining({ id: 'add-spec-workbench' }) }),
+    })
+    await expect(invokeHandler(desktopBridgeChannels.readSpecArtifact, {
+      changeId: 'add-spec-workbench',
+      artifactKind: 'proposal',
+    })).resolves.toMatchObject({
+      kind: 'proposal',
+      content: expect.stringContaining('Add Spec Workbench'),
+    })
+    await expect(invokeHandler(desktopBridgeChannels.startSpecRun, {
+      conversationId: 'conversation-1',
+      changeId: 'add-spec-workbench',
+      role: 'build',
+      taskIds: ['ui'],
+    })).resolves.toEqual({ runId: 'run-123' })
+
+    expect(runtime.runEngine.startRun).toHaveBeenCalledWith(expect.objectContaining({
+      conversationId: 'conversation-1',
+      role: 'build',
+      prompt: expect.stringContaining('Continue spec change add-spec-workbench in build mode.'),
+    }))
+    expect(runtime.runEngine.startRun).toHaveBeenCalledWith(expect.objectContaining({
+      prompt: expect.stringContaining('ui: Add route'),
+    }))
   })
 
   it('exports run evidence through the dedicated handler', async () => {
@@ -294,10 +341,11 @@ describe('setupIpcHandlers', () => {
   })
 })
 
-function createRuntime() {
+function createRuntime(settingsOverride?: Partial<AppSettings>) {
   const settings: AppSettings = {
     provider: createDefaultProviderSettings('openrouter'),
     workspace: { rootPath: '/workspace', approvalPolicy: 'on-request' },
+    ...settingsOverride,
   }
   const snapshot: ConversationSnapshot = {
     conversation: null,
@@ -400,6 +448,26 @@ function createRuntime() {
       resolveApproval: vi.fn(async () => {}),
     },
   }
+}
+
+async function writeSpecChange(workspaceRoot: string, changeId: string): Promise<void> {
+  const changeRoot = path.join(workspaceRoot, '.nano', 'specs', 'changes', changeId)
+
+  await mkdir(changeRoot, { recursive: true })
+  await writeFile(path.join(changeRoot, 'proposal.md'), '# Add Spec Workbench\n\nCreate a visible specs screen.\n', 'utf8')
+  await writeFile(path.join(changeRoot, 'design.md'), '# Design\n\nUse a three-column workbench.\n', 'utf8')
+  await writeFile(path.join(changeRoot, 'tasks.md'), '- [ ] ui: Add route\n', 'utf8')
+  await writeFile(path.join(changeRoot, 'evidence.json'), `${JSON.stringify({
+    changeId,
+    status: 'planned',
+    createdAt: '2026-05-14T10:00:00.000Z',
+    updatedAt: '2026-05-14T10:05:00.000Z',
+    runs: ['run-1'],
+    approvals: [],
+    changedFiles: [],
+    validation: [],
+    draftPr: null,
+  }, null, 2)}\n`, 'utf8')
 }
 
 async function invokeHandler(channel: string, payload?: unknown) {

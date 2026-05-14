@@ -6,6 +6,7 @@ import { conversationSchema, messageSchema } from '../messages'
 import { runSchema } from '../runs'
 import { providerAuthMethodSchema } from '../settings'
 import { sessionExportResultSchema, sessionListSchema, sessionMutationResultSchema } from '../sessions'
+import { specArtifactKindSchema, specChangeDetailSchema } from '../spec'
 
 export const desktopPlatformSchema = z.enum(['darwin', 'linux', 'win32'])
 
@@ -105,3 +106,23 @@ export const importDataResultSchema = z.object({
 })
 
 export type ImportDataResult = z.infer<typeof importDataResultSchema>
+
+export const specChangeListSchema = z.object({
+  changes: z.array(specChangeDetailSchema),
+})
+
+export type SpecChangeList = z.infer<typeof specChangeListSchema>
+
+export const specChangeDetailResultSchema = z.object({
+  change: specChangeDetailSchema.nullable(),
+})
+
+export type SpecChangeDetailResult = z.infer<typeof specChangeDetailResultSchema>
+
+export const specArtifactReadResultSchema = z.object({
+  kind: specArtifactKindSchema,
+  path: z.string().min(1),
+  content: z.string(),
+})
+
+export type SpecArtifactReadResult = z.infer<typeof specArtifactReadResultSchema>

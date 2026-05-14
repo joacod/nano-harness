@@ -7,7 +7,7 @@ import type { SkillInventory } from '../skills'
 import type { McpInventory } from '../mcp'
 import type { MemoryProposalList, MemoryRecordList, ResolveMemoryProposalInput } from '../memory'
 import type { SessionExportResult, SessionInput, SessionList, SessionMutationResult } from '../sessions'
-import type { ClearProviderAuthInput, ExportRunEvidenceInput, GetConversationInput, OpenExternalUrlInput, ProviderCredentialInput, ResolveApprovalInput, RunIdInput, SaveProviderAuthInput, ShowItemInFolderInput, StartProviderOauthInput } from './inputs'
+import type { ClearProviderAuthInput, ExportRunEvidenceInput, GetConversationInput, OpenExternalUrlInput, ProviderCredentialInput, ReadSpecArtifactInput, ResolveApprovalInput, RunIdInput, SaveProviderAuthInput, ShowItemInFolderInput, SpecChangeInput, StartProviderOauthInput, StartSpecRunInput } from './inputs'
 import type {
   ConversationList,
   ConversationSnapshot,
@@ -17,6 +17,9 @@ import type {
   ImportDataResult,
   ProviderCredentialStatus,
   ProviderStatus,
+  SpecArtifactReadResult,
+  SpecChangeDetailResult,
+  SpecChangeList,
   StartProviderOauthResult,
   StartRunResult,
 } from './outputs'
@@ -31,6 +34,10 @@ export type DesktopApi = {
   listMemoryRecords(): Promise<MemoryRecordList>
   listMemoryProposals(): Promise<MemoryProposalList>
   resolveMemoryProposal(input: ResolveMemoryProposalInput): Promise<void>
+  listSpecChanges(): Promise<SpecChangeList>
+  getSpecChange(input: SpecChangeInput): Promise<SpecChangeDetailResult>
+  readSpecArtifact(input: ReadSpecArtifactInput): Promise<SpecArtifactReadResult>
+  startSpecRun(input: StartSpecRunInput): Promise<StartRunResult>
   getProviderCredentialStatus(input: ProviderCredentialInput): Promise<ProviderCredentialStatus>
   saveProviderAuth(input: SaveProviderAuthInput): Promise<void>
   startProviderOauth(input: StartProviderOauthInput): Promise<StartProviderOauthResult>
