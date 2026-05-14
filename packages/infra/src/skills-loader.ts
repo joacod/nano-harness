@@ -51,8 +51,7 @@ export class MarkdownSkillResolver implements SkillResolver {
 
   async resolveForRun(input: { settings: AppSettings; run?: Run; messages: Message[] }) {
     const skills = await this.listSkills(input.settings)
-    const promptText = input.messages.filter((message) => message.role === 'user').map((message) => message.content).join('\n').toLowerCase()
-    const selected = skills.filter((skill) => skill.enabled && isSkillRelevant(skill, promptText))
+    const selected = skills.filter((skill) => skill.enabled)
 
     return skillContextSchema.parse({
       available: skills.map(toSummary),
@@ -93,15 +92,6 @@ function toSummary(skill: SkillPackage): SkillSummary {
     path: skill.path,
     enabled: skill.enabled,
   }
-}
-
-function isSkillRelevant(skill: SkillPackage, promptText: string): boolean {
-  if (!promptText.trim()) {
-    return false
-  }
-
-  const needles = [skill.id, skill.name, ...skill.triggers].map((value) => value.toLowerCase())
-  return needles.some((needle) => promptText.includes(needle))
 }
 
 async function readSkillsDirectory(directoryPath: string, source: 'user' | 'project'): Promise<SkillPackage[]> {
