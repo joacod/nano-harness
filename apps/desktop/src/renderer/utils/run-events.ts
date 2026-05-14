@@ -28,6 +28,14 @@ const runEventDescriptors: Record<RunEvent['type'], RunEventDescriptor> = {
   'run.started': { phase: 'started' },
   'run.dry_run_preview': { phase: 'queued' },
   'memory.proposal_created': { phase: 'using_tools' },
+  'spec.change_created': { phase: 'using_tools' },
+  'spec.artifact_written': { phase: 'using_tools' },
+  'spec.task_updated': { phase: 'using_tools' },
+  'spec.evidence_appended': { phase: 'using_tools' },
+  'spec.change_archived': { phase: 'using_tools' },
+  'obligation.created': { phase: 'using_tools' },
+  'obligation.satisfied': { phase: 'using_tools' },
+  'obligation.unmet': { phase: 'using_tools', tone: 'warning' },
   'run.waiting_approval': { phase: 'waiting_approval' },
   'run.completed': {},
   'run.failed': { tone: 'failed' },
@@ -229,6 +237,22 @@ export function describeRunEvent(event: RunEvent) {
       }
     case 'memory.proposal_created':
       return { title: 'Memory proposal created', detail: `${event.payload.proposal.category}: ${event.payload.proposal.content}` }
+    case 'spec.change_created':
+      return { title: 'Spec change created', detail: `${event.payload.change.id} · ${event.payload.change.status}` }
+    case 'spec.artifact_written':
+      return { title: 'Spec artifact written', detail: `${event.payload.changeId} · ${event.payload.artifactKind} · ${event.payload.path}` }
+    case 'spec.task_updated':
+      return { title: 'Spec task updated', detail: `${event.payload.task.status}: ${event.payload.task.title}` }
+    case 'spec.evidence_appended':
+      return { title: 'Spec evidence appended', detail: `${event.payload.changeId} · ${event.payload.evidence.runIds.length} linked runs` }
+    case 'spec.change_archived':
+      return { title: 'Spec change archived', detail: `${event.payload.changeId} · ${event.payload.archivedPath}` }
+    case 'obligation.created':
+      return { title: 'Validation obligation created', detail: event.payload.obligation.reason }
+    case 'obligation.satisfied':
+      return { title: 'Validation obligation satisfied', detail: `${event.payload.obligationId} · ${event.payload.evidence.length} evidence links` }
+    case 'obligation.unmet':
+      return { title: 'Validation obligation unmet', detail: event.payload.reason }
     case 'run.waiting_approval':
       return { title: 'Waiting for approval', detail: `Approval request ${event.payload.approvalRequestId}` }
     case 'run.completed':
