@@ -31,6 +31,19 @@ export function AdvancedSettingsForm({
     setSaveMessage(null)
   }
 
+  function toggleAllAdvanced() {
+    if (advanced.enabled) {
+      updateAdvanced({ ...advanced, enabled: false })
+      return
+    }
+
+    updateAdvanced({
+      enabled: true,
+      chatActivity: true,
+      telemetrySidebar: true,
+    })
+  }
+
   async function handleSubmit() {
     const normalizedSettings = normalizeAdvancedSettings(draftSettings)
 
@@ -73,16 +86,18 @@ export function AdvancedSettingsForm({
             <p className="eyebrow" id="advanced-mode-heading">
               Advanced
             </p>
-            <p>Choose which power-user details the sidebar Advanced switch can reveal.</p>
+            <p>Keep the main workspace quiet by default, and turn on deeper run details when you need them.</p>
           </div>
 
           <div className="advanced-settings-list">
             <AdvancedSettingsRow
-              title="Enable advanced features"
-              description="Show the Advanced switch in the sidebar and allow configured advanced surfaces to appear."
+              title="Enable all"
+              description="Turns on every advanced surface and shows the Advanced switch in the sidebar."
               checked={advanced.enabled}
-              onToggle={() => updateAdvanced({ ...advanced, enabled: !advanced.enabled })}
+              featured
+              onToggle={toggleAllAdvanced}
             />
+            <div className="advanced-settings-divider" aria-hidden="true" />
             <AdvancedSettingsRow
               title="Advanced chat activity"
               description="Show the transient run activity table before thinking or response streaming starts."
@@ -131,17 +146,19 @@ function AdvancedSettingsRow({
   checked,
   description,
   disabled,
+  featured,
   onToggle,
   title,
 }: {
   checked: boolean
   description: string
   disabled?: boolean
+  featured?: boolean
   onToggle: () => void
   title: string
 }) {
   return (
-    <div className="advanced-settings-row">
+    <div className={`advanced-settings-row${featured ? ' advanced-settings-row-featured' : ''}`}>
       <div className="advanced-settings-copy">
         <strong>{title}</strong>
         <p>{description}</p>

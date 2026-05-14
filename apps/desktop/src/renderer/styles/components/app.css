@@ -279,6 +279,10 @@
   min-width: 0;
 }
 
+.sidebar-footer-status-row > :only-child {
+  grid-column: 1 / -1;
+}
+
 .switch-button {
   display: flex;
   align-items: center;
@@ -1361,6 +1365,18 @@
   border: var(--border-width-default) solid var(--color-alpha-white-10);
   border-radius: var(--radius-lg);
   background: var(--color-bg-purple-subtle);
+}
+
+.advanced-settings-row-featured {
+  border-color: var(--color-primary-alpha-36);
+  background: var(--color-bg-purple-muted);
+  box-shadow: var(--shadow-active-surface);
+}
+
+.advanced-settings-divider {
+  height: var(--border-width-default);
+  margin: var(--space-1) 0;
+  background: var(--color-alpha-white-12);
 }
 
 .advanced-settings-copy {
