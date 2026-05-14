@@ -100,7 +100,7 @@ export function AdvancedSettingsForm({
             <div className="advanced-settings-divider" aria-hidden="true" />
             <AdvancedSettingsRow
               title="Advanced chat activity"
-              description="Show the transient run activity table before thinking or response streaming starts."
+              description="Show provider steps, tool calls, and tool results in the chat transcript."
               checked={advanced.enabled && advanced.chatActivity}
               disabled={!advanced.enabled}
               onToggle={() => updateAdvanced({ ...advanced, chatActivity: !advanced.chatActivity })}

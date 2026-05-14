@@ -212,6 +212,22 @@
   font-size: var(--font-size-sm);
 }
 
+.streaming-compact {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  align-self: flex-start;
+  width: fit-content;
+  max-width: 100%;
+  padding: var(--space-2) var(--space-2-5);
+  border: var(--border-width-default) solid var(--color-secondary-alpha-24);
+  border-radius: var(--radius-pill);
+  background: var(--surface-1);
+  color: var(--text-strong);
+  font-size: var(--font-size-sm);
+  box-shadow: var(--surface-card-inset);
+}
+
 .streaming-waiting-orb {
   width: 0.625rem;
   height: 0.625rem;
@@ -243,6 +259,61 @@
   white-space: pre-wrap;
   font-size: var(--font-size-lg);
   line-height: var(--line-height-normal);
+}
+
+.tool-output-details {
+  border: var(--border-width-default) solid var(--color-warning-alpha-24);
+  border-radius: var(--radius-xl);
+  background: var(--color-bg-app-alpha-42);
+  overflow: hidden;
+}
+
+.tool-output-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2-5) var(--space-3);
+  color: var(--text-strong);
+  cursor: pointer;
+  font-size: var(--font-size-md);
+  overflow-wrap: anywhere;
+}
+
+.tool-output-toggle {
+  flex: 0 0 auto;
+  padding: var(--space-1) var(--space-2);
+  border: var(--border-width-default) solid var(--color-warning-alpha-30);
+  border-radius: var(--radius-pill);
+  background: var(--color-warning-alpha-12);
+  color: var(--muted-foreground);
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  letter-spacing: var(--letter-spacing-emphasis);
+  text-transform: uppercase;
+}
+
+.tool-output-toggle:hover,
+.tool-output-toggle:focus-visible {
+  border-color: var(--color-warning-alpha-42);
+  background: var(--color-warning-alpha-24);
+  color: var(--text-strong);
+}
+
+.tool-output-toggle:focus-visible {
+  outline: var(--focus-outline-width) solid var(--focus-outline-color);
+  outline-offset: var(--focus-outline-offset);
+  box-shadow: var(--focus-ring-shadow-strong);
+}
+
+.tool-output-pre {
+  max-height: 24rem;
+  padding: var(--space-3);
+  border-top: var(--border-width-default) solid var(--color-warning-alpha-18);
+  overflow: auto;
+  background: var(--color-bg-amber-code);
+  font-size: var(--font-size-md);
 }
 
 .sd-root,

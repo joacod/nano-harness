@@ -34,6 +34,15 @@ export function StreamingMessageBubble({
 }) {
   const hasThinking = Boolean(streamingState.reasoning.text || streamingState.reasoning.summaries.length > 0)
 
+  if (!showAdvancedChatActivity && !streamingState.content && !hasThinking) {
+    return (
+      <div className="streaming-compact" aria-live="polite">
+        <span className="streaming-waiting-orb" aria-hidden="true" />
+        <span>{getStreamingLabel(streamingState)}</span>
+      </div>
+    )
+  }
+
   return (
     <article className="message-bubble message-assistant message-streaming">
       <header className="message-meta message-meta-row">

@@ -45,6 +45,99 @@ describe('ChatTranscript', () => {
       })
     })
   })
+
+  it('hides persisted tool activity when advanced chat activity is disabled', () => {
+    renderWithQueryClient(
+      <ChatTranscript
+        snapshot={createSnapshot({ messages: createToolActivityMessages() })}
+        streamingEntry={null}
+        pendingApproval={null}
+        endRef={createRef<HTMLDivElement>()}
+        showAdvancedChatActivity={false}
+      />,
+    )
+
+    expect(screen.getByText('Final answer')).toBeTruthy()
+    expect(screen.queryByText('read_file')).toBeNull()
+    expect(screen.queryByText('tool-call-1')).toBeNull()
+    expect(screen.queryByText(/notes\.txt/)).toBeNull()
+  })
+
+  it('shows summarized tool activity when advanced chat activity is enabled', () => {
+    renderWithQueryClient(
+      <ChatTranscript
+        snapshot={createSnapshot({ messages: createToolActivityMessages() })}
+        streamingEntry={null}
+        pendingApproval={null}
+        endRef={createRef<HTMLDivElement>()}
+        showAdvancedChatActivity
+      />,
+    )
+
+    expect(screen.getByText('read_file')).toBeTruthy()
+    expect(screen.getByText('tool-call-1')).toBeTruthy()
+    expect(screen.getByText('Read File · notes.txt · 2 lines')).toBeTruthy()
+    expect(screen.getByText(/hello/)).toBeTruthy()
+  })
+
+  it('collapses long advanced tool output by default', () => {
+    const longContent = Array.from({ length: 80 }, (_, index) => `line ${index + 1}`).join('\n')
+
+    renderWithQueryClient(
+      <ChatTranscript
+        snapshot={createSnapshot({
+          messages: [
+            {
+              id: 'tool-message-1',
+              conversationId: 'conversation-1',
+              runId: 'run-1',
+              role: 'tool',
+              toolCallId: 'tool-call-1',
+              toolName: 'read_file',
+              content: JSON.stringify({ path: 'long.txt', content: longContent }),
+              createdAt: '2026-04-29T10:02:00.000Z',
+            },
+          ],
+        })}
+        streamingEntry={null}
+        pendingApproval={null}
+        endRef={createRef<HTMLDivElement>()}
+        showAdvancedChatActivity
+      />,
+    )
+
+    const toggle = screen.getByRole('button', { name: 'Show full output' })
+
+    expect(screen.getByText('Read File · long.txt · 80 lines')).toBeTruthy()
+    expect(toggle).toBeTruthy()
+    expect(screen.queryByText(/line 80/)).toBeNull()
+  })
+
+  it('uses a compact working indicator before non-advanced streaming content starts', () => {
+    renderWithQueryClient(
+      <ChatTranscript
+        snapshot={createSnapshot()}
+        streamingEntry={[
+          'run-1',
+          {
+            conversationId: 'conversation-1',
+            content: '',
+            reasoning: { text: '', summaries: [], encryptedCount: 0, isStreaming: false },
+            phase: 'contacting_provider',
+            activity: [{ id: 'activity-1', title: 'Provider request sent', detail: 'openrouter · model' }],
+            isStreaming: true,
+          },
+        ]}
+        pendingApproval={null}
+        endRef={createRef<HTMLDivElement>()}
+        showAdvancedChatActivity={false}
+      />,
+    )
+
+    expect(screen.getByText('Contacting provider…')).toBeTruthy()
+    expect(screen.queryByText('assistant streaming')).toBeNull()
+    expect(screen.queryByText('Provider request sent')).toBeNull()
+  })
 })
 
 function createApprovalRequest(overrides?: Partial<ApprovalRequest>): ApprovalRequest {
@@ -68,4 +161,36 @@ function createSnapshot(overrides?: Partial<ConversationSnapshot>): Conversation
     approvalResolutions: [],
     ...overrides,
   }
+}
+
+function createToolActivityMessages(): ConversationSnapshot['messages'] {
+  return [
+    {
+      id: 'assistant-tool-call-1',
+      conversationId: 'conversation-1',
+      runId: 'run-1',
+      role: 'assistant',
+      content: '',
+      toolCalls: [{ id: 'tool-call-1', actionId: 'read_file', input: { path: 'notes.txt' } }],
+      createdAt: '2026-04-29T10:01:00.000Z',
+    },
+    {
+      id: 'tool-message-1',
+      conversationId: 'conversation-1',
+      runId: 'run-1',
+      role: 'tool',
+      toolCallId: 'tool-call-1',
+      toolName: 'read_file',
+      content: JSON.stringify({ path: 'notes.txt', content: 'hello\nworld' }),
+      createdAt: '2026-04-29T10:02:00.000Z',
+    },
+    {
+      id: 'assistant-final-1',
+      conversationId: 'conversation-1',
+      runId: 'run-1',
+      role: 'assistant',
+      content: 'Final answer',
+      createdAt: '2026-04-29T10:03:00.000Z',
+    },
+  ]
 }

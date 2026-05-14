@@ -27,7 +27,7 @@ export function ChatTranscript({
       {snapshot.messages.length === 0 ? <FeedbackText>No persisted messages yet.</FeedbackText> : null}
 
       {snapshot.messages.map((message) => (
-        <MessageBubble key={message.id} message={message} />
+        <MessageBubble key={message.id} message={message} showAdvancedChatActivity={showAdvancedChatActivity} />
       ))}
 
       {streamingState ? (
