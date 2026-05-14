@@ -16,7 +16,7 @@ export function ConversationRoute() {
   const { conversationId } = useParams({ from: '/conversations/$conversationId' })
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  const { showTechnicalInfo } = useTechnicalUi()
+  const { advancedSettings, isAdvancedUiActive } = useTechnicalUi()
   const snapshotQuery = useQuery(conversationQueryOptions(conversationId))
   const { liveRunEvents, streamingRuns } = useRuntimeUi()
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null)
@@ -24,7 +24,7 @@ export function ConversationRoute() {
   const transcriptPanelRef = useRef<HTMLElement | null>(null)
   const transcriptEndRef = useRef<HTMLDivElement | null>(null)
   const isTranscriptPinnedRef = useRef(true)
-  const wasShowingTechnicalInfoRef = useRef(showTechnicalInfo)
+  const wasShowingTechnicalInfoRef = useRef(isAdvancedUiActive)
 
   useEffect(() => {
     const runs = snapshotQuery.data?.runs ?? []
@@ -46,12 +46,12 @@ export function ConversationRoute() {
   useEffect(() => {
     const latestRunId = snapshotQuery.data?.runs.at(-1)?.id ?? null
 
-    if (showTechnicalInfo && !wasShowingTechnicalInfoRef.current && latestRunId) {
+    if (isAdvancedUiActive && advancedSettings.telemetrySidebar && !wasShowingTechnicalInfoRef.current && latestRunId) {
       setSelectedRunId(latestRunId)
     }
 
-    wasShowingTechnicalInfoRef.current = showTechnicalInfo
-  }, [showTechnicalInfo, snapshotQuery.data?.runs])
+    wasShowingTechnicalInfoRef.current = isAdvancedUiActive
+  }, [advancedSettings.telemetrySidebar, isAdvancedUiActive, snapshotQuery.data?.runs])
 
   const streamingEntry = useMemo(() => {
     return Object.entries(streamingRuns).find(([, run]) => run.conversationId === conversationId)
@@ -59,6 +59,8 @@ export function ConversationRoute() {
   const streamingRunId = streamingEntry?.[0] ?? null
   const streamingContentLength = streamingEntry?.[1].content.length ?? 0
   const messageCount = snapshotQuery.data?.messages.length ?? 0
+  const showAdvancedChatActivity = isAdvancedUiActive && advancedSettings.chatActivity
+  const showTelemetrySidebar = isAdvancedUiActive && advancedSettings.telemetrySidebar
 
   function scrollTranscriptToBottom() {
     const panel = transcriptPanelRef.current
@@ -183,7 +185,7 @@ export function ConversationRoute() {
     <>
       <SessionLayout
         conversationId={conversationId}
-        showTechnicalInfo={showTechnicalInfo}
+        showTechnicalInfo={showTelemetrySidebar}
         title={snapshotQuery.data?.conversation?.title ?? 'Loading conversation…'}
         transcriptRef={transcriptPanelRef}
         onTranscriptScroll={handleTranscriptScroll}
@@ -200,6 +202,7 @@ export function ConversationRoute() {
                 streamingEntry={streamingEntry ?? null}
                 endRef={transcriptEndRef}
                 pendingApproval={chatPendingApproval}
+                showAdvancedChatActivity={showAdvancedChatActivity}
               />
             ) : null}
           </>

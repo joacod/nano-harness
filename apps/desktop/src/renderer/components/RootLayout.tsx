@@ -12,9 +12,10 @@ export function RootLayout() {
   const navigate = useNavigate()
   const currentPath = useRouterState({ select: (state) => state.location.pathname })
   const lastSessionPathRef = useRef('/')
-  const { isSidebarCollapsed, showTechnicalInfo, toggleSidebarCollapsed, toggleTechnicalInfo } = useTechnicalUi()
+  const { advancedSettings, isAdvancedUiActive, isSidebarCollapsed, toggleSidebarCollapsed, toggleTechnicalInfo } = useTechnicalUi()
   const providerStatusQuery = useQuery(providerStatusQueryOptions)
   const providerStatus = providerStatusQuery.data
+  const advancedFeaturesEnabled = advancedSettings?.enabled ?? true
   const isSettingsOpen = currentPath === '/settings'
 
   useEffect(() => {
@@ -71,14 +72,16 @@ export function RootLayout() {
               Settings
             </button>
             <div className="sidebar-footer-status-row">
-              <Switch
-                type="button"
-                className="sidebar-compact-switch"
-                checked={showTechnicalInfo}
-                onClick={toggleTechnicalInfo}
-              >
-                Advanced
-              </Switch>
+              {advancedFeaturesEnabled ? (
+                <Switch
+                  type="button"
+                  className="sidebar-compact-switch"
+                  checked={isAdvancedUiActive}
+                  onClick={toggleTechnicalInfo}
+                >
+                  Advanced
+                </Switch>
+              ) : null}
               <RuntimePill className="sidebar-provider-pill" tone={providerStatus?.isReady ? 'ready' : 'warning'} aria-live="polite">
                 Provider
               </RuntimePill>

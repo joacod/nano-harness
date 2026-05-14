@@ -3,8 +3,9 @@ import { createContext, startTransition, useContext, useEffect, useState } from 
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { RouterProvider } from '@tanstack/react-router'
 
-import type { DesktopContext, RunEvent } from '../../../../packages/shared/src'
-import { contextQueryOptions } from './queries'
+import type { AdvancedSettings, DesktopContext, RunEvent } from '../../../../packages/shared/src'
+import { createDefaultAdvancedSettings } from '../../../../packages/shared/src'
+import { contextQueryOptions, settingsQueryOptions } from './queries'
 import { router } from './router'
 import { isTransientRunEvent, updateLiveRunEvents, updateStreamingState, type StreamingRunState } from './utils/run-events'
 
@@ -17,7 +18,9 @@ type RuntimeUiState = {
 
 const RuntimeUiContext = createContext<RuntimeUiState | null>(null)
 const TechnicalUiContext = createContext<{
+  advancedSettings: AdvancedSettings
   isSidebarCollapsed: boolean
+  isAdvancedUiActive: boolean
   showTechnicalInfo: boolean
   toggleSidebarCollapsed: () => void
   toggleTechnicalInfo: () => void
@@ -46,11 +49,17 @@ export function useTechnicalUi() {
 export function RuntimeUiProvider() {
   const queryClient = useQueryClient()
   const { data: context } = useQuery(contextQueryOptions)
+  const { data: settings } = useQuery(settingsQueryOptions)
   const [recentEvents, setRecentEvents] = useState<RunEvent[]>([])
   const [liveRunEvents, setLiveRunEvents] = useState<Record<string, RunEvent[]>>({})
   const [streamingRuns, setStreamingRuns] = useState<Record<string, StreamingRunState>>({})
   const [showTechnicalInfo, setShowTechnicalInfo] = useState(false)
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true)
+  const advancedSettings = {
+    ...createDefaultAdvancedSettings(),
+    ...settings?.advanced,
+  }
+  const isAdvancedUiActive = showTechnicalInfo && advancedSettings.enabled
 
   useEffect(() => {
     const unsubscribe = window.desktop.onRunEvent((event) => {
@@ -84,10 +93,12 @@ export function RuntimeUiProvider() {
   return (
     <TechnicalUiContext.Provider
       value={{
+        advancedSettings,
         isSidebarCollapsed,
+        isAdvancedUiActive,
         showTechnicalInfo,
         toggleSidebarCollapsed: () => setIsSidebarCollapsed((current) => !current),
-        toggleTechnicalInfo: () => setShowTechnicalInfo((current) => !current),
+        toggleTechnicalInfo: () => setShowTechnicalInfo((current) => advancedSettings.enabled && !current),
       }}
     >
       <RuntimeUiContext.Provider

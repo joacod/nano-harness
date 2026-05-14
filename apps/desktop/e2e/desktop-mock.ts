@@ -80,6 +80,11 @@ export async function installDesktopMock(page: Page, setup: MockSetup): Promise<
           rootPath: '/workspace',
           approvalPolicy: 'on-request',
         },
+        advanced: {
+          enabled: true,
+          chatActivity: true,
+          telemetrySidebar: true,
+        },
       },
       providerStatus: {
         providerId: 'openai-compatible',

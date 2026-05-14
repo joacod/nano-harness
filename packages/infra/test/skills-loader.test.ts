@@ -31,16 +31,17 @@ afterEach(async () => {
 })
 
 describe('MarkdownSkillResolver', () => {
-  it('loads bundled skills and selects relevant ones by trigger', async () => {
+  it('loads bundled skills and selects enabled ones for each run', async () => {
     const resolver = new MarkdownSkillResolver({ userSkillsDir: '/missing/user/skills' })
     const context = await resolver.resolveForRun({
       settings,
       run,
-      messages: [userMessage('Please survey this repo architecture')],
+      messages: [userMessage('Please help with this task')],
     })
 
     expect(context.available.map((skill) => skill.id)).toContain('repo-onboarding')
     expect(context.selected.map((skill) => skill.id)).toContain('repo-onboarding')
+    expect(context.selected.map((skill) => skill.id)).toContain('typescript-refactor')
     expect(context.selected[0]?.content).toContain('package roots')
   })
 
@@ -72,6 +73,7 @@ describe('MarkdownSkillResolver', () => {
     })
 
     expect(context.available.map((skill) => skill.id)).toEqual(expect.arrayContaining(['docs-writer', 'release-notes']))
+    expect(context.selected.map((skill) => skill.id)).toContain('docs-writer')
     expect(context.selected.map((skill) => skill.id)).toContain('release-notes')
   })
 

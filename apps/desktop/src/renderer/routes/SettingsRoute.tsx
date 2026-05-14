@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 
 import { SettingsFormCard, type SettingsTab } from '../components/SettingsFormCard'
+import { AdvancedSettingsTabContainer } from '../components/settings/AdvancedSettingsTabContainer'
 import { DataSettingsTabContainer } from '../components/settings/DataSettingsTabContainer'
 import { HarnessEngineeringCard } from '../components/settings/HarnessEngineeringCard'
 import { MemorySettingsTabContainer } from '../components/settings/MemorySettingsTabContainer'
@@ -30,6 +31,7 @@ export function SettingsRoute() {
       key={JSON.stringify(settingsQuery.data)}
       providersPanel={<ProviderSettingsTabContainer settings={settingsQuery.data} />}
       workspacePanel={<WorkspaceSettingsTabContainer settings={settingsQuery.data} />}
+      advancedPanel={<AdvancedSettingsTabContainer settings={settingsQuery.data} />}
       skillsPanel={<SkillsSettingsTabContainer settings={settingsQuery.data} />}
       mcpPanel={<McpSettingsTabContainer />}
       memoryPanel={<MemorySettingsTabContainer />}

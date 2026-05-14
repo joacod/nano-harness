@@ -26,6 +26,9 @@
   --shadow-signal-pulse-start: 0 0 16px var(--color-primary-alpha-08), inset 0 0 20px var(--color-primary-alpha-04);
   --shadow-signal-pulse-end: 0 0 30px var(--color-primary-alpha-18), inset 0 0 28px var(--color-primary-alpha-08);
   --shadow-message-streaming: 0 0 28px var(--color-secondary-alpha-14), var(--shadow-inset-highlight);
+  --shadow-streaming-waiting-start: 0 0 0 0 var(--color-primary-alpha-36);
+  --shadow-streaming-waiting-end: 0 0 0 0.5rem transparent;
+  --shadow-streaming-waiting-rest: 0 0 0 0 transparent;
   --shadow-code-block: inset 0 0 22px var(--color-secondary-alpha-06);
   --shadow-code-actions: 0 0 14px var(--color-secondary-alpha-12);
   --shadow-code-action-button: inset 0 0 14px var(--color-primary-alpha-04);

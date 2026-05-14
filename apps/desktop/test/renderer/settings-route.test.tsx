@@ -13,6 +13,7 @@ import { createDesktopMock, renderWithQueryClient } from './test-utils'
 type MockSettingsFormCardProps = {
   providersPanel: ReactNode
   workspacePanel: ReactNode
+  advancedPanel: ReactNode
   skillsPanel: ReactNode
   mcpPanel: ReactNode
   memoryPanel: ReactNode
@@ -31,6 +32,7 @@ vi.mock('../../src/renderer/components/SettingsFormCard', () => ({
         <p>Mock settings form</p>
         {props.providersPanel}
         {props.workspacePanel}
+        {props.advancedPanel}
         {props.skillsPanel}
         {props.mcpPanel}
         {props.memoryPanel}
@@ -112,7 +114,7 @@ describe('SettingsRoute', () => {
 
     await waitFor(() => {
       expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['settings'] })
-      expect(screen.getByText('Exported to /tmp/export.zip')).toBeTruthy()
+      expect(screen.getByText('Saved export.zip locally.')).toBeTruthy()
       expect(screen.getByText('Safety backup created at /tmp/backup.zip')).toBeTruthy()
     })
   })

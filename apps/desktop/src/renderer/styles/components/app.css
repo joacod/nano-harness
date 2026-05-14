@@ -148,6 +148,7 @@
 .ghost-button,
 .switch-button,
 .tab-button,
+.composer-mode-button,
 .primary-button,
 .run-card,
 .custom-select-trigger,
@@ -167,6 +168,7 @@
 .ghost-button:focus-visible,
 .switch-button:focus-visible,
 .tab-button:focus-visible,
+.composer-mode-button:focus-visible,
 .primary-button:focus-visible,
 .run-card:focus-visible,
 .custom-select-trigger:focus-visible,
@@ -279,6 +281,10 @@
   min-width: 0;
 }
 
+.sidebar-footer-status-row > :only-child {
+  grid-column: 1 / -1;
+}
+
 .switch-button {
   display: flex;
   align-items: center;
@@ -302,6 +308,12 @@
   color: var(--text-strong);
   background: var(--button-ghost-bg-hover);
   box-shadow: var(--button-ghost-shadow);
+}
+
+.switch-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.54;
+  box-shadow: none;
 }
 
 .switch-track {
@@ -1341,6 +1353,70 @@
   accent-color: var(--primary);
 }
 
+.advanced-settings-list {
+  display: grid;
+  gap: var(--space-2-5);
+}
+
+.advanced-settings-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(8.5rem, 11rem);
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: var(--border-width-default) solid var(--color-alpha-white-10);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-purple-subtle);
+}
+
+.advanced-settings-row-featured {
+  position: relative;
+  overflow: hidden;
+  border-color: var(--color-primary-alpha-18);
+  background: linear-gradient(90deg, var(--color-primary-alpha-08), var(--color-bg-purple-subtle) 42%);
+  box-shadow: var(--shadow-inset-highlight);
+}
+
+.advanced-settings-row-featured::before {
+  position: absolute;
+  top: var(--space-3);
+  bottom: var(--space-3);
+  left: 0;
+  width: var(--border-width-heavy);
+  border-radius: 0 var(--radius-pill) var(--radius-pill) 0;
+  background: var(--primary);
+  box-shadow: var(--shadow-switch-thumb-active);
+  content: '';
+}
+
+.advanced-settings-divider {
+  height: var(--border-width-default);
+  margin: var(--space-1) 0;
+  background: var(--color-alpha-white-12);
+}
+
+.advanced-settings-copy {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.advanced-settings-copy strong {
+  color: var(--text-strong);
+  font-size: var(--font-size-lg);
+}
+
+.advanced-settings-copy p {
+  margin: 0;
+  color: var(--muted-foreground);
+  line-height: var(--line-height-form);
+}
+
+.advanced-settings-switch {
+  justify-self: end;
+  min-width: 8.5rem;
+}
+
 .memory-item {
   display: grid;
   gap: var(--space-2-5);
@@ -1369,25 +1445,45 @@
   gap: var(--space-2);
 }
 
-.composer-command-strip {
+.composer-mode-group {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-1-5);
+  gap: var(--space-2);
   padding-bottom: var(--space-0-5);
 }
 
-.composer-command-strip span {
+.composer-mode-button {
   display: inline-flex;
   align-items: center;
-  min-height: 1.5rem;
-  padding: var(--space-1) var(--space-2);
+  justify-content: center;
+  min-height: 2rem;
+  padding: var(--space-1-5) var(--space-3);
   border: var(--border-width-default) solid var(--color-alpha-white-12);
   border-radius: var(--radius-pill);
   background: var(--color-surface-alpha-48);
   color: var(--text-soft);
-  font-family: var(--font-mono);
-  font-size: var(--font-size-xs);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-extrabold);
   letter-spacing: var(--letter-spacing-subtle);
+  text-transform: uppercase;
+}
+
+.composer-mode-button:hover {
+  border-color: var(--button-ghost-border-hover);
+  color: var(--button-ghost-fg-hover);
+  background: var(--button-ghost-bg-hover);
+}
+
+.composer-mode-button[aria-pressed='true'] {
+  border-color: var(--color-primary-alpha-72);
+  color: var(--button-primary-fg);
+  background: var(--button-primary-bg);
+  box-shadow: var(--button-primary-shadow);
+}
+
+.composer-mode-button:disabled {
+  opacity: 0.54;
+  cursor: default;
 }
 
 .composer-input-row {
@@ -1833,6 +1929,15 @@
   .settings-field-grid-wide,
   .settings-provider-grid {
     grid-template-columns: 1fr;
+  }
+
+  .advanced-settings-row {
+    grid-template-columns: 1fr;
+  }
+
+  .advanced-settings-switch {
+    justify-self: stretch;
+    min-width: 0;
   }
 
   .settings-field-action {

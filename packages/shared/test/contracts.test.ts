@@ -7,7 +7,7 @@ import {
   harnessChangeManifestSchema,
   harnessComponentRegistrySchema,
   implementationSpecSchema,
-  parseSpecCommand,
+  createSpecWorkflowPrompt,
   messageSchema,
   mcpServerSettingsSchema,
   providerAdapterIdSchema,
@@ -144,11 +144,9 @@ describe('shared contracts', () => {
     })).toMatchObject({ id: 'change-1' })
   })
 
-  it('validates spec artifacts and parses /spec commands', () => {
-    expect(parseSpecCommand('/spec fix the settings crash')).toMatchObject({
-      isSpec: true,
-      prompt: expect.stringContaining('fix the settings crash'),
-    })
+  it('validates spec artifacts and creates spec workflow prompts', () => {
+    expect(createSpecWorkflowPrompt('fix the settings crash')).toContain('fix the settings crash')
+    expect(createSpecWorkflowPrompt('fix the settings crash')).toContain('Route the workflow through Plan, Build, and Review')
     expect(implementationSpecSchema.parse({
       id: 'spec-1',
       source: { type: 'local_text', value: 'fix bug' },
@@ -275,7 +273,7 @@ describe('shared contracts', () => {
   })
 
   it('validates bridge payloads for approval resolution and external urls', () => {
-    expect(runCreateInputSchema.parse({ conversationId: 'conversation-1', prompt: '/plan test', role: 'plan' })).toMatchObject({ role: 'plan' })
+    expect(runCreateInputSchema.parse({ conversationId: 'conversation-1', prompt: 'plan the test', role: 'plan' })).toMatchObject({ role: 'plan' })
 
     expect(
       resolveApprovalInputSchema.parse({

@@ -19,7 +19,7 @@ export function SkillsHubCard({
       <p className="eyebrow">Skills</p>
       <h2>Skills hub</h2>
       <FeedbackText>
-        Markdown skills are loaded from bundled defaults, `~/.nano/skills`, and `.nano/skills`. Full content is injected only when an enabled skill matches the run.
+        Markdown skills are loaded from bundled defaults, `~/.nano/skills`, and `.nano/skills`. Enabled skills are available automatically on every run.
       </FeedbackText>
       {error ? <FeedbackText variant="error" live>{error}</FeedbackText> : null}
       {skills.length === 0 ? <FeedbackText>No skills discovered.</FeedbackText> : null}
@@ -42,7 +42,7 @@ export function SkillsHubCard({
                 </div>
                 <p className="timeline-type">{skill.source}{skill.path ? ` · ${skill.path}` : ''}</p>
                 <FeedbackText>{skill.description}</FeedbackText>
-                {skill.triggers.length ? <small className="muted-copy">Triggers: {skill.triggers.join(', ')}</small> : null}
+                {skill.triggers.length ? <small className="muted-copy">Focus terms: {skill.triggers.join(', ')}</small> : null}
                 {skill.tools.length ? <small className="muted-copy">Tools: {skill.tools.join(', ')}</small> : null}
               </div>
             </li>

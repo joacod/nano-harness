@@ -4,7 +4,7 @@ import { cleanup, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { providerDefaultModels } from '@nano-harness/shared'
+import { providerDefaultModels, type RunCreateInput } from '@nano-harness/shared'
 
 import { ComposerCard } from '../../src/renderer/components/ComposerCard'
 import { createDesktopMock, renderWithQueryClient } from './test-utils'
@@ -33,7 +33,7 @@ describe('ComposerCard', () => {
 
   it('shows a validation error for blank prompts and does not start a run', async () => {
     const user = userEvent.setup()
-    const startRun = vi.fn(async () => ({ runId: 'run-1' }))
+    const startRun = vi.fn(async (_input: RunCreateInput) => ({ runId: 'run-1' }))
 
     window.desktop = createDesktopMock({
       getProviderStatus: async () => createProviderStatus({ isReady: false, issues: ['Missing key'] }),
@@ -51,7 +51,7 @@ describe('ComposerCard', () => {
 
   it('trims prompts, starts a run, invalidates queries, and navigates to the conversation', async () => {
     const user = userEvent.setup()
-    const startRun = vi.fn(async () => ({ runId: 'run-1' }))
+    const startRun = vi.fn(async (_input: RunCreateInput) => ({ runId: 'run-1' }))
     vi.stubGlobal('crypto', { randomUUID: () => 'uuid-123' })
 
     window.desktop = createDesktopMock({
@@ -87,7 +87,7 @@ describe('ComposerCard', () => {
     expect(promptInput.value).toBe('')
   })
 
-  it('routes /plan slash commands to plan role runs', async () => {
+  it('routes selected Plan mode to plan role runs', async () => {
     const user = userEvent.setup()
     const startRun = vi.fn(async () => ({ runId: 'run-1' }))
     vi.stubGlobal('crypto', { randomUUID: () => 'uuid-123' })
@@ -99,7 +99,8 @@ describe('ComposerCard', () => {
     const { container } = renderWithQueryClient(<ComposerCard conversationId={null} />)
     const promptInput = getRequiredElement<HTMLTextAreaElement>(container, 'textarea[name="prompt"]')
 
-    await user.type(promptInput, '/plan add MCP support')
+    await user.click(screen.getByRole('button', { name: /Plan mode/u }))
+    await user.type(promptInput, 'add MCP support')
     await user.click(screen.getByRole('button', { name: 'Send prompt' }))
 
     await waitFor(() => {
@@ -108,6 +109,57 @@ describe('ComposerCard', () => {
         prompt: 'add MCP support',
         role: 'plan',
       })
+    })
+  })
+
+  it('routes selected Review mode to review role runs', async () => {
+    const user = userEvent.setup()
+    const startRun = vi.fn(async () => ({ runId: 'run-1' }))
+    vi.stubGlobal('crypto', { randomUUID: () => 'uuid-123' })
+    window.desktop = createDesktopMock({
+      getProviderStatus: async () => createProviderStatus(),
+      startRun,
+    })
+
+    const { container } = renderWithQueryClient(<ComposerCard conversationId={null} />)
+    const promptInput = getRequiredElement<HTMLTextAreaElement>(container, 'textarea[name="prompt"]')
+
+    await user.click(screen.getByRole('button', { name: /Review mode/u }))
+    await user.type(promptInput, 'check the auth changes')
+    await user.click(screen.getByRole('button', { name: 'Send prompt' }))
+
+    await waitFor(() => {
+      expect(startRun).toHaveBeenCalledWith({
+        conversationId: 'conversation-uuid-123',
+        prompt: 'check the auth changes',
+        role: 'review',
+      })
+    })
+  })
+
+  it('routes selected Spec mode through a bounded plan prompt', async () => {
+    const user = userEvent.setup()
+    const startRun = vi.fn(async (_input: RunCreateInput) => ({ runId: 'run-1' }))
+    vi.stubGlobal('crypto', { randomUUID: () => 'uuid-123' })
+    window.desktop = createDesktopMock({
+      getProviderStatus: async () => createProviderStatus(),
+      startRun,
+    })
+
+    const { container } = renderWithQueryClient(<ComposerCard conversationId={null} />)
+    const promptInput = getRequiredElement<HTMLTextAreaElement>(container, 'textarea[name="prompt"]')
+
+    await user.click(screen.getByRole('button', { name: /Spec mode/u }))
+    await user.type(promptInput, 'define session export')
+    await user.click(screen.getByRole('button', { name: 'Send prompt' }))
+
+    await waitFor(() => {
+      expect(startRun).toHaveBeenCalledWith({
+        conversationId: 'conversation-uuid-123',
+        prompt: expect.stringContaining('define session export'),
+        role: 'plan',
+      })
+      expect(startRun.mock.calls[0]?.[0].prompt).toContain('Route the workflow through Plan, Build, and Review')
     })
   })
 

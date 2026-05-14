@@ -192,6 +192,22 @@ export const workspaceSettingsSchema = z.object({
 
 export type WorkspaceSettings = z.infer<typeof workspaceSettingsSchema>
 
+export const advancedSettingsSchema = z.object({
+  enabled: z.boolean().default(true),
+  chatActivity: z.boolean().default(true),
+  telemetrySidebar: z.boolean().default(true),
+})
+
+export type AdvancedSettings = z.infer<typeof advancedSettingsSchema>
+
+export function createDefaultAdvancedSettings(): AdvancedSettings {
+  return {
+    enabled: true,
+    chatActivity: true,
+    telemetrySidebar: true,
+  }
+}
+
 export const appSettingsSchema = z.object({
   provider: providerSettingsSchema,
   workspace: workspaceSettingsSchema,
@@ -199,6 +215,7 @@ export const appSettingsSchema = z.object({
   mcp: mcpSettingsSchema.optional(),
   safety: safetySettingsSchema.optional(),
   memory: memorySettingsSchema.optional(),
+  advanced: advancedSettingsSchema.optional(),
 })
 
 export type AppSettings = z.infer<typeof appSettingsSchema>

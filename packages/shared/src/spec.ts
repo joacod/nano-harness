@@ -48,22 +48,10 @@ export const specEvidencePacketSchema = z.object({
 
 export type SpecEvidencePacket = z.infer<typeof specEvidencePacketSchema>
 
-export function parseSpecCommand(value: string): { prompt: string; isSpec: boolean } {
-  const trimmed = value.trim()
-  const match = /^\/spec(?:\s+([\s\S]*))?$/u.exec(trimmed)
-
-  if (!match) {
-    return { prompt: trimmed, isSpec: false }
-  }
-
-  const task = match[1]?.trim() || trimmed
-
-  return {
-    isSpec: true,
-    prompt: [
-      'Create a bounded implementation spec for this task before any build work.',
-      'Route the workflow through Plan, Build, and Review. Keep branch creation, push, and PR publication approval-gated.',
-      task,
-    ].join('\n\n'),
-  }
+export function createSpecWorkflowPrompt(task: string): string {
+  return [
+    'Create a bounded implementation spec for this task before any build work.',
+    'Route the workflow through Plan, Build, and Review. Keep branch creation, push, and PR publication approval-gated.',
+    task.trim(),
+  ].join('\n\n')
 }
