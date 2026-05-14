@@ -12,9 +12,10 @@ export function RootLayout() {
   const navigate = useNavigate()
   const currentPath = useRouterState({ select: (state) => state.location.pathname })
   const lastSessionPathRef = useRef('/')
-  const { isSidebarCollapsed, showTechnicalInfo, toggleSidebarCollapsed, toggleTechnicalInfo } = useTechnicalUi()
+  const { advancedSettings, isAdvancedUiActive, isSidebarCollapsed, toggleSidebarCollapsed, toggleTechnicalInfo } = useTechnicalUi()
   const providerStatusQuery = useQuery(providerStatusQueryOptions)
   const providerStatus = providerStatusQuery.data
+  const advancedFeaturesEnabled = advancedSettings?.enabled ?? true
   const isSettingsOpen = currentPath === '/settings'
 
   useEffect(() => {
@@ -74,7 +75,8 @@ export function RootLayout() {
               <Switch
                 type="button"
                 className="sidebar-compact-switch"
-                checked={showTechnicalInfo}
+                checked={isAdvancedUiActive}
+                disabled={!advancedFeaturesEnabled}
                 onClick={toggleTechnicalInfo}
               >
                 Advanced

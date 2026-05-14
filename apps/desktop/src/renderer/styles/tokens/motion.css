@@ -9,4 +9,6 @@
   --motion-raise-y: -1px;
   --motion-chevron-y: -2px;
   --motion-center-y: -50%;
+  --motion-pulse-scale-start: scale(0.88);
+  --motion-pulse-scale-end: scale(1);
 }

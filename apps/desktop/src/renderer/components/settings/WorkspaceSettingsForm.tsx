@@ -40,6 +40,7 @@ export function WorkspaceSettingsForm({
         mcp: value.mcp,
         safety: normalizeSafetySettings(value.safety),
         memory: value.memory,
+        advanced: value.advanced,
       }
 
       await onSubmit(normalizedSettings)
@@ -294,6 +295,7 @@ function normalizeWorkspaceSettings(settings: AppSettings): AppSettings {
     mcp: settings.mcp,
     safety: normalizeSafetySettings(settings.safety),
     memory: settings.memory,
+    advanced: settings.advanced,
   }
 }
 

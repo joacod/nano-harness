@@ -25,14 +25,22 @@ export function getStreamingLabel(streamingState: StreamingRunState) {
   }
 }
 
-export function StreamingMessageBubble({ streamingState }: { streamingState: StreamingRunState }) {
+export function StreamingMessageBubble({
+  streamingState,
+  showAdvancedChatActivity,
+}: {
+  streamingState: StreamingRunState
+  showAdvancedChatActivity: boolean
+}) {
+  const hasThinking = Boolean(streamingState.reasoning.text || streamingState.reasoning.summaries.length > 0)
+
   return (
     <article className="message-bubble message-assistant message-streaming">
       <header className="message-meta message-meta-row">
         <span>assistant streaming</span>
         <StatusBadge status="streaming">{getStreamingLabel(streamingState)}</StatusBadge>
       </header>
-      {streamingState.activity.length > 0 ? (
+      {showAdvancedChatActivity && streamingState.activity.length > 0 ? (
         <div className="message-activity" aria-live="polite">
           {streamingState.activity.map((activity) => (
             <div key={activity.id} className="message-activity-item">
@@ -42,7 +50,7 @@ export function StreamingMessageBubble({ streamingState }: { streamingState: Str
           ))}
         </div>
       ) : null}
-      {streamingState.reasoning.text || streamingState.reasoning.summaries.length > 0 ? (
+      {hasThinking ? (
         <ThinkingPanel
           display={{
             text: normalizeReasoningText(dedupeStrings([
@@ -57,6 +65,11 @@ export function StreamingMessageBubble({ streamingState }: { streamingState: Str
       ) : null}
       {streamingState.content ? (
         <MarkdownMessage content={streamingState.content} streaming />
+      ) : !hasThinking ? (
+        <div className="streaming-waiting" aria-live="polite">
+          <span className="streaming-waiting-orb" aria-hidden="true" />
+          <span>{getStreamingLabel(streamingState)}</span>
+        </div>
       ) : (
         <p className="streaming-placeholder" aria-live="polite">
           {getStreamingLabel(streamingState)}

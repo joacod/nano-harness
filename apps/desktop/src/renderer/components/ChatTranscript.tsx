@@ -12,11 +12,13 @@ export function ChatTranscript({
   streamingEntry,
   endRef,
   pendingApproval,
+  showAdvancedChatActivity = false,
 }: {
   snapshot: ConversationSnapshot
   streamingEntry: [string, StreamingRunState] | null
   endRef: RefObject<HTMLDivElement | null>
   pendingApproval: ApprovalRequest | null
+  showAdvancedChatActivity?: boolean
 }) {
   const streamingState = streamingEntry?.[1] ?? null
 
@@ -29,7 +31,7 @@ export function ChatTranscript({
       ))}
 
       {streamingState ? (
-        <StreamingMessageBubble streamingState={streamingState} />
+        <StreamingMessageBubble streamingState={streamingState} showAdvancedChatActivity={showAdvancedChatActivity} />
       ) : null}
 
       {pendingApproval ? <ApprovalPrompt pendingApproval={pendingApproval} /> : null}

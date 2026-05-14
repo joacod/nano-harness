@@ -47,6 +47,11 @@ export function ProviderSettingsForm({
           ...value.workspace,
           rootPath: value.workspace.rootPath.trim(),
         },
+        skills: value.skills,
+        mcp: value.mcp,
+        safety: value.safety,
+        memory: value.memory,
+        advanced: value.advanced,
       }
 
       await onSubmit(normalizedSettings)
@@ -322,6 +327,11 @@ function normalizeProviderSettings(settings: AppSettings): AppSettings {
       ...settings.workspace,
       rootPath: settings.workspace.rootPath.trim(),
     },
+    skills: settings.skills,
+    mcp: settings.mcp,
+    safety: settings.safety,
+    memory: settings.memory,
+    advanced: settings.advanced,
   }
 }
 

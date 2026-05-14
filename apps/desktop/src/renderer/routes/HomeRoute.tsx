@@ -3,12 +3,12 @@ import { SessionTelemetry } from '../components/SessionTelemetry'
 import { useTechnicalUi } from '../runtime-ui'
 
 export function HomeRoute() {
-  const { showTechnicalInfo } = useTechnicalUi()
+  const { advancedSettings, isAdvancedUiActive } = useTechnicalUi()
 
   return (
     <SessionLayout
       conversationId={null}
-      showTechnicalInfo={showTechnicalInfo}
+      showTechnicalInfo={isAdvancedUiActive && advancedSettings.telemetrySidebar}
       title="Start new session"
       inspectorChildren={(
         <SessionTelemetry

@@ -304,6 +304,12 @@
   box-shadow: var(--button-ghost-shadow);
 }
 
+.switch-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.54;
+  box-shadow: none;
+}
+
 .switch-track {
   position: relative;
   width: 2.625rem;
