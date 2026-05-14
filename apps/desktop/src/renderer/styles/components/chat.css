@@ -132,6 +132,14 @@
   overflow-wrap: anywhere;
 }
 
+.message-activity-bubble {
+  border-style: dashed;
+}
+
+.message-activity-persisted {
+  margin-bottom: 0;
+}
+
 .thinking-panel {
   margin-bottom: var(--space-2-5);
   border: var(--border-width-default) solid var(--color-primary-alpha-24);

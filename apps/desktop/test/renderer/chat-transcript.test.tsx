@@ -138,6 +138,138 @@ describe('ChatTranscript', () => {
     expect(screen.queryByText('assistant streaming')).toBeNull()
     expect(screen.queryByText('Provider request sent')).toBeNull()
   })
+
+  it('keeps completed run activity visible when advanced chat activity is enabled', () => {
+    const { container } = renderWithQueryClient(
+      <ChatTranscript
+        snapshot={createSnapshot({
+          runs: [{
+            id: 'run-1',
+            conversationId: 'conversation-1',
+            status: 'completed',
+            role: 'build',
+            createdAt: '2026-04-29T10:00:00.000Z',
+            startedAt: '2026-04-29T10:01:00.000Z',
+            finishedAt: '2026-04-29T10:03:00.000Z',
+          }],
+          events: [
+            {
+              id: 'event-1',
+              runId: 'run-1',
+              type: 'provider.requested',
+              timestamp: '2026-04-29T10:00:30.000Z',
+              payload: { provider: 'openrouter', model: 'deepseek/deepseek-v4-pro' },
+            },
+            {
+              id: 'event-2',
+              runId: 'run-1',
+              type: 'action.requested',
+              timestamp: '2026-04-29T10:01:20.000Z',
+              payload: {
+                actionCall: {
+                  id: 'action-call-1',
+                  runId: 'run-1',
+                  actionId: 'fetch_url',
+                  input: { url: 'https://example.com' },
+                  requestedAt: '2026-04-29T10:01:20.000Z',
+                },
+              },
+            },
+            {
+              id: 'event-3',
+              runId: 'run-1',
+              type: 'action.completed',
+              timestamp: '2026-04-29T10:01:30.000Z',
+              payload: {
+                result: {
+                  id: 'action-result-1',
+                  actionCallId: 'action-call-1',
+                  status: 'completed',
+                  output: { status: 200 },
+                  completedAt: '2026-04-29T10:01:30.000Z',
+                },
+              },
+            },
+            {
+              id: 'event-4',
+              runId: 'run-1',
+              type: 'provider.requested',
+              timestamp: '2026-04-29T10:01:50.000Z',
+              payload: { provider: 'openrouter', model: 'deepseek/deepseek-v4-pro' },
+            },
+            {
+              id: 'event-5',
+              runId: 'run-1',
+              type: 'run.completed',
+              timestamp: '2026-04-29T10:02:10.000Z',
+              payload: { finishedAt: '2026-04-29T10:02:10.000Z' },
+            },
+          ],
+          messages: [
+            {
+              id: 'user-message-1',
+              conversationId: 'conversation-1',
+              runId: 'run-1',
+              role: 'user',
+              content: 'Please answer this',
+              createdAt: '2026-04-29T10:00:00.000Z',
+            },
+            {
+              id: 'assistant-tool-call-1',
+              conversationId: 'conversation-1',
+              runId: 'run-1',
+              role: 'assistant',
+              content: '',
+              toolCalls: [{ id: 'tool-call-1', actionId: 'fetch_url', input: { url: 'https://example.com' } }],
+              createdAt: '2026-04-29T10:01:10.000Z',
+            },
+            {
+              id: 'tool-message-1',
+              conversationId: 'conversation-1',
+              runId: 'run-1',
+              role: 'tool',
+              toolCallId: 'tool-call-1',
+              toolName: 'fetch_url',
+              content: JSON.stringify({ url: 'https://example.com', status: 200 }),
+              createdAt: '2026-04-29T10:01:40.000Z',
+            },
+            {
+              id: 'assistant-final-1',
+              conversationId: 'conversation-1',
+              runId: 'run-1',
+              role: 'assistant',
+              content: 'Final answer',
+              createdAt: '2026-04-29T10:02:00.000Z',
+            },
+          ],
+        })}
+        streamingEntry={null}
+        pendingApproval={null}
+        endRef={createRef<HTMLDivElement>()}
+        showAdvancedChatActivity
+      />,
+    )
+
+    expect(screen.getAllByText('assistant activity')).toHaveLength(4)
+    expect(screen.getAllByText('Provider request sent')).toHaveLength(2)
+    expect(screen.getAllByText('openrouter · deepseek/deepseek-v4-pro')).toHaveLength(2)
+    expect(screen.getByText('Action requested: fetch_url')).toBeTruthy()
+    expect(screen.getByText('Run completed')).toBeTruthy()
+
+    const transcriptItems = [...container.querySelectorAll('.message-bubble')].map((item) => item.textContent ?? '')
+    expect(transcriptItems[0]).toContain('Please answer this')
+    expect(transcriptItems[1]).toContain('assistant activity')
+    expect(transcriptItems[1]).toContain('Provider request sent')
+    expect(transcriptItems[2]).toContain('fetch_url')
+    expect(transcriptItems[3]).toContain('assistant activity')
+    expect(transcriptItems[3]).toContain('Action requested: fetch_url')
+    expect(transcriptItems[4]).toContain('tool')
+    expect(transcriptItems[5]).toContain('assistant activity')
+    expect(transcriptItems[5]).toContain('Provider request sent')
+    expect(transcriptItems[6]).toContain('Final answer')
+    expect(transcriptItems[7]).toContain('assistant activity')
+    expect(transcriptItems[7]).toContain('Run completed')
+  })
 })
 
 function createApprovalRequest(overrides?: Partial<ApprovalRequest>): ApprovalRequest {
