@@ -1368,9 +1368,23 @@
 }
 
 .advanced-settings-row-featured {
-  border-color: var(--color-primary-alpha-36);
-  background: var(--color-bg-purple-muted);
-  box-shadow: var(--shadow-active-surface);
+  position: relative;
+  overflow: hidden;
+  border-color: var(--color-primary-alpha-18);
+  background: linear-gradient(90deg, var(--color-primary-alpha-08), var(--color-bg-purple-subtle) 42%);
+  box-shadow: var(--shadow-inset-highlight);
+}
+
+.advanced-settings-row-featured::before {
+  position: absolute;
+  top: var(--space-3);
+  bottom: var(--space-3);
+  left: 0;
+  width: var(--border-width-heavy);
+  border-radius: 0 var(--radius-pill) var(--radius-pill) 0;
+  background: var(--primary);
+  box-shadow: var(--shadow-switch-thumb-active);
+  content: '';
 }
 
 .advanced-settings-divider {
