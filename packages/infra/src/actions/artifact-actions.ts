@@ -1,6 +1,10 @@
-import { benchmarkRunSummarySchema, draftPrArtifactSchema, harnessChangeManifestSchema, harnessComponentRegistry, implementationSpecSchema, specEvidencePacketSchema } from '@nano-harness/shared'
+import { benchmarkRunSummarySchema, draftPrArtifactSchema, harnessChangeManifestSchema, harnessComponentRegistry, implementationSpecSchema, specArtifactKindSchema, specEvidencePacketSchema, specTaskStatusSchema, type SpecArtifactKind } from '@nano-harness/shared'
+
+import { SpecWorkspaceService } from '../spec-workspace'
 
 import { createActionResult, type BuiltInActionCommand } from './types'
+
+const specWorkspaceService = new SpecWorkspaceService()
 
 function parseHarnessChangeManifestInput(value: Record<string, unknown>) {
   return harnessChangeManifestSchema.parse(value.manifest)
@@ -53,11 +57,247 @@ function parseDraftPrInput(value: Record<string, unknown>) {
   return { spec, changedFiles, validationOutputs, evidenceLinks }
 }
 
+function parseBoolean(value: unknown): boolean {
+  return value === true
+}
+
+function parseString(value: unknown, fieldName: string): string {
+  if (typeof value !== 'string' || !value.trim()) {
+    throw new Error(`${fieldName} must be a non-empty string`)
+  }
+
+  return value
+}
+
+function parseStringContent(value: unknown, fieldName: string): string {
+  if (typeof value !== 'string') {
+    throw new Error(`${fieldName} must be a string`)
+  }
+
+  return value
+}
+
+function parseOptionalString(value: unknown, fieldName: string): string | undefined {
+  if (value === undefined) {
+    return undefined
+  }
+
+  return parseString(value, fieldName)
+}
+
+function parseStringArray(value: unknown, fieldName: string): string[] | undefined {
+  if (value === undefined) {
+    return undefined
+  }
+
+  if (!Array.isArray(value) || !value.every((item) => typeof item === 'string' && item.trim())) {
+    throw new Error(`${fieldName} must be an array of non-empty strings`)
+  }
+
+  return value
+}
+
+function parseArtifactKind(value: unknown): SpecArtifactKind {
+  return specArtifactKindSchema.parse(value)
+}
+
 function slugifyBranchName(value: string): string {
   return `spec/${value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 48) || 'task'}`
 }
 
 export const artifactActionCommands: BuiltInActionCommand[] = [
+  {
+    definition: {
+      id: 'list_spec_changes',
+      title: 'List Spec Changes',
+      description: 'List local Spec Workbench changes from .nano/specs inside the configured workspace',
+      requiresApproval: false,
+      inputSchema: {
+        type: 'object',
+        properties: {
+          includeArchived: { type: 'boolean' },
+        },
+        additionalProperties: false,
+      },
+    },
+    async execute(input) {
+      const changes = await specWorkspaceService.listChanges(input.settings.workspace.rootPath, {
+        includeArchived: parseBoolean(input.call.input.includeArchived),
+      })
+
+      return createActionResult({
+        actionCallId: input.call.id,
+        status: 'completed',
+        output: { changes },
+      })
+    },
+  },
+  {
+    definition: {
+      id: 'read_spec_artifact',
+      title: 'Read Spec Artifact',
+      description: 'Read a local spec artifact from .nano/specs inside the configured workspace',
+      requiresApproval: false,
+      inputSchema: {
+        type: 'object',
+        properties: {
+          changeId: { type: 'string' },
+          artifactKind: { type: 'string' },
+          relativePath: { type: 'string' },
+        },
+        required: ['artifactKind'],
+        additionalProperties: false,
+      },
+    },
+    async execute(input) {
+      const artifact = await specWorkspaceService.readArtifact(input.settings.workspace.rootPath, {
+        changeId: parseOptionalString(input.call.input.changeId, 'changeId'),
+        kind: parseArtifactKind(input.call.input.artifactKind),
+        relativePath: parseOptionalString(input.call.input.relativePath, 'relativePath'),
+      })
+
+      return createActionResult({
+        actionCallId: input.call.id,
+        status: 'completed',
+        output: artifact,
+      })
+    },
+  },
+  {
+    definition: {
+      id: 'write_spec_artifact',
+      title: 'Write Spec Artifact',
+      description: 'Write a local spec artifact under .nano/specs after approval',
+      requiresApproval: true,
+      inputSchema: {
+        type: 'object',
+        properties: {
+          changeId: { type: 'string' },
+          artifactKind: { type: 'string' },
+          relativePath: { type: 'string' },
+          content: { type: 'string' },
+        },
+        required: ['artifactKind', 'content'],
+        additionalProperties: false,
+      },
+    },
+    async execute(input) {
+      const artifactKind = parseArtifactKind(input.call.input.artifactKind)
+      const result = await specWorkspaceService.writeArtifact(input.settings.workspace.rootPath, {
+        changeId: parseOptionalString(input.call.input.changeId, 'changeId'),
+        kind: artifactKind,
+        relativePath: parseOptionalString(input.call.input.relativePath, 'relativePath'),
+        content: parseStringContent(input.call.input.content, 'content'),
+      })
+
+      return createActionResult({
+        actionCallId: input.call.id,
+        status: 'completed',
+        output: {
+          ...result,
+          artifactKind,
+          ...(input.call.input.changeId === undefined ? {} : { changeId: parseString(input.call.input.changeId, 'changeId') }),
+        },
+      })
+    },
+  },
+  {
+    definition: {
+      id: 'update_spec_task',
+      title: 'Update Spec Task',
+      description: 'Update one markdown task checkbox in a local spec change after approval',
+      requiresApproval: true,
+      inputSchema: {
+        type: 'object',
+        properties: {
+          changeId: { type: 'string' },
+          taskId: { type: 'string' },
+          status: { type: 'string' },
+        },
+        required: ['changeId', 'taskId', 'status'],
+        additionalProperties: false,
+      },
+    },
+    async execute(input) {
+      const result = await specWorkspaceService.updateTask(input.settings.workspace.rootPath, {
+        changeId: parseString(input.call.input.changeId, 'changeId'),
+        taskId: parseString(input.call.input.taskId, 'taskId'),
+        status: specTaskStatusSchema.parse(input.call.input.status),
+      })
+
+      return createActionResult({
+        actionCallId: input.call.id,
+        status: 'completed',
+        output: result,
+      })
+    },
+  },
+  {
+    definition: {
+      id: 'append_spec_evidence',
+      title: 'Append Spec Evidence',
+      description: 'Append run, approval, changed-file, validation, or benchmark evidence to a local spec change after approval',
+      requiresApproval: true,
+      inputSchema: {
+        type: 'object',
+        properties: {
+          changeId: { type: 'string' },
+          runs: { type: 'array', items: { type: 'string' } },
+          approvals: { type: 'array', items: { type: 'string' } },
+          changedFiles: { type: 'array', items: { type: 'string' } },
+          validation: { type: 'array', items: { type: 'string' } },
+          benchmarkObservations: { type: 'array', items: { type: 'string' } },
+        },
+        required: ['changeId'],
+        additionalProperties: false,
+      },
+    },
+    async execute(input) {
+      const evidence = await specWorkspaceService.appendEvidence(input.settings.workspace.rootPath, {
+        changeId: parseString(input.call.input.changeId, 'changeId'),
+        runs: parseStringArray(input.call.input.runs, 'runs'),
+        approvals: parseStringArray(input.call.input.approvals, 'approvals'),
+        changedFiles: parseStringArray(input.call.input.changedFiles, 'changedFiles'),
+        validation: parseStringArray(input.call.input.validation, 'validation'),
+        benchmarkObservations: parseStringArray(input.call.input.benchmarkObservations, 'benchmarkObservations'),
+        updatedAt: new Date().toISOString(),
+      })
+
+      return createActionResult({
+        actionCallId: input.call.id,
+        status: 'completed',
+        output: evidence,
+      })
+    },
+  },
+  {
+    definition: {
+      id: 'archive_spec_change',
+      title: 'Archive Spec Change',
+      description: 'Move a local spec change from .nano/specs/changes to .nano/specs/archive after approval',
+      requiresApproval: true,
+      inputSchema: {
+        type: 'object',
+        properties: {
+          changeId: { type: 'string' },
+        },
+        required: ['changeId'],
+        additionalProperties: false,
+      },
+    },
+    async execute(input) {
+      const archivedPath = await specWorkspaceService.archiveChange(input.settings.workspace.rootPath, parseString(input.call.input.changeId, 'changeId'))
+
+      return createActionResult({
+        actionCallId: input.call.id,
+        status: 'completed',
+        output: {
+          changeId: parseString(input.call.input.changeId, 'changeId'),
+          archivedPath,
+        },
+      })
+    },
+  },
   {
     definition: {
       id: 'list_harness_components',

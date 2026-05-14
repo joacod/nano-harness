@@ -2,10 +2,12 @@ import { mkdir, readdir, readFile, rename, stat, writeFile } from 'node:fs/promi
 import path from 'node:path'
 
 import {
+  jsonValueSchema,
   specChangeDetailSchema,
   specChangeStatusSchema,
   specEvidenceLinkSchema,
   specTaskSchema,
+  type JsonValue,
   type SpecArtifactKind,
   type SpecChangeDetail,
   type SpecChangeStatus,
@@ -24,7 +26,7 @@ export type SpecWorkspaceEvidenceFile = {
   changedFiles: string[]
   validation: string[]
   benchmarkObservations: string[]
-  draftPr: unknown | null
+  draftPr: JsonValue | null
 }
 
 export type SpecWorkspaceArtifact = {
@@ -84,6 +86,79 @@ export class SpecWorkspaceService {
       path: artifactPath.displayPath,
       content,
     }
+  }
+
+  async writeArtifact(workspaceRoot: string, input: {
+    changeId?: string
+    kind: SpecArtifactKind
+    relativePath?: string
+    content: string
+  }): Promise<{ path: string; bytesWritten: number }> {
+    const artifactPath = this.resolveArtifactPath(workspaceRoot, input)
+
+    await mkdir(path.dirname(artifactPath.absolutePath), { recursive: true })
+    await writeFile(artifactPath.absolutePath, input.content, 'utf8')
+
+    return {
+      path: artifactPath.displayPath,
+      bytesWritten: Buffer.byteLength(input.content, 'utf8'),
+    }
+  }
+
+  async updateTask(workspaceRoot: string, input: {
+    changeId: string
+    taskId: string
+    status: SpecTask['status']
+  }): Promise<{ path: string; task: SpecTask }> {
+    const artifactPath = this.resolveArtifactPath(workspaceRoot, {
+      changeId: input.changeId,
+      kind: 'tasks',
+    })
+    const content = await readFile(artifactPath.absolutePath, 'utf8')
+    const lines = content.split('\n')
+    const tasks = this.parseTasks(content)
+    const task = tasks.find((item) => item.id === input.taskId)
+
+    if (!task?.sourceLine) {
+      throw new Error(`Spec task ${input.taskId} not found`)
+    }
+
+    lines[task.sourceLine - 1] = replaceTaskCheckbox(lines[task.sourceLine - 1] ?? '', input.status)
+    await writeFile(artifactPath.absolutePath, lines.join('\n'), 'utf8')
+
+    return {
+      path: artifactPath.displayPath,
+      task: specTaskSchema.parse({
+        ...task,
+        status: input.status,
+      }),
+    }
+  }
+
+  async appendEvidence(workspaceRoot: string, input: {
+    changeId: string
+    runs?: string[]
+    approvals?: string[]
+    changedFiles?: string[]
+    validation?: string[]
+    benchmarkObservations?: string[]
+    updatedAt: string
+  }): Promise<SpecWorkspaceEvidenceFile> {
+    const existingEvidence = await this.readEvidence(workspaceRoot, input.changeId)
+    const evidence = parseEvidenceFile({
+      changeId: input.changeId,
+      status: existingEvidence?.status ?? 'draft',
+      createdAt: existingEvidence?.createdAt ?? input.updatedAt,
+      updatedAt: input.updatedAt,
+      runs: mergeUnique(existingEvidence?.runs, input.runs),
+      approvals: mergeUnique(existingEvidence?.approvals, input.approvals),
+      changedFiles: mergeUnique(existingEvidence?.changedFiles, input.changedFiles),
+      validation: mergeUnique(existingEvidence?.validation, input.validation),
+      benchmarkObservations: mergeUnique(existingEvidence?.benchmarkObservations, input.benchmarkObservations),
+      draftPr: existingEvidence?.draftPr ?? null,
+    })
+
+    return this.writeEvidence(workspaceRoot, evidence)
   }
 
   parseTasks(content: string): SpecTask[] {
@@ -280,7 +355,7 @@ function parseEvidenceFile(value: unknown): SpecWorkspaceEvidenceFile {
     changedFiles: parseStringArray(record.changedFiles, 'changedFiles'),
     validation: parseStringArray(record.validation, 'validation'),
     benchmarkObservations: parseStringArray(record.benchmarkObservations, 'benchmarkObservations'),
-    draftPr: record.draftPr ?? null,
+    draftPr: record.draftPr === undefined ? null : jsonValueSchema.nullable().parse(record.draftPr),
   }
 }
 
@@ -382,6 +457,26 @@ function parseTaskLine(line: string, sourceLine: number): SpecTask | null {
     status,
     sourceLine,
   })
+}
+
+function replaceTaskCheckbox(line: string, status: SpecTask['status']): string {
+  const checkbox = status === 'done'
+    ? 'x'
+    : status === 'in_progress'
+      ? '~'
+      : status === 'blocked'
+        ? '-'
+        : ' '
+
+  if (!/^\s*-\s*\[[ xX~-]\]/.test(line)) {
+    throw new Error('Spec task line is not a markdown checkbox')
+  }
+
+  return line.replace(/\[[ xX~-]\]/, `[${checkbox}]`)
+}
+
+function mergeUnique(left: string[] = [], right: string[] = []): string[] {
+  return [...new Set([...left, ...right])]
 }
 
 function countTasks(tasks: SpecTask[]) {

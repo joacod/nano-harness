@@ -497,6 +497,110 @@ describe('BuiltInActionExecutor', () => {
       },
     })
   })
+
+  it('manages local spec workspace artifacts through approval-gated spec actions', async () => {
+    const rootPath = await createWorkspace()
+    const executor = createExecutor()
+    const settings = { ...workspaceSettings, workspace: { ...workspaceSettings.workspace, rootPath } }
+
+    const writeProposalResult = await executor.execute(createExecutionInput({
+      actionId: 'write_spec_artifact',
+      settings,
+      input: {
+        changeId: 'add-spec-workbench',
+        artifactKind: 'proposal',
+        content: '# Add Spec Workbench\n\nCreate a visible specs screen.\n',
+      },
+    }))
+    const writeTasksResult = await executor.execute(createExecutionInput({
+      actionId: 'write_spec_artifact',
+      settings,
+      input: {
+        changeId: 'add-spec-workbench',
+        artifactKind: 'tasks',
+        content: '- [ ] contracts: Add shared schemas\n- [ ] ui: Add route\n',
+      },
+    }))
+    const appendEvidenceResult = await executor.execute(createExecutionInput({
+      actionId: 'append_spec_evidence',
+      settings,
+      input: {
+        changeId: 'add-spec-workbench',
+        runs: ['run-1'],
+        approvals: ['approval-1'],
+        changedFiles: ['packages/shared/src/spec.ts'],
+        validation: ['pnpm typecheck passed'],
+      },
+    }))
+    const updateTaskResult = await executor.execute(createExecutionInput({
+      actionId: 'update_spec_task',
+      settings,
+      input: {
+        changeId: 'add-spec-workbench',
+        taskId: 'contracts',
+        status: 'done',
+      },
+    }))
+    const listResult = await executor.execute(createExecutionInput({
+      actionId: 'list_spec_changes',
+      settings,
+      input: {},
+    }))
+    const readResult = await executor.execute(createExecutionInput({
+      actionId: 'read_spec_artifact',
+      settings,
+      input: {
+        changeId: 'add-spec-workbench',
+        artifactKind: 'tasks',
+      },
+    }))
+    const archiveResult = await executor.execute(createExecutionInput({
+      actionId: 'archive_spec_change',
+      settings,
+      input: {
+        changeId: 'add-spec-workbench',
+      },
+    }))
+
+    expect(writeProposalResult).toMatchObject({ status: 'completed', output: { path: '.nano/specs/changes/add-spec-workbench/proposal.md' } })
+    expect(writeTasksResult).toMatchObject({ status: 'completed', output: { path: '.nano/specs/changes/add-spec-workbench/tasks.md' } })
+    expect(appendEvidenceResult).toMatchObject({
+      status: 'completed',
+      output: {
+        changeId: 'add-spec-workbench',
+        runs: ['run-1'],
+        approvals: ['approval-1'],
+        changedFiles: ['packages/shared/src/spec.ts'],
+        validation: ['pnpm typecheck passed'],
+      },
+    })
+    expect(updateTaskResult).toMatchObject({ status: 'completed', output: { task: { id: 'contracts', status: 'done' } } })
+    expect(listResult).toMatchObject({
+      status: 'completed',
+      output: {
+        changes: [expect.objectContaining({
+          summary: expect.objectContaining({
+            id: 'add-spec-workbench',
+            title: 'Add Spec Workbench',
+            linkedRunIds: ['run-1'],
+          }),
+        })],
+      },
+    })
+    expect(readResult).toMatchObject({ status: 'completed', output: { content: '- [x] contracts: Add shared schemas\n- [ ] ui: Add route\n' } })
+    expect(archiveResult).toMatchObject({ status: 'completed', output: { archivedPath: '.nano/specs/archive/add-spec-workbench' } })
+  })
+
+  it('exposes spec action approval requirements in definitions', async () => {
+    const executor = createExecutor()
+
+    await expect(executor.getDefinition('list_spec_changes')).resolves.toMatchObject({ requiresApproval: false })
+    await expect(executor.getDefinition('read_spec_artifact')).resolves.toMatchObject({ requiresApproval: false })
+    await expect(executor.getDefinition('write_spec_artifact')).resolves.toMatchObject({ requiresApproval: true })
+    await expect(executor.getDefinition('update_spec_task')).resolves.toMatchObject({ requiresApproval: true })
+    await expect(executor.getDefinition('append_spec_evidence')).resolves.toMatchObject({ requiresApproval: true })
+    await expect(executor.getDefinition('archive_spec_change')).resolves.toMatchObject({ requiresApproval: true })
+  })
 })
 
 function createExecutor() {
@@ -511,7 +615,7 @@ function createExecutionInput(input: {
   const action: ActionDefinition = {
     id: input.actionId,
     title: input.actionId,
-    requiresApproval: input.actionId === 'write_file' || input.actionId === 'apply_patch' || input.actionId === 'run_command' || input.actionId === 'propose_harness_change',
+    requiresApproval: ['write_file', 'apply_patch', 'run_command', 'propose_harness_change', 'write_spec_artifact', 'update_spec_task', 'append_spec_evidence', 'archive_spec_change'].includes(input.actionId),
     inputSchema: {
       type: 'object',
       properties: {},
