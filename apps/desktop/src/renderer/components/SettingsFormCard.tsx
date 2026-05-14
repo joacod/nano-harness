@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 
 import { Card, Tabs } from './ui'
 
-export type SettingsTab = 'providers' | 'workspace' | 'advanced' | 'skills' | 'mcp' | 'memory' | 'harness' | 'data'
+export type SettingsTab = 'providers' | 'workspace' | 'skills' | 'mcp' | 'memory' | 'harness' | 'data' | 'advanced'
 
 export function SettingsFormCard({
   providersPanel,
@@ -47,11 +47,6 @@ export function SettingsFormCard({
             panel: workspacePanel,
           },
           {
-            value: 'advanced',
-            label: 'Advanced',
-            panel: advancedPanel,
-          },
-          {
             value: 'skills',
             label: 'Skills',
             panel: skillsPanel,
@@ -75,6 +70,11 @@ export function SettingsFormCard({
             value: 'data',
             label: 'Data',
             panel: dataPanel,
+          },
+          {
+            value: 'advanced',
+            label: 'Advanced',
+            panel: advancedPanel,
           },
         ]}
       />

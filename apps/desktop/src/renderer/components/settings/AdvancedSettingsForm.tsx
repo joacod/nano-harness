@@ -71,47 +71,32 @@ export function AdvancedSettingsForm({
         <section className="settings-section" aria-labelledby="advanced-mode-heading">
           <div className="settings-section-heading">
             <p className="eyebrow" id="advanced-mode-heading">
-              Advanced Mode
+              Advanced
             </p>
-            <p>The sidebar Advanced switch reveals only the advanced surfaces enabled here.</p>
+            <p>Choose which power-user details the sidebar Advanced switch can reveal.</p>
           </div>
 
-          <div className="settings-field-grid settings-field-grid-compact">
-            <Switch
-              type="button"
+          <div className="advanced-settings-list">
+            <AdvancedSettingsRow
+              title="Enable advanced features"
+              description="Show the Advanced switch in the sidebar and allow configured advanced surfaces to appear."
               checked={advanced.enabled}
-              onClick={() => updateAdvanced({ ...advanced, enabled: !advanced.enabled })}
-            >
-              Enable advanced features
-            </Switch>
-          </div>
-        </section>
-
-        <section className="settings-section" aria-labelledby="advanced-surfaces-heading">
-          <div className="settings-section-heading">
-            <p className="eyebrow" id="advanced-surfaces-heading">
-              Advanced Surfaces
-            </p>
-            <p>Keep the default chat simple, and opt into detailed runtime surfaces when needed.</p>
-          </div>
-
-          <div className="settings-field-grid settings-field-grid-compact">
-            <Switch
-              type="button"
+              onToggle={() => updateAdvanced({ ...advanced, enabled: !advanced.enabled })}
+            />
+            <AdvancedSettingsRow
+              title="Advanced chat activity"
+              description="Show the transient run activity table before thinking or response streaming starts."
               checked={advanced.enabled && advanced.chatActivity}
               disabled={!advanced.enabled}
-              onClick={() => updateAdvanced({ ...advanced, chatActivity: !advanced.chatActivity })}
-            >
-              Advanced chat activity
-            </Switch>
-            <Switch
-              type="button"
+              onToggle={() => updateAdvanced({ ...advanced, chatActivity: !advanced.chatActivity })}
+            />
+            <AdvancedSettingsRow
+              title="Telemetry sidebar"
+              description="Show the right-side run list, event inspector, approvals, and evidence export controls."
               checked={advanced.enabled && advanced.telemetrySidebar}
               disabled={!advanced.enabled}
-              onClick={() => updateAdvanced({ ...advanced, telemetrySidebar: !advanced.telemetrySidebar })}
-            >
-              Telemetry sidebar
-            </Switch>
+              onToggle={() => updateAdvanced({ ...advanced, telemetrySidebar: !advanced.telemetrySidebar })}
+            />
           </div>
         </section>
 
@@ -139,6 +124,32 @@ export function AdvancedSettingsForm({
         </FeedbackText>
       ) : null}
     </>
+  )
+}
+
+function AdvancedSettingsRow({
+  checked,
+  description,
+  disabled,
+  onToggle,
+  title,
+}: {
+  checked: boolean
+  description: string
+  disabled?: boolean
+  onToggle: () => void
+  title: string
+}) {
+  return (
+    <div className="advanced-settings-row">
+      <div className="advanced-settings-copy">
+        <strong>{title}</strong>
+        <p>{description}</p>
+      </div>
+      <Switch type="button" className="advanced-settings-switch" checked={checked} disabled={disabled} onClick={onToggle}>
+        {checked ? 'On' : 'Off'}
+      </Switch>
+    </div>
   )
 }
 

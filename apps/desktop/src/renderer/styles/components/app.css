@@ -1347,6 +1347,44 @@
   accent-color: var(--primary);
 }
 
+.advanced-settings-list {
+  display: grid;
+  gap: var(--space-2-5);
+}
+
+.advanced-settings-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(8.5rem, 11rem);
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: var(--border-width-default) solid var(--color-alpha-white-10);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-purple-subtle);
+}
+
+.advanced-settings-copy {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.advanced-settings-copy strong {
+  color: var(--text-strong);
+  font-size: var(--font-size-lg);
+}
+
+.advanced-settings-copy p {
+  margin: 0;
+  color: var(--muted-foreground);
+  line-height: var(--line-height-form);
+}
+
+.advanced-settings-switch {
+  justify-self: end;
+  min-width: 8.5rem;
+}
+
 .memory-item {
   display: grid;
   gap: var(--space-2-5);
@@ -1839,6 +1877,15 @@
   .settings-field-grid-wide,
   .settings-provider-grid {
     grid-template-columns: 1fr;
+  }
+
+  .advanced-settings-row {
+    grid-template-columns: 1fr;
+  }
+
+  .advanced-settings-switch {
+    justify-self: stretch;
+    min-width: 0;
   }
 
   .settings-field-action {

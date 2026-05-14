@@ -72,15 +72,16 @@ export function RootLayout() {
               Settings
             </button>
             <div className="sidebar-footer-status-row">
-              <Switch
-                type="button"
-                className="sidebar-compact-switch"
-                checked={isAdvancedUiActive}
-                disabled={!advancedFeaturesEnabled}
-                onClick={toggleTechnicalInfo}
-              >
-                Advanced
-              </Switch>
+              {advancedFeaturesEnabled ? (
+                <Switch
+                  type="button"
+                  className="sidebar-compact-switch"
+                  checked={isAdvancedUiActive}
+                  onClick={toggleTechnicalInfo}
+                >
+                  Advanced
+                </Switch>
+              ) : null}
               <RuntimePill className="sidebar-provider-pill" tone={providerStatus?.isReady ? 'ready' : 'warning'} aria-live="polite">
                 Provider
               </RuntimePill>
