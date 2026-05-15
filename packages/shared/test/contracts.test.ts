@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import {
   appSettingsSchema,
+  benchmarkRunArtifactSchema,
   clearProviderAuthInputSchema,
   getProviderDefinition,
   harnessPromotionArtifactSchema,
@@ -178,6 +179,23 @@ describe('shared contracts', () => {
       liveMutationApplied: false,
       createdAt: '2026-04-29T10:00:00.000Z',
     })).toMatchObject({ promotionReady: true, liveMutationApplied: false })
+  })
+
+  it('validates benchmark run artifacts as draft-only results', () => {
+    expect(benchmarkRunArtifactSchema.parse({
+      id: 'benchmark-local-1',
+      suite: 'local',
+      cases: [{ id: 'edit-and-test', title: 'Edit And Test', path: 'benchmarks/cases/edit-and-test.md' }],
+      results: [{ caseId: 'edit-and-test', status: 'passed', evidence: ['run:run-1'] }],
+      summary: { suite: 'local', passed: 1, failed: 0, score: 1 },
+      unknownCaseIds: [],
+      missingCaseIds: [],
+      evidence: ['export:run-1'],
+      outputPath: 'benchmarks/results/local.json',
+      approvalRequiredForWrite: true,
+      liveMutationApplied: false,
+      createdAt: '2026-04-29T10:00:00.000Z',
+    })).toMatchObject({ summary: { score: 1 }, liveMutationApplied: false })
   })
 
   it('validates spec artifacts and creates spec workflow prompts', () => {

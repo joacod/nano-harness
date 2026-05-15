@@ -432,6 +432,20 @@ describe('BuiltInActionExecutor', () => {
         },
       }),
     )
+    const benchmarkArtifactResult = await executor.execute(
+      createExecutionInput({
+        actionId: 'create_benchmark_run_artifact',
+        settings: { ...workspaceSettings, workspace: { ...workspaceSettings.workspace, rootPath } },
+        input: {
+          suite: 'local',
+          results: [
+            { caseId: 'edit-and-test', status: 'passed', evidence: ['run:run-1'] },
+            { caseId: 'validation-obligations', status: 'failed', notes: 'Missing evidence export.' },
+          ],
+          evidence: ['session export: local'],
+        },
+      }),
+    )
     const promotionResult = await executor.execute(
       createExecutionInput({
         actionId: 'create_harness_promotion_artifact',
@@ -474,6 +488,19 @@ describe('BuiltInActionExecutor', () => {
     expect(comparisonResult).toMatchObject({
       status: 'completed',
       output: { passedDelta: 1, failedDelta: -1, scoreDelta: 0.33999999999999997, improved: true },
+    })
+    expect(benchmarkArtifactResult).toMatchObject({
+      status: 'completed',
+      output: {
+        summary: { suite: 'local', passed: 1, failed: 1, score: 0.5 },
+        outputPath: 'benchmarks/results/local.json',
+        approvalRequiredForWrite: true,
+        liveMutationApplied: false,
+      },
+    })
+    expect(benchmarkArtifactResult.output).toMatchObject({
+      missingCaseIds: expect.arrayContaining(['approval-pause-resume']),
+      unknownCaseIds: [],
     })
     expect(promotionResult).toMatchObject({
       status: 'completed',

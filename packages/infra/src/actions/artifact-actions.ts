@@ -1,4 +1,4 @@
-import { benchmarkComparisonSchema, benchmarkRunSummarySchema, draftPrArtifactSchema, harnessChangeManifestSchema, harnessComponentRegistry, harnessPromotionArtifactSchema, implementationSpecSchema, skillImprovementArtifactSchema, specArtifactKindSchema, specEvidencePacketSchema, specTaskStatusSchema, type SpecArtifactKind } from '@nano-harness/shared'
+import { benchmarkCaseRegistry, benchmarkCaseResultSchema, benchmarkComparisonSchema, benchmarkRunArtifactSchema, benchmarkRunSummarySchema, draftPrArtifactSchema, harnessChangeManifestSchema, harnessComponentRegistry, harnessPromotionArtifactSchema, implementationSpecSchema, skillImprovementArtifactSchema, specArtifactKindSchema, specEvidencePacketSchema, specTaskStatusSchema, type SpecArtifactKind } from '@nano-harness/shared'
 
 import { SpecWorkspaceService } from '../spec-workspace'
 
@@ -21,6 +21,18 @@ function parseBenchmarkComparisonInput(value: Record<string, unknown>) {
   return {
     before: benchmarkRunSummarySchema.parse(value.before),
     after: benchmarkRunSummarySchema.parse(value.after),
+  }
+}
+
+function parseBenchmarkRunInput(value: Record<string, unknown>) {
+  if (typeof value.suite !== 'string' || !value.suite.trim()) {
+    throw new Error('create_benchmark_run_artifact requires a non-empty suite')
+  }
+
+  return {
+    suite: value.suite.trim(),
+    results: Array.isArray(value.results) ? value.results.map((result) => benchmarkCaseResultSchema.parse(result)) : [],
+    evidence: parseStringArray(value.evidence, 'evidence'),
   }
 }
 
@@ -419,6 +431,57 @@ export const artifactActionCommands: BuiltInActionCommand[] = [
           liveMutationApplied: false,
           approvalRequiredForPromotion: true,
         },
+      })
+    },
+  },
+  {
+    definition: {
+      id: 'create_benchmark_run_artifact',
+      title: 'Create Benchmark Run Artifact',
+      description: 'Create a local benchmark result artifact from tracked case outcomes without mutating benchmark files',
+      requiresApproval: false,
+      inputSchema: {
+        type: 'object',
+        properties: {
+          suite: { type: 'string' },
+          results: { type: 'array', items: { type: 'object' } },
+          evidence: { type: 'array', items: { type: 'string' } },
+        },
+        required: ['suite', 'results'],
+        additionalProperties: false,
+      },
+    },
+    async execute(input) {
+      const parsedInput = parseBenchmarkRunInput(input.call.input)
+      const knownCaseIds = new Set(benchmarkCaseRegistry.cases.map((benchmarkCase) => benchmarkCase.id))
+      const resultCaseIds = new Set(parsedInput.results.map((result) => result.caseId))
+      const passed = parsedInput.results.filter((result) => result.status === 'passed').length
+      const failed = parsedInput.results.filter((result) => result.status === 'failed').length
+      const total = passed + failed
+      const artifact = benchmarkRunArtifactSchema.parse({
+        id: `benchmark-${parsedInput.suite}-${Date.now().toString(36)}`,
+        suite: parsedInput.suite,
+        cases: benchmarkCaseRegistry.cases,
+        results: parsedInput.results,
+        summary: {
+          suite: parsedInput.suite,
+          passed,
+          failed,
+          score: total === 0 ? 0 : passed / total,
+        },
+        unknownCaseIds: parsedInput.results.map((result) => result.caseId).filter((caseId) => !knownCaseIds.has(caseId)),
+        missingCaseIds: benchmarkCaseRegistry.cases.map((benchmarkCase) => benchmarkCase.id).filter((caseId) => !resultCaseIds.has(caseId)),
+        evidence: parsedInput.evidence,
+        outputPath: `benchmarks/results/${parsedInput.suite}.json`,
+        approvalRequiredForWrite: true,
+        liveMutationApplied: false,
+        createdAt: new Date().toISOString(),
+      })
+
+      return createActionResult({
+        actionCallId: input.call.id,
+        status: 'completed',
+        output: artifact,
       })
     },
   },
