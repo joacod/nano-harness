@@ -446,6 +446,15 @@ describe('BuiltInActionExecutor', () => {
         },
       }),
     )
+    const writeBenchmarkArtifactResult = await executor.execute(
+      createExecutionInput({
+        actionId: 'write_benchmark_run_artifact',
+        settings: { ...workspaceSettings, workspace: { ...workspaceSettings.workspace, rootPath } },
+        input: {
+          artifact: expectActionOutput(benchmarkArtifactResult.output),
+        },
+      }),
+    )
     const promotionResult = await executor.execute(
       createExecutionInput({
         actionId: 'create_harness_promotion_artifact',
@@ -502,6 +511,11 @@ describe('BuiltInActionExecutor', () => {
       missingCaseIds: expect.arrayContaining(['approval-pause-resume']),
       unknownCaseIds: [],
     })
+    expect(writeBenchmarkArtifactResult).toMatchObject({
+      status: 'completed',
+      output: { path: 'benchmarks/results/local.json' },
+    })
+    await expect(readFile(path.join(rootPath, 'benchmarks/results/local.json'), 'utf8')).resolves.toContain('"suite": "local"')
     expect(promotionResult).toMatchObject({
       status: 'completed',
       output: {
@@ -764,7 +778,7 @@ function createExecutionInput(input: {
   const action: ActionDefinition = {
     id: input.actionId,
     title: input.actionId,
-    requiresApproval: ['write_file', 'apply_patch', 'run_command', 'propose_harness_change', 'write_spec_artifact', 'update_spec_task', 'append_spec_evidence', 'archive_spec_change'].includes(input.actionId),
+    requiresApproval: ['write_file', 'apply_patch', 'run_command', 'propose_harness_change', 'write_benchmark_run_artifact', 'write_spec_artifact', 'update_spec_task', 'append_spec_evidence', 'archive_spec_change'].includes(input.actionId),
     inputSchema: {
       type: 'object',
       properties: {},
@@ -785,6 +799,11 @@ function createExecutionInput(input: {
     settings: input.settings,
     signal: new AbortController().signal,
   }
+}
+
+function expectActionOutput(output: JsonValue | undefined): JsonValue {
+  expect(output).toBeDefined()
+  return output as JsonValue
 }
 
 async function createWorkspace(): Promise<string> {

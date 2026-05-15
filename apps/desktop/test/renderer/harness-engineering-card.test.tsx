@@ -18,5 +18,6 @@ describe('HarnessEngineeringCard', () => {
     expect(screen.getByText('Spec Workbench')).toBeTruthy()
     expect(screen.getByText('benchmarks/cases/spec-workbench.md')).toBeTruthy()
     expect(screen.getByText(/create_benchmark_run_artifact/u)).toBeTruthy()
+    expect(screen.getByText(/write_benchmark_run_artifact/u)).toBeTruthy()
   })
 })

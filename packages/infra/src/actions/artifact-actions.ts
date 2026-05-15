@@ -1,8 +1,12 @@
-import { benchmarkCaseRegistry, benchmarkCaseResultSchema, benchmarkComparisonSchema, benchmarkRunArtifactSchema, benchmarkRunSummarySchema, draftPrArtifactSchema, harnessChangeManifestSchema, harnessComponentRegistry, harnessPromotionArtifactSchema, implementationSpecSchema, skillImprovementArtifactSchema, specArtifactKindSchema, specEvidencePacketSchema, specTaskStatusSchema, type SpecArtifactKind } from '@nano-harness/shared'
+import { mkdir, writeFile } from 'node:fs/promises'
+import path from 'node:path'
+
+import { benchmarkCaseRegistry, benchmarkCaseResultSchema, benchmarkComparisonSchema, benchmarkRunArtifactSchema, benchmarkRunSummarySchema, draftPrArtifactSchema, harnessChangeManifestSchema, harnessComponentRegistry, harnessPromotionArtifactSchema, implementationSpecSchema, skillImprovementArtifactSchema, specArtifactKindSchema, specEvidencePacketSchema, specTaskStatusSchema, type BenchmarkRunArtifact, type SpecArtifactKind } from '@nano-harness/shared'
 
 import { SpecWorkspaceService } from '../spec-workspace'
 
 import { createActionResult, type BuiltInActionCommand } from './types'
+import { resolveWorkspacePath } from './workspace'
 
 const specWorkspaceService = new SpecWorkspaceService()
 
@@ -34,6 +38,18 @@ function parseBenchmarkRunInput(value: Record<string, unknown>) {
     results: Array.isArray(value.results) ? value.results.map((result) => benchmarkCaseResultSchema.parse(result)) : [],
     evidence: parseStringArray(value.evidence, 'evidence'),
   }
+}
+
+function parseWriteBenchmarkRunInput(value: Record<string, unknown>): { artifact: BenchmarkRunArtifact; path: string } {
+  const artifact = benchmarkRunArtifactSchema.parse(value.artifact)
+  const outputPath = typeof value.path === 'string' && value.path.trim() ? value.path.trim() : artifact.outputPath
+  const normalizedPath = outputPath.replace(/\\/g, '/')
+
+  if (!normalizedPath.startsWith('benchmarks/results/') || !normalizedPath.endsWith('.json')) {
+    throw new Error('write_benchmark_run_artifact path must be under benchmarks/results and end with .json')
+  }
+
+  return { artifact, path: normalizedPath }
 }
 
 function parseCreateSpecInput(value: Record<string, unknown>): {
@@ -482,6 +498,40 @@ export const artifactActionCommands: BuiltInActionCommand[] = [
         actionCallId: input.call.id,
         status: 'completed',
         output: artifact,
+      })
+    },
+  },
+  {
+    definition: {
+      id: 'write_benchmark_run_artifact',
+      title: 'Write Benchmark Run Artifact',
+      description: 'Validate and write a benchmark result artifact under benchmarks/results after approval',
+      requiresApproval: true,
+      inputSchema: {
+        type: 'object',
+        properties: {
+          artifact: { type: 'object' },
+          path: { type: 'string' },
+        },
+        required: ['artifact'],
+        additionalProperties: false,
+      },
+    },
+    async execute(input) {
+      const parsedInput = parseWriteBenchmarkRunInput(input.call.input)
+      const resolvedPath = resolveWorkspacePath(input.settings.workspace.rootPath, parsedInput.path)
+      const content = `${JSON.stringify({ ...parsedInput.artifact, outputPath: parsedInput.path }, null, 2)}\n`
+
+      await mkdir(path.dirname(resolvedPath), { recursive: true })
+      await writeFile(resolvedPath, content, 'utf8')
+
+      return createActionResult({
+        actionCallId: input.call.id,
+        status: 'completed',
+        output: {
+          path: parsedInput.path,
+          bytesWritten: Buffer.byteLength(content, 'utf8'),
+        },
       })
     },
   },

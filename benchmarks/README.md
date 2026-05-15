@@ -7,7 +7,7 @@ Generated outputs belong in ignored folders:
 - `benchmarks/results/` for run results.
 - `benchmarks/exports/` for exported evidence packets.
 
-Use `create_benchmark_run_artifact` to turn tracked case outcomes into a benchmark result artifact. The action is non-mutating and returns a draft `benchmarks/results/<suite>.json` path that still requires approval before any file write.
+Use `create_benchmark_run_artifact` to turn tracked case outcomes into a benchmark result artifact. The action is non-mutating and returns a draft `benchmarks/results/<suite>.json` path. Use approval-gated `write_benchmark_run_artifact` to validate and persist that artifact under `benchmarks/results/`.
 
 ## Tracked Cases
 
