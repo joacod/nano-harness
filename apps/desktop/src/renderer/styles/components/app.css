@@ -342,6 +342,57 @@
   min-width: 0;
 }
 
+.spec-task-picker {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2-5);
+  min-width: 0;
+  margin: 0;
+  padding: var(--space-3);
+  border: var(--border-width-default) solid var(--border);
+  border-radius: var(--radius-xl);
+  background: var(--color-surface-alpha-78);
+}
+
+.spec-task-picker legend {
+  padding: 0 var(--space-1);
+  color: var(--muted-foreground);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: var(--letter-spacing-wide);
+  text-transform: uppercase;
+}
+
+.spec-task-choice {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  padding: var(--space-2);
+  border-radius: var(--radius-lg);
+  color: var(--foreground);
+}
+
+.spec-task-choice:hover,
+.spec-task-choice:has(input:focus-visible) {
+  background: var(--color-bg-purple-active);
+}
+
+.spec-task-choice span {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-0-5);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.spec-task-choice strong {
+  color: var(--muted-foreground);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+}
+
 .spec-artifact-preview,
 .spec-evidence-section {
   display: flex;

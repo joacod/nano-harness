@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, screen } from '@testing-library/react'
+import { cleanup, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -46,6 +46,7 @@ describe('SpecsRoute', () => {
 
   it('shows active spec count and local changes', async () => {
     const user = userEvent.setup()
+    const startSpecRun = vi.fn(async () => ({ runId: 'run-1' }))
     window.desktop = createDesktopMock({
       listSpecChanges: async () => ({
         changes: [{
@@ -72,6 +73,7 @@ describe('SpecsRoute', () => {
         path: `.nano/specs/changes/add-spec-workbench/${input.artifactKind}.md`,
         content: input.artifactKind === 'tasks' ? '- [ ] ui: Add route\n' : '# Add Spec Workbench\n\nCreate a visible specs screen.\n',
       }),
+      startSpecRun,
     })
 
     renderWithQueryClient(<SpecsRoute />)
@@ -83,6 +85,22 @@ describe('SpecsRoute', () => {
     await user.click(screen.getByRole('tab', { name: 'Tasks' }))
 
     expect(await screen.findByText('.nano/specs/changes/add-spec-workbench/tasks.md')).toBeTruthy()
-    expect(screen.getByRole('button', { name: 'Plan' }).hasAttribute('disabled')).toBe(true)
+
+    await user.click(screen.getByRole('button', { name: 'Build selected task' }))
+
+    await waitFor(() => {
+      expect(startSpecRun).toHaveBeenCalledWith({
+        conversationId: expect.stringMatching(/^conversation-/),
+        changeId: 'add-spec-workbench',
+        role: 'build',
+        taskIds: ['ui'],
+      })
+    })
+    await waitFor(() => {
+      expect(routerMocks.navigate).toHaveBeenCalledWith({
+        to: '/conversations/$conversationId',
+        params: { conversationId: expect.stringMatching(/^conversation-/) },
+      })
+    })
   })
 })

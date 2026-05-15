@@ -1,8 +1,71 @@
-import type { SpecChangeDetail } from '../../../../../../packages/shared/src'
+import { useEffect, useMemo, useState } from 'react'
+
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useNavigate } from '@tanstack/react-router'
+
+import type { AgentRole, SpecChangeDetail } from '../../../../../../packages/shared/src'
+import { createConversationId } from '../../queries'
 import { Button, FeedbackText, StatusBadge } from '../ui'
 import { SpecEvidencePanel } from './SpecEvidencePanel'
 
 export function SpecWorkflowPanel({ change }: { change: SpecChangeDetail | null }) {
+  const navigate = useNavigate()
+  const queryClient = useQueryClient()
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
+  const buildableTasks = useMemo(() => {
+    return change?.tasks.filter((task) => task.status !== 'done' && task.status !== 'blocked') ?? []
+  }, [change])
+  const startSpecRunMutation = useMutation({
+    mutationFn: async (input: { role: AgentRole; taskIds?: string[] }) => {
+      if (!change) {
+        throw new Error('Select a spec change before starting a run.')
+      }
+
+      const conversationId = createConversationId()
+      const result = await window.desktop.startSpecRun({
+        conversationId,
+        changeId: change.summary.id,
+        role: input.role,
+        taskIds: input.taskIds,
+      })
+
+      return { conversationId, runId: result.runId }
+    },
+    onSuccess: async ({ conversationId }) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['conversations'] }),
+        queryClient.invalidateQueries({ queryKey: ['sessions'] }),
+        queryClient.invalidateQueries({ queryKey: ['conversation', conversationId] }),
+        queryClient.invalidateQueries({ queryKey: ['spec-changes'] }),
+      ])
+
+      await navigate({
+        to: '/conversations/$conversationId',
+        params: { conversationId },
+      })
+    },
+  })
+  const selectedTask = buildableTasks.find((task) => task.id === selectedTaskId) ?? null
+
+  useEffect(() => {
+    if (!change || buildableTasks.length === 0) {
+      setSelectedTaskId(null)
+      return
+    }
+
+    setSelectedTaskId((currentTaskId) => {
+      if (currentTaskId && buildableTasks.some((task) => task.id === currentTaskId)) {
+        return currentTaskId
+      }
+
+      return buildableTasks[0]?.id ?? null
+    })
+  }, [buildableTasks, change])
+
+  function startRoleRun(role: AgentRole, taskIds?: string[]) {
+    void startSpecRunMutation.mutateAsync({ role, taskIds })
+  }
+
   return (
     <section className="spec-workbench-column spec-workbench-workflow" aria-label="Spec workflow and evidence">
       <div className="spec-workbench-column-header">
@@ -15,16 +78,61 @@ export function SpecWorkflowPanel({ change }: { change: SpecChangeDetail | null 
           <StatusBadge status={change.summary.status}>{change.summary.status}</StatusBadge>
         </div>
       ) : null}
+      {change && buildableTasks.length > 0 ? (
+        <fieldset className="spec-task-picker" disabled={startSpecRunMutation.isPending}>
+          <legend>Selected task</legend>
+          <div className="spec-task-list">
+            {buildableTasks.map((task) => (
+              <label key={task.id} className="spec-task-choice">
+                <input
+                  type="radio"
+                  name="spec-workbench-selected-task"
+                  value={task.id}
+                  checked={selectedTaskId === task.id}
+                  onChange={() => setSelectedTaskId(task.id)}
+                />
+                <span>
+                  <strong>{task.id}</strong>
+                  {task.title}
+                </span>
+                <StatusBadge status={task.status}>{task.status}</StatusBadge>
+              </label>
+            ))}
+          </div>
+        </fieldset>
+      ) : null}
       <div className="spec-workflow-actions">
         <Button type="button" disabled fullWidth>Propose</Button>
-        <Button type="button" disabled fullWidth>Plan</Button>
-        <Button type="button" disabled fullWidth>Build selected task</Button>
-        <Button type="button" disabled fullWidth>Verify</Button>
+        <Button
+          type="button"
+          fullWidth
+          disabled={!change || startSpecRunMutation.isPending}
+          onClick={() => startRoleRun('plan')}
+        >
+          Plan
+        </Button>
+        <Button
+          type="button"
+          fullWidth
+          disabled={!change || !selectedTask || startSpecRunMutation.isPending}
+          onClick={() => startRoleRun('build', selectedTask ? [selectedTask.id] : undefined)}
+        >
+          Build selected task
+        </Button>
+        <Button
+          type="button"
+          fullWidth
+          disabled={!change || startSpecRunMutation.isPending}
+          onClick={() => startRoleRun('review')}
+        >
+          Verify
+        </Button>
         <Button type="button" disabled fullWidth>Archive</Button>
       </div>
-      <FeedbackText>
-        Workflow buttons are visible in v0. Starting role-specific runs is wired in the next step.
-      </FeedbackText>
+      {startSpecRunMutation.isPending ? <FeedbackText live>Starting spec run...</FeedbackText> : null}
+      {startSpecRunMutation.error instanceof Error ? (
+        <FeedbackText variant="error" live>{startSpecRunMutation.error.message}</FeedbackText>
+      ) : null}
       <SpecEvidencePanel change={change} />
     </section>
   )
