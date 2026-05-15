@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 
-import type { ApprovalRequest, ConversationSnapshot, ExportRunEvidenceResult, RunEvent } from '../../../../../packages/shared/src'
-import { formatPreciseTimestamp } from '../utils/formatting'
+import type { ApprovalRequest, ConversationSnapshot, ExportRunEvidenceResult, MemoryProposalList, MemoryRecordList, RunEvent } from '../../../../../packages/shared/src'
+import { formatPreciseTimestamp, formatTimestamp } from '../utils/formatting'
 import { describeRunEvent, getEventTone, getRecoverableRunAction, type StreamingRunState } from '../utils/run-events'
 import { Button, Card, FeedbackText, StatusBadge } from './ui'
 
@@ -12,6 +12,8 @@ export function RunInspectorCard({
   streamingState,
   onEvidenceExported,
   onEvidenceExportError,
+  memoryRecords = null,
+  memoryProposals = null,
 }: {
   run: ConversationSnapshot['runs'][number] | null
   events: RunEvent[]
@@ -19,10 +21,14 @@ export function RunInspectorCard({
   streamingState: StreamingRunState | null
   onEvidenceExported: (result: ExportRunEvidenceResult) => void
   onEvidenceExportError: (error: unknown) => void
+  memoryRecords?: MemoryRecordList | null
+  memoryProposals?: MemoryProposalList | null
 }) {
   const queryClient = useQueryClient()
   const recoverableAction = run ? getRecoverableRunAction(run, pendingApproval) : null
   const latestFirstEvents = [...events].reverse()
+  const recalledMemory = memoryRecords?.records.slice(0, 3) ?? []
+  const pendingMemoryProposals = memoryProposals?.proposals.filter((proposal) => proposal.status === 'pending').slice(0, 3) ?? []
   const runControlMutation = useMutation({
     mutationFn: async (action: 'resume' | 'cancel') => {
       if (!run) {
@@ -126,6 +132,40 @@ export function RunInspectorCard({
               {runControlMutation.error.message}
             </FeedbackText>
           ) : null}
+
+          <section className="inspector-memory-context" aria-labelledby="inspector-memory-heading">
+            <div className="inspector-section-heading">
+              <p className="eyebrow" id="inspector-memory-heading">Memory</p>
+              <p>Recalled context and pending suggestions for this workspace.</p>
+            </div>
+            {recalledMemory.length === 0 && pendingMemoryProposals.length === 0 ? (
+              <FeedbackText>No recalled memory or pending suggestions.</FeedbackText>
+            ) : null}
+            {recalledMemory.length > 0 ? (
+              <div className="inspector-memory-group">
+                <span className="field-label">Recalled</span>
+                {recalledMemory.map((record) => (
+                  <article className="memory-item" key={record.id}>
+                    <span className="field-label">{record.category}</span>
+                    <p>{record.content}</p>
+                    <small className="muted-copy">Source: {record.source} · Updated {formatTimestamp(record.updatedAt)}</small>
+                  </article>
+                ))}
+              </div>
+            ) : null}
+            {pendingMemoryProposals.length > 0 ? (
+              <div className="inspector-memory-group">
+                <span className="field-label">Pending Suggestions</span>
+                {pendingMemoryProposals.map((proposal) => (
+                  <article className="memory-item" key={proposal.id}>
+                    <span className="field-label">{proposal.category}</span>
+                    <p>{proposal.content}</p>
+                    <small className="muted-copy">Evidence: {proposal.evidence.join(', ')}</small>
+                  </article>
+                ))}
+              </div>
+            ) : null}
+          </section>
 
           {events.length === 0 ? <FeedbackText>No events captured for this run yet.</FeedbackText> : null}
 

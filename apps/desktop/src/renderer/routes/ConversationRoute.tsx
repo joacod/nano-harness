@@ -7,7 +7,7 @@ import { ChatTranscript } from '../components/ChatTranscript'
 import { SessionLayout } from '../components/SessionLayout'
 import { SessionTelemetry } from '../components/SessionTelemetry'
 import { Card, FeedbackText, Toast, type ToastMessage } from '../components/ui'
-import { conversationQueryOptions } from '../queries'
+import { conversationQueryOptions, memoryProposalsQueryOptions, memoryRecordsQueryOptions } from '../queries'
 import { useRuntimeUi, useTechnicalUi } from '../runtime-ui'
 import { getFileName } from '../utils/files'
 import { getLatestConversationPendingApproval, getPendingApproval, mergeRunEvents } from '../utils/run-events'
@@ -18,6 +18,14 @@ export function ConversationRoute() {
   const queryClient = useQueryClient()
   const { advancedSettings, isAdvancedUiActive } = useTechnicalUi()
   const snapshotQuery = useQuery(conversationQueryOptions(conversationId))
+  const memoryRecordsQuery = useQuery({
+    ...memoryRecordsQueryOptions,
+    enabled: isAdvancedUiActive && advancedSettings.telemetrySidebar,
+  })
+  const memoryProposalsQuery = useQuery({
+    ...memoryProposalsQueryOptions,
+    enabled: isAdvancedUiActive && advancedSettings.telemetrySidebar,
+  })
   const { liveRunEvents, streamingRuns } = useRuntimeUi()
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null)
   const [toast, setToast] = useState<ToastMessage | null>(null)
@@ -216,6 +224,8 @@ export function ConversationRoute() {
             selectedRun={selectedRun}
             selectedRunEvents={selectedRunEvents}
             pendingApproval={pendingApproval}
+            memoryRecords={memoryRecordsQuery.data ?? null}
+            memoryProposals={memoryProposalsQuery.data ?? null}
             streamingState={selectedRun ? streamingRuns[selectedRun.id] ?? null : null}
             onRunEvidenceExported={(result) => {
               setToast({
