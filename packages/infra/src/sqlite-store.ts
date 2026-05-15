@@ -364,7 +364,8 @@ export class SqliteStore implements Store {
 
     const rows = await this.db.select().from(memoryRecordsTable).orderBy(asc(memoryRecordsTable.updatedAt))
     const enabledCategories = new Set(memorySettings.enabledCategories)
-    const terms = input.query.toLowerCase().split(/\s+/).filter((term) => term.length > 2)
+    const query = normalizeMemoryText(input.query)
+    const terms = tokenizeMemoryText(query)
     const records = rows
       .map((row) => memoryRecordSchema.parse({
         ...row,
@@ -372,7 +373,7 @@ export class SqliteStore implements Store {
         confidence: Number.parseFloat(row.confidence),
       }))
       .filter((record) => enabledCategories.has(record.category))
-      .map((record) => ({ record, score: scoreMemoryRecord(record.content, terms) }))
+      .map((record) => ({ record, score: scoreMemoryRecord(record, query, terms) }))
       .filter((item) => item.score > 0 || terms.length === 0)
       .sort((left, right) => right.score - left.score || right.record.updatedAt.localeCompare(left.record.updatedAt))
       .slice(0, memorySettings.maxSnippets)
@@ -625,13 +626,54 @@ export class SqliteStore implements Store {
   }
 }
 
-function scoreMemoryRecord(content: string, terms: string[]): number {
+function scoreMemoryRecord(record: ReturnType<typeof memoryRecordSchema.parse>, query: string, terms: string[]): number {
   if (terms.length === 0) {
-    return 1
+    return record.confidence + categoryWeight(record.category)
   }
 
-  const normalized = content.toLowerCase()
-  return terms.reduce((score, term) => score + (normalized.includes(term) ? 1 : 0), 0)
+  const content = normalizeMemoryText(record.content)
+  const source = normalizeMemoryText(record.source)
+  const contentTokens = tokenizeMemoryText(content)
+  const sourceTokens = tokenizeMemoryText(source)
+  const contentTokenSet = new Set(contentTokens)
+  const sourceTokenSet = new Set(sourceTokens)
+  const exactPhraseScore = query.length > 0 && content.includes(query) ? 8 : 0
+  const contentTermScore = terms.reduce((score, term) => score + (contentTokenSet.has(term) ? 2 : content.includes(term) ? 1 : 0), 0)
+  const sourceTermScore = terms.reduce((score, term) => score + (sourceTokenSet.has(term) ? 0.5 : 0), 0)
+  const categoryTermScore = terms.includes(record.category.replace('_', '-')) || terms.includes(record.category.replace('_', ' ')) ? 1 : 0
+  const recencyScore = Math.max(0, Date.parse(record.updatedAt) / 8.64e13) * 0.01
+
+  return exactPhraseScore
+    + contentTermScore
+    + sourceTermScore
+    + categoryTermScore
+    + record.confidence
+    + categoryWeight(record.category)
+    + recencyScore
+}
+
+function normalizeMemoryText(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9_/-]+/g, ' ').trim()
+}
+
+function tokenizeMemoryText(value: string): string[] {
+  return normalizeMemoryText(value).split(/\s+/).filter((term) => term.length > 2)
+}
+
+function categoryWeight(category: ReturnType<typeof memoryRecordSchema.parse>['category']): number {
+  if (category === 'preference') {
+    return 0.4
+  }
+
+  if (category === 'workflow') {
+    return 0.3
+  }
+
+  if (category === 'project_fact') {
+    return 0.2
+  }
+
+  return 0.1
 }
 
 function formatMemoryMarkdown(title: string, records: Array<ReturnType<typeof memoryRecordSchema.parse>>): string {

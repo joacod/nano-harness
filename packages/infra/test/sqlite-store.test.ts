@@ -314,7 +314,63 @@ describe('SqliteStore', () => {
       await store.close()
     }
   })
+
+  it('ranks memory recall with weighted query relevance', async () => {
+    const store = await createTestStore()
+
+    try {
+      await saveApprovedMemory(store, {
+        id: 'proposal-generic-typecheck',
+        category: 'workflow',
+        content: 'Run typecheck after broad TypeScript edits.',
+      })
+      await saveApprovedMemory(store, {
+        id: 'proposal-renderer-typecheck',
+        category: 'workflow',
+        content: 'Run renderer typecheck after UI edits.',
+      })
+      await saveApprovedMemory(store, {
+        id: 'proposal-release-notes',
+        category: 'project_fact',
+        content: 'Release notes live in the changelog folder.',
+      })
+
+      const recall = await store.recallMemory({
+        query: 'renderer typecheck',
+        settings: {
+          provider: createDefaultProviderSettings('openrouter'),
+          workspace: { rootPath: '/workspace', approvalPolicy: 'on-request' },
+          memory: { enabled: true, enabledCategories: ['workflow', 'project_fact'], maxSnippets: 2 },
+        },
+      })
+
+      expect(recall.selected.map((record) => record.id)).toEqual([
+        'memory-proposal-renderer-typecheck',
+        'memory-proposal-generic-typecheck',
+      ])
+    } finally {
+      await store.close()
+    }
+  })
 })
+
+async function saveApprovedMemory(store: Awaited<ReturnType<typeof createTestStore>>, input: {
+  id: string
+  category: 'preference' | 'project_fact' | 'workflow' | 'benchmark_observation'
+  content: string
+}): Promise<void> {
+  await store.saveMemoryProposal({
+    id: input.id,
+    runId: 'run-1',
+    category: input.category,
+    content: input.content,
+    rationale: 'Test memory proposal.',
+    evidence: ['run-1'],
+    status: 'pending',
+    createdAt: '2026-04-29T10:00:00.000Z',
+  })
+  await store.resolveMemoryProposal({ proposalId: input.id, decision: 'approved' })
+}
 
 async function createTestStore() {
   const dataDir = await mkdtemp(path.join(tmpdir(), 'nano-harness-sqlite-'))
