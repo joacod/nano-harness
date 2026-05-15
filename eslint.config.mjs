@@ -14,6 +14,16 @@ export default tseslint.config(
     }
   },
   {
+    files: ['**/*.cjs'],
+    languageOptions: {
+      sourceType: 'commonjs',
+      globals: {
+        Buffer: 'readonly',
+        process: 'readonly',
+      },
+    },
+  },
+  {
     files: ['packages/*/test/**/*.ts', 'apps/desktop/test/**/*.{ts,tsx}', 'apps/desktop/e2e/**/*.ts'],
     rules: {
       'no-restricted-syntax': [

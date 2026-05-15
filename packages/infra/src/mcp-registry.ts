@@ -1,5 +1,9 @@
+import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process'
+
 import type { ActionExecutionInput, ActionExecutor, McpRegistry } from '@nano-harness/core'
-import { mcpInventorySchema, type ActionDefinition, type ActionResult, type AppSettings, type JsonValue, type McpInventory, type McpServerSettings } from '@nano-harness/shared'
+import { mcpInventorySchema, type ActionDefinition, type ActionResult, type AppSettings, type JsonValue, type McpInventory, type McpResource, type McpServerSettings, type McpTool } from '@nano-harness/shared'
+
+const mcpRequestTimeoutMs = 5_000
 
 const mcpActionDefinitions: Record<string, ActionDefinition> = {
   list_mcp_resources: {
@@ -43,6 +47,7 @@ export class ConfiguredMcpRegistry implements McpRegistry {
   async getInventory(settings: AppSettings): Promise<McpInventory> {
     const servers = settings.mcp?.servers ?? []
     const enabledServers = servers.filter((server) => server.enabled)
+    const liveInventories = await Promise.all(enabledServers.map(async (server) => getLiveInventory(server)))
 
     return mcpInventorySchema.parse({
       servers: servers.map((server) => ({
@@ -54,16 +59,20 @@ export class ConfiguredMcpRegistry implements McpRegistry {
         allowedTools: server.allowedTools,
         allowedResources: server.allowedResources,
       })),
-      tools: enabledServers.flatMap((server) => server.staticTools.filter((tool) => server.allowedTools.includes(tool.name))),
-      resources: enabledServers.flatMap((server) => server.staticResources
-        .filter((resource) => server.allowedResources.includes(resource.uri))
-        .map((resource) => ({
+      tools: enabledServers.flatMap((server, index) => [
+        ...server.staticTools,
+        ...liveInventories[index].tools,
+      ].filter((tool) => server.allowedTools.includes(tool.name))),
+      resources: enabledServers.flatMap((server, index) => [
+        ...server.staticResources.map((resource) => ({
           serverId: resource.serverId,
           uri: resource.uri,
           name: resource.name,
           description: resource.description,
           mimeType: resource.mimeType,
-        }))),
+        })),
+        ...liveInventories[index].resources,
+      ].filter((resource) => server.allowedResources.includes(resource.uri))),
     })
   }
 
@@ -76,11 +85,15 @@ export class ConfiguredMcpRegistry implements McpRegistry {
 
     const resource = server.staticResources.find((item) => item.uri === input.uri)
 
-    if (!resource) {
-      throw new Error(`MCP resource ${input.uri} is not available from configured static inventory`)
+    if (resource) {
+      return { content: resource.content, mimeType: resource.mimeType }
     }
 
-    return { content: resource.content, mimeType: resource.mimeType }
+    if (server.transport === 'stdio') {
+      return await readStdioResource(server, input.uri)
+    }
+
+    throw new Error(`MCP resource ${input.uri} is not available from configured inventory`)
   }
 
   async invokeTool(input: { settings: AppSettings; serverId: string; toolName: string; arguments: Record<string, unknown> }): Promise<unknown> {
@@ -90,8 +103,241 @@ export class ConfiguredMcpRegistry implements McpRegistry {
       throw new Error(`MCP tool ${input.toolName} is not allowed for server ${input.serverId}`)
     }
 
-    throw new Error('MCP tool transport is not connected yet; only inventory and resource inspection are available')
+    if (server.transport === 'stdio') {
+      return await invokeStdioTool(server, input.toolName, input.arguments)
+    }
+
+    throw new Error('MCP tool transport is not connected for this server')
   }
+}
+
+async function getLiveInventory(server: McpServerSettings): Promise<{ tools: McpTool[]; resources: McpResource[] }> {
+  if (server.transport !== 'stdio' || !server.command) {
+    return { tools: [], resources: [] }
+  }
+
+  try {
+    return await withStdioMcpSession(server, async (session) => {
+      const [toolsResult, resourcesResult] = await Promise.all([
+        session.request('tools/list', {}),
+        session.request('resources/list', {}),
+      ])
+      return {
+        tools: parseMcpTools(server.id, toolsResult),
+        resources: parseMcpResources(server.id, resourcesResult),
+      }
+    })
+  } catch {
+    return { tools: [], resources: [] }
+  }
+}
+
+async function readStdioResource(server: McpServerSettings, uri: string): Promise<{ content: string; mimeType?: string }> {
+  if (server.transport !== 'stdio' || !server.command) {
+    throw new Error(`MCP server ${server.id} does not have a stdio command configured`)
+  }
+
+  return await withStdioMcpSession(server, async (session) => {
+    const result = await session.request('resources/read', { uri })
+    const content = parseResourceContent(result)
+
+    if (!content) {
+      throw new Error(`MCP resource ${uri} did not return text content`)
+    }
+
+    return content
+  })
+}
+
+async function invokeStdioTool(server: McpServerSettings, toolName: string, args: Record<string, unknown>): Promise<unknown> {
+  if (server.transport !== 'stdio' || !server.command) {
+    throw new Error(`MCP server ${server.id} does not have a stdio command configured`)
+  }
+
+  return await withStdioMcpSession(server, async (session) => session.request('tools/call', { name: toolName, arguments: args }))
+}
+
+async function withStdioMcpSession<T>(server: Extract<McpServerSettings, { transport: 'stdio' }>, run: (session: StdioMcpSession) => Promise<T>): Promise<T> {
+  if (!server.command) {
+    throw new Error(`MCP server ${server.id} does not have a command configured`)
+  }
+
+  const session = new StdioMcpSession(server.command, server.args)
+
+  try {
+    await session.initialize()
+    return await run(session)
+  } finally {
+    session.close()
+  }
+}
+
+class StdioMcpSession {
+  private readonly child: ChildProcessWithoutNullStreams
+  private readonly pending = new Map<number, { resolve: (value: unknown) => void; reject: (error: Error) => void; timeout: ReturnType<typeof setTimeout> }>()
+  private buffer = Buffer.alloc(0)
+  private nextId = 1
+
+  constructor(command: string, args: string[]) {
+    this.child = spawn(command, args, { stdio: ['pipe', 'pipe', 'pipe'], env: {} })
+    this.child.stdout.on('data', (chunk) => this.handleStdout(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)))
+    this.child.stderr.resume()
+    this.child.on('error', (error) => this.rejectAll(error instanceof Error ? error : new Error('MCP server process failed')))
+    this.child.on('exit', (code) => {
+      if (this.pending.size > 0) {
+        this.rejectAll(new Error(`MCP server exited before responding${code === null ? '' : ` with code ${code}`}`))
+      }
+    })
+  }
+
+  async initialize(): Promise<void> {
+    await this.request('initialize', {
+      protocolVersion: '2024-11-05',
+      capabilities: {},
+      clientInfo: { name: 'nano-harness', version: '0.0.1' },
+    })
+    this.notify('notifications/initialized', {})
+  }
+
+  request(method: string, params: Record<string, unknown>): Promise<unknown> {
+    const id = this.nextId++
+    const message = { jsonrpc: '2.0', id, method, params }
+
+    return new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        this.pending.delete(id)
+        reject(new Error(`MCP request ${method} timed out`))
+      }, mcpRequestTimeoutMs)
+
+      this.pending.set(id, { resolve, reject, timeout })
+      this.writeMessage(message)
+    })
+  }
+
+  notify(method: string, params: Record<string, unknown>): void {
+    this.writeMessage({ jsonrpc: '2.0', method, params })
+  }
+
+  close(): void {
+    this.child.kill()
+  }
+
+  private writeMessage(message: Record<string, unknown>): void {
+    const body = JSON.stringify(message)
+    this.child.stdin.write(`Content-Length: ${Buffer.byteLength(body, 'utf8')}\r\n\r\n${body}`)
+  }
+
+  private handleStdout(chunk: Buffer): void {
+    this.buffer = Buffer.concat([this.buffer, chunk])
+
+    while (true) {
+      const headerEnd = this.buffer.indexOf('\r\n\r\n')
+
+      if (headerEnd === -1) {
+        return
+      }
+
+      const header = this.buffer.subarray(0, headerEnd).toString('utf8')
+      const contentLength = parseContentLength(header)
+
+      if (contentLength === null) {
+        this.rejectAll(new Error('MCP response is missing Content-Length'))
+        return
+      }
+
+      const bodyStart = headerEnd + 4
+      const bodyEnd = bodyStart + contentLength
+
+      if (this.buffer.length < bodyEnd) {
+        return
+      }
+
+      const body = this.buffer.subarray(bodyStart, bodyEnd).toString('utf8')
+      this.buffer = this.buffer.subarray(bodyEnd)
+      this.handleMessage(JSON.parse(body) as Record<string, unknown>)
+    }
+  }
+
+  private handleMessage(message: Record<string, unknown>): void {
+    if (typeof message.id !== 'number') {
+      return
+    }
+
+    const pending = this.pending.get(message.id)
+
+    if (!pending) {
+      return
+    }
+
+    clearTimeout(pending.timeout)
+    this.pending.delete(message.id)
+
+    if (message.error) {
+      pending.reject(new Error(JSON.stringify(message.error)))
+      return
+    }
+
+    pending.resolve(message.result)
+  }
+
+  private rejectAll(error: Error): void {
+    for (const pending of this.pending.values()) {
+      clearTimeout(pending.timeout)
+      pending.reject(error)
+    }
+
+    this.pending.clear()
+  }
+}
+
+function parseContentLength(header: string): number | null {
+  const line = header.split('\r\n').find((item) => item.toLowerCase().startsWith('content-length:'))
+  const value = line?.slice('content-length:'.length).trim()
+  const parsed = value ? Number.parseInt(value, 10) : Number.NaN
+  return Number.isFinite(parsed) ? parsed : null
+}
+
+function parseMcpTools(serverId: string, value: unknown): McpTool[] {
+  if (!isRecord(value) || !Array.isArray(value.tools)) {
+    return []
+  }
+
+  return value.tools.filter(isRecord).flatMap((tool) => typeof tool.name === 'string' ? [{
+    serverId,
+    name: tool.name,
+    ...(typeof tool.description === 'string' ? { description: tool.description } : {}),
+    ...(isRecord(tool.inputSchema) ? { inputSchema: tool.inputSchema } : {}),
+  }] : [])
+}
+
+function parseMcpResources(serverId: string, value: unknown): McpResource[] {
+  if (!isRecord(value) || !Array.isArray(value.resources)) {
+    return []
+  }
+
+  return value.resources.filter(isRecord).flatMap((resource) => typeof resource.uri === 'string' && typeof resource.name === 'string' ? [{
+    serverId,
+    uri: resource.uri,
+    name: resource.name,
+    ...(typeof resource.description === 'string' ? { description: resource.description } : {}),
+    ...(typeof resource.mimeType === 'string' ? { mimeType: resource.mimeType } : {}),
+  }] : [])
+}
+
+function parseResourceContent(value: unknown): { content: string; mimeType?: string } | null {
+  if (!isRecord(value) || !Array.isArray(value.contents)) {
+    return null
+  }
+
+  const content = value.contents.filter(isRecord).find((item) => typeof item.text === 'string')
+
+  return content && typeof content.text === 'string'
+    ? { content: content.text, ...(typeof content.mimeType === 'string' ? { mimeType: content.mimeType } : {}) }
+    : null
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
 export class McpActionExecutor implements ActionExecutor {
