@@ -10,6 +10,9 @@ import type {
   Message,
   Run,
   RunEvent,
+  SpecArtifactKind,
+  SpecEvidenceLink,
+  SpecTask,
 } from '@nano-harness/shared'
 
 import type { ActionExecutor } from './actions'
@@ -150,6 +153,10 @@ export class ActionInvocationPipeline {
       payload: { result },
     })
 
+    if (result.status === 'completed') {
+      await this.emitSpecAndObligationEvents(run, actionDefinition, actionCall, result)
+    }
+
     const postHookStopped = await this.runToolHooks('post_tool_use', run, actionDefinition, actionCall, settings, result)
 
     if (postHookStopped) {
@@ -237,6 +244,128 @@ export class ActionInvocationPipeline {
 
     return null
   }
+
+  private async emitSpecAndObligationEvents(
+    run: Run,
+    action: ActionDefinition,
+    actionCall: ActionCall,
+    result: ActionResult,
+  ): Promise<void> {
+    const timestamp = this.dependencies.now()
+    const output = asRecord(result.output)
+
+    if (action.id === 'write_spec_artifact') {
+      const path = getStringField(output, 'path')
+      const artifactKind = getStringField(output, 'artifactKind')
+      const changeId = getStringField(output, 'changeId') ?? extractSpecChangeId(path)
+
+      if (path && artifactKind && changeId && isSpecArtifactKind(artifactKind)) {
+        await this.dependencies.emitEvent({
+          id: this.dependencies.createId(),
+          runId: run.id,
+          timestamp,
+          type: 'spec.artifact_written',
+          payload: { changeId, artifactKind, path },
+        })
+        await this.emitValidationObligation(run, actionCall, timestamp, {
+          reason: `Validate spec artifact ${artifactKind} for ${changeId}.`,
+          changedFiles: [path],
+        })
+      }
+      return
+    }
+
+    if (action.id === 'update_spec_task') {
+      const task = parseSpecTask(output.task)
+      const changeId = getStringField(actionCall.input, 'changeId')
+
+      if (changeId && task) {
+        await this.dependencies.emitEvent({
+          id: this.dependencies.createId(),
+          runId: run.id,
+          timestamp,
+          type: 'spec.task_updated',
+          payload: { changeId, task },
+        })
+
+        if (task.status === 'done') {
+          await this.emitValidationObligation(run, actionCall, timestamp, {
+            reason: `Validate completed spec task ${task.id}: ${task.title}.`,
+            changedFiles: compactStrings([getStringField(output, 'path')]),
+            validationCommands: task.validationNotes,
+          })
+        }
+      }
+      return
+    }
+
+    if (action.id === 'append_spec_evidence') {
+      const changeId = getStringField(actionCall.input, 'changeId') ?? getStringField(output, 'changeId')
+      const evidence = parseSpecEvidenceLink(output)
+
+      if (changeId) {
+        await this.dependencies.emitEvent({
+          id: this.dependencies.createId(),
+          runId: run.id,
+          timestamp,
+          type: 'spec.evidence_appended',
+          payload: { changeId, evidence },
+        })
+      }
+      return
+    }
+
+    if (action.id === 'archive_spec_change') {
+      const changeId = getStringField(output, 'changeId')
+      const archivedPath = getStringField(output, 'archivedPath')
+
+      if (changeId && archivedPath) {
+        await this.dependencies.emitEvent({
+          id: this.dependencies.createId(),
+          runId: run.id,
+          timestamp,
+          type: 'spec.change_archived',
+          payload: { changeId, archivedPath },
+        })
+      }
+      return
+    }
+
+    if (action.id === 'apply_patch' || action.id === 'write_file') {
+      const path = getStringField(output, 'path')
+
+      if (path) {
+        await this.emitValidationObligation(run, actionCall, timestamp, {
+          reason: `Validate edits to ${path}.`,
+          changedFiles: [path],
+        })
+      }
+    }
+  }
+
+  private async emitValidationObligation(
+    run: Run,
+    actionCall: ActionCall,
+    timestamp: string,
+    input: { reason: string; changedFiles?: string[]; validationCommands?: string[] },
+  ): Promise<void> {
+    await this.dependencies.emitEvent({
+      id: this.dependencies.createId(),
+      runId: run.id,
+      timestamp,
+      type: 'obligation.created',
+      payload: {
+        obligation: {
+          id: this.dependencies.createId(),
+          reason: input.reason,
+          sourceActionCallIds: [actionCall.id],
+          changedFiles: input.changedFiles ?? [],
+          validationCommands: input.validationCommands ?? [],
+          createdAt: timestamp,
+        },
+      },
+    })
+  }
 }
 
 function stringifyToolOutput(value: JsonValue | undefined): string {
@@ -259,4 +388,76 @@ function stringifyActionResult(result: ActionResult): string {
   }
 
   return stringifyToolOutput(output)
+}
+
+function asRecord(value: JsonValue | undefined): Record<string, JsonValue> {
+  return value && typeof value === 'object' && !Array.isArray(value) ? value : {}
+}
+
+function getStringField(value: Record<string, JsonValue>, key: string): string | null {
+  const field = value[key]
+  return typeof field === 'string' && field.trim() ? field : null
+}
+
+function compactStrings(values: Array<string | null | undefined>): string[] {
+  return values.filter((value): value is string => typeof value === 'string' && value.trim().length > 0)
+}
+
+function extractSpecChangeId(path: string | null): string | null {
+  const match = path?.match(/^\.nano\/specs\/(?:changes|archive)\/([^/]+)\//)
+  return match?.[1] ?? null
+}
+
+function isSpecArtifactKind(value: string): value is SpecArtifactKind {
+  return value === 'proposal'
+    || value === 'design'
+    || value === 'tasks'
+    || value === 'delta_spec'
+    || value === 'evidence'
+    || value === 'current_spec'
+}
+
+function parseSpecTask(value: JsonValue | undefined): SpecTask | null {
+  const task = asRecord(value)
+  const id = getStringField(task, 'id')
+  const title = getStringField(task, 'title')
+  const status = getStringField(task, 'status')
+  const ownerRole = getStringField(task, 'ownerRole')
+
+  if (!id || !title || !isSpecTaskStatus(status)) {
+    return null
+  }
+
+  return {
+    id,
+    title,
+    status,
+    validationNotes: getStringArrayField(task, 'validationNotes'),
+    ...(typeof task.sourceLine === 'number' ? { sourceLine: task.sourceLine } : {}),
+    ...(isAgentRole(ownerRole) ? { ownerRole } : {}),
+  }
+}
+
+function parseSpecEvidenceLink(value: Record<string, JsonValue>): SpecEvidenceLink {
+  return {
+    runIds: getStringArrayField(value, 'runs'),
+    eventIds: getStringArrayField(value, 'events'),
+    approvalIds: getStringArrayField(value, 'approvals'),
+    changedFiles: getStringArrayField(value, 'changedFiles'),
+    validationOutputs: getStringArrayField(value, 'validation'),
+    benchmarkObservations: getStringArrayField(value, 'benchmarkObservations'),
+  }
+}
+
+function getStringArrayField(value: Record<string, JsonValue>, key: string): string[] {
+  const field = value[key]
+  return Array.isArray(field) ? field.filter((item): item is string => typeof item === 'string' && item.trim().length > 0) : []
+}
+
+function isSpecTaskStatus(value: string | null): value is SpecTask['status'] {
+  return value === 'todo' || value === 'in_progress' || value === 'done' || value === 'blocked'
+}
+
+function isAgentRole(value: string | null): value is Exclude<SpecTask['ownerRole'], undefined> {
+  return value === 'plan' || value === 'build' || value === 'review'
 }

@@ -119,6 +119,115 @@ describe('ActionInvocationPipeline', () => {
     expect(cancelReason).toBe('approval rejected for write_file')
   })
 
+  it('emits validation obligations after file edits', async () => {
+    const events: RunEvent[] = []
+    const actionExecutor = new FakeActionExecutor([
+      createActionDefinition({ id: 'write_file', title: 'Write File', requiresApproval: true }),
+    ], async (input) => createActionResult({ actionCallId: input.call.id, output: { path: 'src/app.ts', bytesWritten: 42 } }))
+    const pipeline = new ActionInvocationPipeline({
+      store: new FakeStore(),
+      actionExecutor,
+      policy: new FakePolicy(() => ({ effect: 'allow' })),
+      hookRunner: {
+        async listHooks() {
+          return []
+        },
+        async runHooks() {
+          return []
+        },
+      },
+      now: () => '2026-04-29T10:00:00.000Z',
+      createId: createSequentialId(),
+      emitEvent: async (event) => {
+        events.push(event)
+      },
+      requireApproval: async () => ({ approvalRequestId: 'unused', decision: 'granted', decidedAt: '2026-04-29T10:00:00.000Z' }),
+      cancelRun: async () => {},
+    })
+
+    await pipeline.executeRequests({
+      run,
+      actionRequests: [createToolRequest('write_file')],
+      messages: [...messages],
+      settings: testSettings,
+      signal: new AbortController().signal,
+    })
+
+    const obligationEvent = events.find((event) => event.type === 'obligation.created')
+    expect(obligationEvent).toMatchObject({
+      type: 'obligation.created',
+      payload: {
+        obligation: {
+          reason: 'Validate edits to src/app.ts.',
+          sourceActionCallIds: ['id-1'],
+          changedFiles: ['src/app.ts'],
+          validationCommands: [],
+        },
+      },
+    })
+  })
+
+  it('emits spec artifact and validation obligation events after spec writes', async () => {
+    const events: RunEvent[] = []
+    const actionExecutor = new FakeActionExecutor([
+      createActionDefinition({ id: 'write_spec_artifact', title: 'Write Spec Artifact', requiresApproval: true }),
+    ], async (input) => createActionResult({
+      actionCallId: input.call.id,
+      output: {
+        changeId: 'add-workbench',
+        artifactKind: 'tasks',
+        path: '.nano/specs/changes/add-workbench/tasks.md',
+        bytesWritten: 17,
+      },
+    }))
+    const pipeline = new ActionInvocationPipeline({
+      store: new FakeStore(),
+      actionExecutor,
+      policy: new FakePolicy(() => ({ effect: 'allow' })),
+      hookRunner: {
+        async listHooks() {
+          return []
+        },
+        async runHooks() {
+          return []
+        },
+      },
+      now: () => '2026-04-29T10:00:00.000Z',
+      createId: createSequentialId(),
+      emitEvent: async (event) => {
+        events.push(event)
+      },
+      requireApproval: async () => ({ approvalRequestId: 'unused', decision: 'granted', decidedAt: '2026-04-29T10:00:00.000Z' }),
+      cancelRun: async () => {},
+    })
+
+    await pipeline.executeRequests({
+      run,
+      actionRequests: [createToolRequest('write_spec_artifact')],
+      messages: [...messages],
+      settings: testSettings,
+      signal: new AbortController().signal,
+    })
+
+    expect(events.find((event) => event.type === 'spec.artifact_written')).toMatchObject({
+      type: 'spec.artifact_written',
+      payload: {
+        changeId: 'add-workbench',
+        artifactKind: 'tasks',
+        path: '.nano/specs/changes/add-workbench/tasks.md',
+      },
+    })
+    expect(events.find((event) => event.type === 'obligation.created')).toMatchObject({
+      type: 'obligation.created',
+      payload: {
+        obligation: {
+          reason: 'Validate spec artifact tasks for add-workbench.',
+          changedFiles: ['.nano/specs/changes/add-workbench/tasks.md'],
+        },
+      },
+    })
+  })
+
   it('denies actions before execution when policy rejects them', async () => {
     const actionExecutor = new FakeActionExecutor([
       createActionDefinition({ id: 'read_file', title: 'Read File' }),
