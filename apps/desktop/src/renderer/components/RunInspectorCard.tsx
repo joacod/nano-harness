@@ -29,7 +29,9 @@ export function RunInspectorCard({
   const latestFirstEvents = [...events].reverse()
   const dryRunMemory = getLatestDryRunMemory(events)
   const recalledMemory = memoryRecords?.records.slice(0, 3) ?? []
-  const pendingMemoryProposals = memoryProposals?.proposals.filter((proposal) => proposal.status === 'pending').slice(0, 3) ?? []
+  const pendingMemoryProposals = memoryProposals?.proposals
+    .filter((proposal) => proposal.status === 'pending' && proposal.runId === run?.id)
+    .slice(0, 3) ?? []
   const validationObligations = getValidationObligationSummary(events)
   const runControlMutation = useMutation({
     mutationFn: async (action: 'resume' | 'cancel') => {
@@ -158,7 +160,7 @@ export function RunInspectorCard({
           <section className="inspector-memory-context" aria-labelledby="inspector-memory-heading">
             <div className="inspector-section-heading">
               <p className="eyebrow" id="inspector-memory-heading">Memory</p>
-              <p>Recalled context and pending suggestions for this workspace.</p>
+              <p>Recalled context and pending suggestions produced by this run.</p>
             </div>
             {recalledMemory.length === 0 && pendingMemoryProposals.length === 0 ? (
               <FeedbackText>No recalled memory or pending suggestions.</FeedbackText>

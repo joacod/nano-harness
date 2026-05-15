@@ -232,16 +232,28 @@ describe('RunInspectorCard', () => {
           }],
         }}
         memoryProposals={{
-          proposals: [{
-            id: 'proposal-2',
-            runId: 'run-1',
-            category: 'workflow',
-            content: 'Validate spec tasks before marking them done.',
-            rationale: 'Spec evidence was appended during this run.',
-            evidence: ['validation:pnpm typecheck passed'],
-            status: 'pending',
-            createdAt: '2026-04-29T10:06:00.000Z',
-          }],
+          proposals: [
+            {
+              id: 'proposal-2',
+              runId: 'run-1',
+              category: 'workflow',
+              content: 'Validate spec tasks before marking them done.',
+              rationale: 'Spec evidence was appended during this run.',
+              evidence: ['validation:pnpm typecheck passed'],
+              status: 'pending',
+              createdAt: '2026-04-29T10:06:00.000Z',
+            },
+            {
+              id: 'proposal-other-run',
+              runId: 'run-other',
+              category: 'workflow',
+              content: 'This suggestion belongs to another run.',
+              rationale: 'Different run evidence.',
+              evidence: ['event:other'],
+              status: 'pending',
+              createdAt: '2026-04-29T10:07:00.000Z',
+            },
+          ],
         }}
         onEvidenceExported={() => undefined}
         onEvidenceExportError={() => undefined}
@@ -252,6 +264,7 @@ describe('RunInspectorCard', () => {
     expect(screen.getByText('Run typecheck after renderer edits.')).toBeTruthy()
     expect(screen.getByText('Validate spec tasks before marking them done.')).toBeTruthy()
     expect(screen.getByText('Evidence: validation:pnpm typecheck passed')).toBeTruthy()
+    expect(screen.queryByText('This suggestion belongs to another run.')).toBeNull()
   })
 
   it('surfaces mutation errors from run controls', async () => {
