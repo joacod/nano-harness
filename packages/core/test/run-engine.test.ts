@@ -541,6 +541,36 @@ describe('CoreRunEngine', () => {
     expect(store.events.map((event) => event.type)).not.toContain('memory.proposal_created')
   })
 
+  it('marks unsatisfied validation obligations as unmet when a run completes', async () => {
+    const store = new FakeStore()
+    const writeFileAction = createActionDefinition({ id: 'write_file', title: 'Write File', requiresApproval: true })
+    const engine = new CoreRunEngine({
+      store,
+      provider: new FakeProvider([{ actionCalls: [createToolRequest('write_file')] }, { content: 'Write completed without validation.' }]),
+      providerCredentialResolver: defaultCredentialResolver,
+      actionExecutor: new FakeActionExecutor([writeFileAction], async (input) =>
+        createActionResult({ actionCallId: input.call.id, output: { path: 'src/app.ts', bytesWritten: 12 } }),
+      ),
+      policy: new FakePolicy(() => ({ effect: 'allow' })),
+      now: () => '2026-04-29T10:00:00.000Z',
+      createId: createSequentialId(),
+    })
+
+    const handle = await engine.startRun(createRunInput())
+
+    await waitForCondition(() => store.runs.get(handle.runId)?.status === 'completed')
+
+    const obligationEvent = store.events.find((event) => event.type === 'obligation.created')
+    expect(store.events.find((event) => event.type === 'obligation.unmet')).toMatchObject({
+      type: 'obligation.unmet',
+      payload: {
+        obligationId: obligationEvent?.payload.obligation.id,
+        reason: 'Run completed before validation evidence satisfied this obligation.',
+      },
+    })
+    expect(store.events.map((event) => event.type).indexOf('obligation.unmet')).toBeLessThan(store.events.map((event) => event.type).indexOf('run.completed'))
+  })
+
   it('cancels the run when approval is rejected', async () => {
     const store = new FakeStore()
     store.settings = {

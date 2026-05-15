@@ -29,6 +29,7 @@ export function RunInspectorCard({
   const latestFirstEvents = [...events].reverse()
   const recalledMemory = memoryRecords?.records.slice(0, 3) ?? []
   const pendingMemoryProposals = memoryProposals?.proposals.filter((proposal) => proposal.status === 'pending').slice(0, 3) ?? []
+  const validationObligations = getValidationObligationSummary(events)
   const runControlMutation = useMutation({
     mutationFn: async (action: 'resume' | 'cancel') => {
       if (!run) {
@@ -167,6 +168,24 @@ export function RunInspectorCard({
             ) : null}
           </section>
 
+          {validationObligations.total > 0 ? (
+            <section className="inspector-validation-context" aria-labelledby="inspector-validation-heading">
+              <div className="inspector-section-heading">
+                <p className="eyebrow" id="inspector-validation-heading">Validation Obligations</p>
+                <p>Tracked validation state for edits and spec mutations in this run.</p>
+              </div>
+              <div className="validation-obligation-row">
+                <StatusBadge status={validationObligations.open > 0 ? 'waiting_approval' : 'completed'}>
+                  {validationObligations.open} open
+                </StatusBadge>
+                <StatusBadge status="completed">{validationObligations.satisfied} satisfied</StatusBadge>
+                <StatusBadge status={validationObligations.unmet > 0 ? 'failed' : 'completed'}>
+                  {validationObligations.unmet} unmet
+                </StatusBadge>
+              </div>
+            </section>
+          ) : null}
+
           {events.length === 0 ? <FeedbackText>No events captured for this run yet.</FeedbackText> : null}
 
           <ol className="timeline-list" aria-label="Signal trace, latest first">
@@ -212,4 +231,30 @@ function getSpecEventChangeId(event: RunEvent): string | null {
     default:
       return null
   }
+}
+
+function getValidationObligationSummary(events: RunEvent[]): { total: number; open: number; satisfied: number; unmet: number } {
+  const open = new Set<string>()
+  let total = 0
+  let satisfied = 0
+  let unmet = 0
+
+  for (const event of events) {
+    if (event.type === 'obligation.created') {
+      total += 1
+      open.add(event.payload.obligation.id)
+    }
+
+    if (event.type === 'obligation.satisfied') {
+      satisfied += 1
+      open.delete(event.payload.obligationId)
+    }
+
+    if (event.type === 'obligation.unmet') {
+      unmet += 1
+      open.delete(event.payload.obligationId)
+    }
+  }
+
+  return { total, open: open.size, satisfied, unmet }
 }

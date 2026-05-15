@@ -1324,11 +1324,18 @@
 }
 
 .inspector-memory-context,
+.inspector-validation-context,
 .inspector-memory-group {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
   min-width: 0;
+}
+
+.validation-obligation-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
 }
 
 .inspector-section-heading {

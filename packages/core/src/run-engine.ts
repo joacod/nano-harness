@@ -11,7 +11,7 @@ import type {
 } from '@nano-harness/shared'
 import { getProviderDefinition } from '@nano-harness/shared'
 
-import { ActionInvocationPipeline, type ExecuteActionRequestsOutput } from './action-invocation-pipeline'
+import { ActionInvocationPipeline, getOpenValidationObligationIds, type ExecuteActionRequestsOutput } from './action-invocation-pipeline'
 import type { ActionExecutor } from './actions'
 import { ApprovalGate } from './approval-gate'
 import type { ApprovalCoordinator, PendingApprovalContext } from './approvals'
@@ -618,8 +618,27 @@ export class CoreRunEngine implements RunEngine {
 
   private async completeRun(run: Run): Promise<void> {
     const finishedAt = this.now()
+    await this.emitUnmetValidationObligations(run, finishedAt)
     await this.transitionRun(run, 'completed', { finishedAt }, 'run.completed', { finishedAt })
     await this.createPostRunMemoryProposal(run)
+  }
+
+  private async emitUnmetValidationObligations(run: Run, checkedAt: string): Promise<void> {
+    const openObligationIds = getOpenValidationObligationIds(await this.store.listRunEvents(run.id))
+
+    for (const obligationId of openObligationIds) {
+      await this.emitEvent({
+        id: this.createId(),
+        runId: run.id,
+        timestamp: checkedAt,
+        type: 'obligation.unmet',
+        payload: {
+          obligationId,
+          reason: 'Run completed before validation evidence satisfied this obligation.',
+          checkedAt,
+        },
+      })
+    }
   }
 
   private async createPostRunMemoryProposal(run: Run): Promise<void> {

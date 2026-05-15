@@ -167,6 +167,64 @@ describe('ActionInvocationPipeline', () => {
     })
   })
 
+  it('satisfies open validation obligations after successful validation commands', async () => {
+    const store = new FakeStore()
+    const events: RunEvent[] = []
+    const actionExecutor = new FakeActionExecutor([
+      createActionDefinition({ id: 'write_file', title: 'Write File', requiresApproval: true }),
+      createActionDefinition({ id: 'run_command', title: 'Run Command', requiresApproval: true }),
+    ], async (input) => {
+      if (input.call.actionId === 'write_file') {
+        return createActionResult({ actionCallId: input.call.id, output: { path: 'src/app.ts', bytesWritten: 42 } })
+      }
+
+      return createActionResult({
+        actionCallId: input.call.id,
+        output: { command: 'pnpm', args: ['typecheck'], exitCode: 0, stdout: 'ok', stderr: '' },
+      })
+    })
+    const pipeline = new ActionInvocationPipeline({
+      store,
+      actionExecutor,
+      policy: new FakePolicy(() => ({ effect: 'allow' })),
+      hookRunner: {
+        async listHooks() {
+          return []
+        },
+        async runHooks() {
+          return []
+        },
+      },
+      now: () => '2026-04-29T10:00:00.000Z',
+      createId: createSequentialId(),
+      emitEvent: async (event) => {
+        events.push(event)
+        await store.appendEvent(event)
+      },
+      requireApproval: async () => ({ approvalRequestId: 'unused', decision: 'granted', decidedAt: '2026-04-29T10:00:00.000Z' }),
+      cancelRun: async () => {},
+    })
+
+    await pipeline.executeRequests({
+      run,
+      actionRequests: [createToolRequest('write_file'), createToolRequest('run_command')],
+      messages: [...messages],
+      settings: testSettings,
+      signal: new AbortController().signal,
+    })
+
+    const obligationEvent = events.find((event) => event.type === 'obligation.created')
+    const runCommandEvent = events.find((event): event is Extract<RunEvent, { type: 'action.requested' }> =>
+      event.type === 'action.requested' && event.payload.actionCall.actionId === 'run_command')
+    expect(events.find((event) => event.type === 'obligation.satisfied')).toMatchObject({
+      type: 'obligation.satisfied',
+      payload: {
+        obligationId: obligationEvent?.payload.obligation.id,
+        evidence: expect.arrayContaining([`action:run_command:${runCommandEvent?.payload.actionCall.id}`, 'command:pnpm typecheck']),
+      },
+    })
+  })
+
   it('emits spec artifact and validation obligation events after spec writes', async () => {
     const events: RunEvent[] = []
     const actionExecutor = new FakeActionExecutor([

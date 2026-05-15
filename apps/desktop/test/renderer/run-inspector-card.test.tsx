@@ -133,6 +133,42 @@ describe('RunInspectorCard', () => {
     expect(screen.getByRole('link', { name: 'Open in Specs' }).getAttribute('href')).toBe('/specs/add-spec-workbench')
   })
 
+  it('summarizes validation obligation state', () => {
+    window.desktop = createDesktopMock()
+
+    renderWithQueryClient(
+      <RunInspectorCard
+        run={createRun({ status: 'completed', startedAt: '2026-04-29T10:01:00.000Z' })}
+        events={[
+          event('obligation.created', {
+            obligation: {
+              id: 'obligation-1',
+              reason: 'Validate edits to src/app.ts.',
+              sourceActionCallIds: ['call-1'],
+              changedFiles: ['src/app.ts'],
+              validationCommands: [],
+              createdAt: '2026-04-29T10:02:00.000Z',
+            },
+          }),
+          event('obligation.unmet', {
+            obligationId: 'obligation-1',
+            reason: 'Run completed before validation evidence satisfied this obligation.',
+            checkedAt: '2026-04-29T10:03:00.000Z',
+          }),
+        ]}
+        pendingApproval={null}
+        streamingState={null}
+        onEvidenceExported={() => undefined}
+        onEvidenceExportError={() => undefined}
+      />,
+    )
+
+    expect(screen.getByText('Validation Obligations')).toBeTruthy()
+    expect(screen.getByText('0 open')).toBeTruthy()
+    expect(screen.getByText('0 satisfied')).toBeTruthy()
+    expect(screen.getByText('1 unmet')).toBeTruthy()
+  })
+
   it('shows recalled memory and pending suggestions in the inspector', () => {
     window.desktop = createDesktopMock()
 
