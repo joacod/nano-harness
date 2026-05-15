@@ -1,12 +1,34 @@
 // @vitest-environment jsdom
 
 import { cleanup, screen } from '@testing-library/react'
-import { afterEach, describe, expect, it } from 'vitest'
+import userEvent from '@testing-library/user-event'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+
+const routerMocks = vi.hoisted(() => ({
+  pathname: '/specs',
+  navigate: vi.fn(async () => undefined),
+}))
+
+vi.mock('@tanstack/react-router', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@tanstack/react-router')>()
+
+  return {
+    ...actual,
+    useNavigate: () => routerMocks.navigate,
+    useRouterState: ({ select }: { select: (state: { location: { pathname: string } }) => string }) =>
+      select({ location: { pathname: routerMocks.pathname } }),
+  }
+})
 
 import { SpecsRoute } from '../../src/renderer/routes/SpecsRoute'
 import { createDesktopMock, renderWithQueryClient } from './test-utils'
 
 describe('SpecsRoute', () => {
+  beforeEach(() => {
+    routerMocks.pathname = '/specs'
+    routerMocks.navigate.mockReset()
+  })
+
   afterEach(() => {
     cleanup()
   })
@@ -23,6 +45,7 @@ describe('SpecsRoute', () => {
   })
 
   it('shows active spec count and local changes', async () => {
+    const user = userEvent.setup()
     window.desktop = createDesktopMock({
       listSpecChanges: async () => ({
         changes: [{
@@ -35,16 +58,31 @@ describe('SpecsRoute', () => {
             updatedAt: '2026-05-14T10:00:00.000Z',
             linkedRunIds: [],
           },
-          artifactPaths: [],
-          tasks: [],
-          evidenceLinks: { runIds: [], eventIds: [], approvalIds: [], changedFiles: [], validationOutputs: [], benchmarkObservations: [] },
+          artifactPaths: [
+            { kind: 'proposal', path: '.nano/specs/changes/add-spec-workbench/proposal.md' },
+            { kind: 'tasks', path: '.nano/specs/changes/add-spec-workbench/tasks.md' },
+            { kind: 'evidence', path: '.nano/specs/changes/add-spec-workbench/evidence.json' },
+          ],
+          tasks: [{ id: 'ui', title: 'Add route', status: 'todo', validationNotes: [], sourceLine: 1 }],
+          evidenceLinks: { runIds: ['run-1'], eventIds: [], approvalIds: [], changedFiles: ['router.tsx'], validationOutputs: ['pnpm typecheck passed'], benchmarkObservations: [] },
         }],
+      }),
+      readSpecArtifact: async (input) => ({
+        kind: input.artifactKind,
+        path: `.nano/specs/changes/add-spec-workbench/${input.artifactKind}.md`,
+        content: input.artifactKind === 'tasks' ? '- [ ] ui: Add route\n' : '# Add Spec Workbench\n\nCreate a visible specs screen.\n',
       }),
     })
 
     renderWithQueryClient(<SpecsRoute />)
 
     expect(await screen.findByText('1 active')).toBeTruthy()
-    expect(await screen.findByText('Add Spec Workbench')).toBeTruthy()
+    expect((await screen.findAllByText('Add Spec Workbench')).length).toBeGreaterThan(0)
+    expect(await screen.findByText('ui: Add route')).toBeTruthy()
+
+    await user.click(screen.getByRole('tab', { name: 'Tasks' }))
+
+    expect(await screen.findByText('.nano/specs/changes/add-spec-workbench/tasks.md')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Plan' }).hasAttribute('disabled')).toBe(true)
   })
 })

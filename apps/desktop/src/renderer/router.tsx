@@ -34,7 +34,13 @@ const specsRoute = createRoute({
   component: SpecsRoute,
 })
 
-const routeTree = rootRoute.addChildren([homeRoute, conversationRoute, settingsRoute, specsRoute])
+const specChangeRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/specs/$changeId',
+  component: SpecsRoute,
+})
+
+const routeTree = rootRoute.addChildren([homeRoute, conversationRoute, settingsRoute, specsRoute, specChangeRoute])
 
 export const router = createRouter({
   routeTree,

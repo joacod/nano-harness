@@ -1,12 +1,21 @@
 import { useQuery } from '@tanstack/react-query'
+import { useNavigate, useRouterState } from '@tanstack/react-router'
 
+import { SpecWorkbench } from '../components/specs/SpecWorkbench'
 import { Card, FeedbackText, RuntimePill } from '../components/ui'
 import { specChangesQueryOptions } from '../queries'
 
 export function SpecsRoute() {
+  const navigate = useNavigate()
+  const pathname = useRouterState({ select: (state) => state.location.pathname })
   const specChangesQuery = useQuery(specChangesQueryOptions)
   const changes = specChangesQuery.data?.changes ?? []
   const activeChanges = changes.filter((change) => change.summary.status !== 'archived' && change.summary.status !== 'verified')
+  const selectedChangeId = pathname.startsWith('/specs/') ? decodeURIComponent(pathname.slice('/specs/'.length)) : null
+
+  function handleSelectChange(changeId: string) {
+    void navigate({ to: '/specs/$changeId', params: { changeId } })
+  }
 
   return (
     <div className="panel-stack">
@@ -23,34 +32,17 @@ export function SpecsRoute() {
         </p>
       </Card>
 
-      <Card>
-        <p className="eyebrow">Local changes</p>
-        <h2>Workbench skeleton</h2>
-        {specChangesQuery.isLoading ? <FeedbackText>Loading spec changes...</FeedbackText> : null}
-        {specChangesQuery.isError ? (
+      {specChangesQuery.isLoading ? <Card><FeedbackText>Loading spec changes...</FeedbackText></Card> : null}
+      {specChangesQuery.isError ? (
+        <Card>
           <FeedbackText variant="error" live>
             Failed to load spec changes.
           </FeedbackText>
-        ) : null}
-        {!specChangesQuery.isLoading && !specChangesQuery.isError && changes.length === 0 ? (
-          <FeedbackText>
-            No spec changes yet. Start with /spec in chat, or create a local spec change for work that needs a plan, tasks, validation, and evidence.
-          </FeedbackText>
-        ) : null}
-        {!specChangesQuery.isLoading && !specChangesQuery.isError && changes.length > 0 ? (
-          <div className="settings-card-list" aria-label="Spec changes">
-            {changes.slice(0, 8).map((change) => (
-              <article key={change.summary.id} className="settings-card-item">
-                <div>
-                  <strong>{change.summary.title}</strong>
-                  <p>{change.summary.id}</p>
-                </div>
-                <RuntimePill>{change.summary.status}</RuntimePill>
-              </article>
-            ))}
-          </div>
-        ) : null}
-      </Card>
+        </Card>
+      ) : null}
+      {!specChangesQuery.isLoading && !specChangesQuery.isError ? (
+        <SpecWorkbench changes={changes} initialChangeId={selectedChangeId} onSelectChange={handleSelectChange} />
+      ) : null}
     </div>
   )
 }
