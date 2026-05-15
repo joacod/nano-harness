@@ -167,6 +167,10 @@ function uniqueStrings(values: string[]): string[] {
   return [...new Set(values.filter((value) => value.trim().length > 0))]
 }
 
+function normalizeMemoryProposalContent(value: string): string {
+  return value.toLowerCase().replace(/\s+/g, ' ').trim()
+}
+
 export class CoreRunEngine implements RunEngine {
   private readonly store: Store
   private readonly provider: Provider
@@ -634,13 +638,26 @@ export class CoreRunEngine implements RunEngine {
       return
     }
 
-    const alreadyProposed = (await this.store.listMemoryProposals()).some((proposal) => proposal.runId === run.id)
+    const existingProposals = await this.store.listMemoryProposals()
+    const alreadyProposed = existingProposals.some((proposal) => proposal.runId === run.id)
 
     if (alreadyProposed) {
       return
     }
 
     if (settings.memory?.enabledCategories && !settings.memory.enabledCategories.includes(evidence.category)) {
+      return
+    }
+
+    const normalizedContent = normalizeMemoryProposalContent(evidence.content)
+    const duplicateProposal = existingProposals.some((proposal) =>
+      proposal.category === evidence.category && normalizeMemoryProposalContent(proposal.content) === normalizedContent,
+    )
+    const duplicateRecord = (await this.store.listMemoryRecords()).some((record) =>
+      record.category === evidence.category && normalizeMemoryProposalContent(record.content) === normalizedContent,
+    )
+
+    if (duplicateProposal || duplicateRecord) {
       return
     }
 

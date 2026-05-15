@@ -500,6 +500,47 @@ describe('CoreRunEngine', () => {
     expect(store.events.map((event) => event.type)).toContain('memory.proposal_created')
   })
 
+  it('does not create duplicate memory proposals already covered by approved memory', async () => {
+    const store = new FakeStore()
+    store.memoryRecords.push({
+      id: 'memory-existing',
+      category: 'workflow',
+      content: 'Validation evidence used in this workspace: pnpm typecheck passed.',
+      source: 'proposal:existing',
+      runId: 'run-existing',
+      confidence: 0.8,
+      createdAt: '2026-04-29T09:00:00.000Z',
+      updatedAt: '2026-04-29T09:00:00.000Z',
+    })
+    const appendSpecEvidenceAction = createActionDefinition({ id: 'append_spec_evidence', title: 'Append Spec Evidence', requiresApproval: true })
+    const engine = new CoreRunEngine({
+      store,
+      provider: new FakeProvider([{ actionCalls: [{ toolCallId: 'tool-call-1', actionId: 'append_spec_evidence', input: { changeId: 'change-1' } }] }, { content: 'Evidence recorded.' }]),
+      providerCredentialResolver: defaultCredentialResolver,
+      actionExecutor: new FakeActionExecutor([appendSpecEvidenceAction], async (input) =>
+        createActionResult({
+          actionCallId: input.call.id,
+          output: {
+            changeId: 'change-1',
+            changedFiles: ['packages/core/src/run-engine.ts'],
+            validation: ['pnpm typecheck passed'],
+            benchmarkObservations: [],
+          },
+        }),
+      ),
+      policy: new FakePolicy(() => ({ effect: 'allow' })),
+      now: () => '2026-04-29T10:00:00.000Z',
+      createId: createSequentialId(),
+    })
+
+    const handle = await engine.startRun(createRunInput({ prompt: 'Record duplicate spec validation evidence.' }))
+
+    await waitForCondition(() => store.runs.get(handle.runId)?.status === 'completed')
+
+    expect(store.memoryProposals).toEqual([])
+    expect(store.events.map((event) => event.type)).not.toContain('memory.proposal_created')
+  })
+
   it('cancels the run when approval is rejected', async () => {
     const store = new FakeStore()
     store.settings = {
