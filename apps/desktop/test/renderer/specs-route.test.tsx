@@ -94,6 +94,7 @@ describe('SpecsRoute', () => {
         changeId: 'add-spec-workbench',
         role: 'build',
         taskIds: ['ui'],
+        workflowIntent: 'build',
       })
     })
     await waitFor(() => {
@@ -101,6 +102,55 @@ describe('SpecsRoute', () => {
         to: '/conversations/$conversationId',
         params: { conversationId: expect.stringMatching(/^conversation-/) },
       })
+    })
+  })
+
+  it('starts propose and archive runs from the workbench actions', async () => {
+    const user = userEvent.setup()
+    const startSpecRun = vi.fn(async () => ({ runId: 'run-1' }))
+    window.desktop = createDesktopMock({
+      listSpecChanges: async () => ({
+        changes: [{
+          summary: {
+            id: 'add-spec-workbench',
+            title: 'Add Spec Workbench',
+            status: 'implemented',
+            path: '.nano/specs/changes/add-spec-workbench',
+            taskCounts: { total: 1, todo: 0, inProgress: 0, done: 1, blocked: 0 },
+            updatedAt: '2026-05-14T10:00:00.000Z',
+            linkedRunIds: ['run-1'],
+          },
+          artifactPaths: [
+            { kind: 'proposal', path: '.nano/specs/changes/add-spec-workbench/proposal.md' },
+            { kind: 'tasks', path: '.nano/specs/changes/add-spec-workbench/tasks.md' },
+            { kind: 'evidence', path: '.nano/specs/changes/add-spec-workbench/evidence.json' },
+          ],
+          tasks: [{ id: 'ui', title: 'Add route', status: 'done', validationNotes: [], sourceLine: 1 }],
+          evidenceLinks: { runIds: ['run-1'], eventIds: [], approvalIds: [], changedFiles: ['router.tsx'], validationOutputs: ['pnpm typecheck passed'], benchmarkObservations: [] },
+        }],
+      }),
+      startSpecRun,
+    })
+
+    renderWithQueryClient(<SpecsRoute />)
+
+    expect((await screen.findAllByText('Add Spec Workbench')).length).toBeGreaterThan(0)
+    await user.click(screen.getByRole('button', { name: 'Propose' }))
+    await waitFor(() => {
+      expect(startSpecRun).toHaveBeenCalledWith(expect.objectContaining({
+        changeId: 'add-spec-workbench',
+        role: 'plan',
+        workflowIntent: 'propose',
+      }))
+    })
+
+    await user.click(screen.getByRole('button', { name: 'Archive' }))
+    await waitFor(() => {
+      expect(startSpecRun).toHaveBeenCalledWith(expect.objectContaining({
+        changeId: 'add-spec-workbench',
+        role: 'review',
+        workflowIntent: 'archive',
+      }))
     })
   })
 })

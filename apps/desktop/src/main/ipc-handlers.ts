@@ -207,7 +207,7 @@ export function setupIpcHandlers(runtime: IpcRuntime): void {
     const handle = await runtime.runEngine.startRun({
       conversationId: input.conversationId,
       role: input.role,
-      prompt: await buildSpecRunPrompt(settings, change, input.role, input.taskIds ?? []),
+      prompt: await buildSpecRunPrompt(settings, change, input.role, input.taskIds ?? [], input.workflowIntent ?? getDefaultSpecWorkflowIntent(input.role)),
     })
 
     return startRunResultSchema.parse({ runId: handle.runId })
@@ -361,7 +361,7 @@ async function requireSettings(runtime: IpcRuntime): Promise<AppSettings> {
   return settings
 }
 
-async function buildSpecRunPrompt(settings: AppSettings, change: SpecChangeDetail, role: AgentRole, taskIds: string[]): Promise<string> {
+async function buildSpecRunPrompt(settings: AppSettings, change: SpecChangeDetail, role: AgentRole, taskIds: string[], workflowIntent: SpecWorkflowIntent): Promise<string> {
   const artifactKinds = getSpecRunArtifactKinds(role)
   const artifacts = await Promise.all(artifactKinds.map(async (artifactKind) => readOptionalSpecArtifact(settings, change.summary.id, artifactKind)))
   const selectedTasks = taskIds.length > 0
@@ -370,6 +370,7 @@ async function buildSpecRunPrompt(settings: AppSettings, change: SpecChangeDetai
 
   return [
     `Continue spec change ${change.summary.id} in ${role} mode.`,
+    `Workflow intent: ${workflowIntent}.`,
     `Status: ${change.summary.status}`,
     selectedTasks.length > 0
       ? ['Selected tasks:', ...selectedTasks.map((task) => `- [${task.status}] ${task.id}: ${task.title}`)].join('\n')
@@ -378,8 +379,18 @@ async function buildSpecRunPrompt(settings: AppSettings, change: SpecChangeDetai
       `Artifact: ${artifact.kind}`,
       artifact.content,
     ].join('\n\n')),
-    getSpecRunInstruction(role),
+    getSpecRunInstruction(role, workflowIntent),
   ].join('\n\n---\n\n')
+}
+
+type SpecWorkflowIntent = 'propose' | 'plan' | 'build' | 'verify' | 'archive'
+
+function getDefaultSpecWorkflowIntent(role: AgentRole): SpecWorkflowIntent {
+  if (role === 'review') {
+    return 'verify'
+  }
+
+  return role
 }
 
 function getSpecRunArtifactKinds(role: AgentRole): SpecArtifactKind[] {
@@ -394,7 +405,15 @@ function getSpecRunArtifactKinds(role: AgentRole): SpecArtifactKind[] {
   return ['proposal', 'design', 'tasks']
 }
 
-function getSpecRunInstruction(role: AgentRole): string {
+function getSpecRunInstruction(role: AgentRole, workflowIntent: SpecWorkflowIntent): string {
+  if (workflowIntent === 'propose') {
+    return 'Propose or refine this spec change. Generate or update proposal, design, tasks, and delta specs through approval-gated spec artifact actions; do not edit application code.'
+  }
+
+  if (workflowIntent === 'archive') {
+    return 'Archive this spec change only if the evidence shows it is ready. Review proposal, tasks, changed files, validation output, and unmet obligations first; if ready, use the approval-gated archive_spec_change action.'
+  }
+
   if (role === 'plan') {
     return 'Plan only. Inspect context, refine the implementation approach, and keep all mutation approval-gated.'
   }

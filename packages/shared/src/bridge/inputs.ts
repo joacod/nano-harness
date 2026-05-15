@@ -76,6 +76,7 @@ export const startSpecRunInputSchema = z.object({
   changeId: z.string().min(1),
   role: agentRoleSchema,
   taskIds: z.array(z.string().min(1)).optional(),
+  workflowIntent: z.enum(['propose', 'plan', 'build', 'verify', 'archive']).optional(),
 })
 
 export type StartSpecRunInput = z.infer<typeof startSpecRunInputSchema>

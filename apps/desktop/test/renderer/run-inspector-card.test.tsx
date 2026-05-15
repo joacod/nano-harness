@@ -110,6 +110,29 @@ describe('RunInspectorCard', () => {
     expect(items[1].textContent).toContain('Run started')
   })
 
+  it('links spec workflow events back to the workbench', () => {
+    window.desktop = createDesktopMock()
+
+    renderWithQueryClient(
+      <RunInspectorCard
+        run={createRun({ status: 'completed', startedAt: '2026-04-29T10:01:00.000Z' })}
+        events={[
+          event('spec.artifact_written', {
+            changeId: 'add-spec-workbench',
+            artifactKind: 'proposal',
+            path: '.nano/specs/changes/add-spec-workbench/proposal.md',
+          }),
+        ]}
+        pendingApproval={null}
+        streamingState={null}
+        onEvidenceExported={() => undefined}
+        onEvidenceExportError={() => undefined}
+      />,
+    )
+
+    expect(screen.getByRole('link', { name: 'Open in Specs' }).getAttribute('href')).toBe('/specs/add-spec-workbench')
+  })
+
   it('shows recalled memory and pending suggestions in the inspector', () => {
     window.desktop = createDesktopMock()
 

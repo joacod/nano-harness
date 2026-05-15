@@ -1318,6 +1318,11 @@
   margin: var(--space-2) 0 0;
 }
 
+.timeline-link {
+  width: fit-content;
+  margin-top: var(--space-2);
+}
+
 .inspector-memory-context,
 .inspector-memory-group {
   display: flex;

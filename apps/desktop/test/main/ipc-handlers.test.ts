@@ -222,12 +222,16 @@ describe('setupIpcHandlers', () => {
       changeId: 'add-spec-workbench',
       role: 'build',
       taskIds: ['ui'],
+      workflowIntent: 'build',
     })).resolves.toEqual({ runId: 'run-123' })
 
     expect(runtime.runEngine.startRun).toHaveBeenCalledWith(expect.objectContaining({
       conversationId: 'conversation-1',
       role: 'build',
       prompt: expect.stringContaining('Continue spec change add-spec-workbench in build mode.'),
+    }))
+    expect(runtime.runEngine.startRun).toHaveBeenCalledWith(expect.objectContaining({
+      prompt: expect.stringContaining('Workflow intent: build.'),
     }))
     expect(runtime.runEngine.startRun).toHaveBeenCalledWith(expect.objectContaining({
       prompt: expect.stringContaining('ui: Add route'),

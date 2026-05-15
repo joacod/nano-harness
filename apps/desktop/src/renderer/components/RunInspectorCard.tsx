@@ -172,6 +172,7 @@ export function RunInspectorCard({
           <ol className="timeline-list" aria-label="Signal trace, latest first">
             {latestFirstEvents.map((event) => {
               const description = describeRunEvent(event)
+              const specChangeId = getSpecEventChangeId(event)
 
               return (
                 <li key={event.id} className="timeline-item">
@@ -183,6 +184,11 @@ export function RunInspectorCard({
                     <small className="timeline-timestamp">{formatPreciseTimestamp(event.timestamp)}</small>
                     <p className="timeline-type">{event.type}</p>
                     <FeedbackText className="timeline-detail">{description.detail}</FeedbackText>
+                    {specChangeId ? (
+                      <a className="ghost-link timeline-link" href={`/specs/${encodeURIComponent(specChangeId)}`}>
+                        Open in Specs
+                      </a>
+                    ) : null}
                   </div>
                 </li>
               )
@@ -192,4 +198,18 @@ export function RunInspectorCard({
       ) : null}
     </Card>
   )
+}
+
+function getSpecEventChangeId(event: RunEvent): string | null {
+  switch (event.type) {
+    case 'spec.change_created':
+      return event.payload.change.id
+    case 'spec.artifact_written':
+    case 'spec.task_updated':
+    case 'spec.evidence_appended':
+    case 'spec.change_archived':
+      return event.payload.changeId
+    default:
+      return null
+  }
 }

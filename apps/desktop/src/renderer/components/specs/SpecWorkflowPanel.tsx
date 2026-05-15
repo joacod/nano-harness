@@ -16,7 +16,7 @@ export function SpecWorkflowPanel({ change }: { change: SpecChangeDetail | null 
     return change?.tasks.filter((task) => task.status !== 'done' && task.status !== 'blocked') ?? []
   }, [change])
   const startSpecRunMutation = useMutation({
-    mutationFn: async (input: { role: AgentRole; taskIds?: string[] }) => {
+    mutationFn: async (input: { role: AgentRole; taskIds?: string[]; workflowIntent: 'propose' | 'plan' | 'build' | 'verify' | 'archive' }) => {
       if (!change) {
         throw new Error('Select a spec change before starting a run.')
       }
@@ -27,6 +27,7 @@ export function SpecWorkflowPanel({ change }: { change: SpecChangeDetail | null 
         changeId: change.summary.id,
         role: input.role,
         taskIds: input.taskIds,
+        workflowIntent: input.workflowIntent,
       })
 
       return { conversationId, runId: result.runId }
@@ -62,8 +63,8 @@ export function SpecWorkflowPanel({ change }: { change: SpecChangeDetail | null 
     })
   }, [buildableTasks, change])
 
-  function startRoleRun(role: AgentRole, taskIds?: string[]) {
-    void startSpecRunMutation.mutateAsync({ role, taskIds })
+  function startRoleRun(role: AgentRole, workflowIntent: 'propose' | 'plan' | 'build' | 'verify' | 'archive', taskIds?: string[]) {
+    void startSpecRunMutation.mutateAsync({ role, workflowIntent, taskIds })
   }
 
   return (
@@ -102,12 +103,19 @@ export function SpecWorkflowPanel({ change }: { change: SpecChangeDetail | null 
         </fieldset>
       ) : null}
       <div className="spec-workflow-actions">
-        <Button type="button" disabled fullWidth>Propose</Button>
         <Button
           type="button"
           fullWidth
           disabled={!change || startSpecRunMutation.isPending}
-          onClick={() => startRoleRun('plan')}
+          onClick={() => startRoleRun('plan', 'propose')}
+        >
+          Propose
+        </Button>
+        <Button
+          type="button"
+          fullWidth
+          disabled={!change || startSpecRunMutation.isPending}
+          onClick={() => startRoleRun('plan', 'plan')}
         >
           Plan
         </Button>
@@ -115,7 +123,7 @@ export function SpecWorkflowPanel({ change }: { change: SpecChangeDetail | null 
           type="button"
           fullWidth
           disabled={!change || !selectedTask || startSpecRunMutation.isPending}
-          onClick={() => startRoleRun('build', selectedTask ? [selectedTask.id] : undefined)}
+          onClick={() => startRoleRun('build', 'build', selectedTask ? [selectedTask.id] : undefined)}
         >
           Build selected task
         </Button>
@@ -123,11 +131,18 @@ export function SpecWorkflowPanel({ change }: { change: SpecChangeDetail | null 
           type="button"
           fullWidth
           disabled={!change || startSpecRunMutation.isPending}
-          onClick={() => startRoleRun('review')}
+          onClick={() => startRoleRun('review', 'verify')}
         >
           Verify
         </Button>
-        <Button type="button" disabled fullWidth>Archive</Button>
+        <Button
+          type="button"
+          fullWidth
+          disabled={!change || change.summary.status === 'archived' || startSpecRunMutation.isPending}
+          onClick={() => startRoleRun('review', 'archive')}
+        >
+          Archive
+        </Button>
       </div>
       {startSpecRunMutation.isPending ? <FeedbackText live>Starting spec run...</FeedbackText> : null}
       {startSpecRunMutation.error instanceof Error ? (
