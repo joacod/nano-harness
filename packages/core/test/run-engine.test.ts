@@ -455,6 +455,51 @@ describe('CoreRunEngine', () => {
     expect(store.events.map((event) => event.type)).toContain('memory.proposal_created')
   })
 
+  it('creates evidence-backed memory proposals from spec validation evidence', async () => {
+    const store = new FakeStore()
+    const appendSpecEvidenceAction = createActionDefinition({ id: 'append_spec_evidence', title: 'Append Spec Evidence', requiresApproval: true })
+    const engine = new CoreRunEngine({
+      store,
+      provider: new FakeProvider([{ actionCalls: [{ toolCallId: 'tool-call-1', actionId: 'append_spec_evidence', input: { changeId: 'change-1' } }] }, { content: 'Evidence recorded.' }]),
+      providerCredentialResolver: defaultCredentialResolver,
+      actionExecutor: new FakeActionExecutor([appendSpecEvidenceAction], async (input) =>
+        createActionResult({
+          actionCallId: input.call.id,
+          output: {
+            changeId: 'change-1',
+            runs: ['run-1'],
+            approvals: ['approval-1'],
+            changedFiles: ['packages/core/src/run-engine.ts'],
+            validation: ['pnpm typecheck passed'],
+            benchmarkObservations: [],
+          },
+        }),
+      ),
+      policy: new FakePolicy(() => ({ effect: 'allow' })),
+      now: () => '2026-04-29T10:00:00.000Z',
+      createId: createSequentialId(),
+    })
+
+    const handle = await engine.startRun(createRunInput({ prompt: 'Record spec validation evidence.' }))
+
+    await waitForCondition(() => store.runs.get(handle.runId)?.status === 'completed')
+
+    expect(store.memoryProposals).toEqual([
+      expect.objectContaining({
+        category: 'workflow',
+        content: 'Validation evidence used in this workspace: pnpm typecheck passed.',
+        evidence: expect.arrayContaining([
+          expect.stringMatching(/^event:spec\.evidence_appended:/),
+          'file:packages/core/src/run-engine.ts',
+          'validation:pnpm typecheck passed',
+        ]),
+        runId: handle.runId,
+        status: 'pending',
+      }),
+    ])
+    expect(store.events.map((event) => event.type)).toContain('memory.proposal_created')
+  })
+
   it('cancels the run when approval is rejected', async () => {
     const store = new FakeStore()
     store.settings = {
