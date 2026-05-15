@@ -20,6 +20,7 @@ import {
   runEventSchema,
   exportRunEvidenceResultSchema,
   runCreateInputSchema,
+  skillImprovementArtifactSchema,
   startProviderOauthInputSchema,
 } from '../src'
 
@@ -160,6 +161,23 @@ describe('shared contracts', () => {
       branchName: 'spec/fix-bug',
       createdAt: '2026-04-29T10:00:00.000Z',
     })).toMatchObject({ id: 'spec-1' })
+  })
+
+  it('validates skill improvement artifacts as draft-only proposals', () => {
+    expect(skillImprovementArtifactSchema.parse({
+      id: 'skill-improvement-1',
+      mode: 'create',
+      title: 'Add Release Notes skill',
+      rationale: 'Repeated release note requests need a focused workflow.',
+      evidence: ['run:run-1', 'event:event-1'],
+      proposedFiles: [{
+        relativePath: '.nano/skills/release-notes/SKILL.md',
+        content: '# Release Notes\nUse git diff evidence.',
+      }],
+      patchPreview: 'diff --git a/.nano/skills/release-notes/SKILL.md b/.nano/skills/release-notes/SKILL.md',
+      approvalRequiredForWrite: true,
+      createdAt: '2026-04-29T10:00:00.000Z',
+    })).toMatchObject({ approvalRequiredForWrite: true })
   })
 
   it('parses assistant and tool messages with tool metadata', () => {

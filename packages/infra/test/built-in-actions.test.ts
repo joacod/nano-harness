@@ -447,6 +447,45 @@ describe('BuiltInActionExecutor', () => {
     })
   })
 
+  it('creates draft skill improvement artifacts without mutating skill files', async () => {
+    const rootPath = await createWorkspace()
+    const executor = createExecutor()
+    const result = await executor.execute(
+      createExecutionInput({
+        actionId: 'create_skill_improvement_artifact',
+        settings: { ...workspaceSettings, workspace: { ...workspaceSettings.workspace, rootPath } },
+        input: {
+          title: 'Add release notes workflow skill',
+          mode: 'create',
+          rationale: 'Repeated release note tasks need a focused evidence workflow.',
+          evidence: ['run:run-1', 'validation:pnpm typecheck passed'],
+          skillName: 'Release Notes',
+          description: 'Draft release notes from local git evidence.',
+          triggers: ['release', 'changelog'],
+          tools: ['git_diff', 'read_file'],
+          safetyNotes: ['Do not invent user-facing changes.'],
+          body: '# Release Notes\nUse git diff and changed files as evidence.',
+        },
+      }),
+    )
+
+    expect(result).toMatchObject({
+      status: 'completed',
+      output: {
+        liveMutationApplied: false,
+        approvalRequiredForWrite: true,
+        artifact: {
+          mode: 'create',
+          approvalRequiredForWrite: true,
+          proposedFiles: [{
+            relativePath: '.nano/skills/release-notes/SKILL.md',
+            content: expect.stringContaining('name: Release Notes'),
+          }],
+        },
+      },
+    })
+  })
+
   it('creates spec and draft PR artifacts without remote push', async () => {
     const rootPath = await createWorkspace()
     const executor = createExecutor()

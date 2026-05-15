@@ -1,4 +1,4 @@
-import { benchmarkRunSummarySchema, draftPrArtifactSchema, harnessChangeManifestSchema, harnessComponentRegistry, implementationSpecSchema, specArtifactKindSchema, specEvidencePacketSchema, specTaskStatusSchema, type SpecArtifactKind } from '@nano-harness/shared'
+import { benchmarkRunSummarySchema, draftPrArtifactSchema, harnessChangeManifestSchema, harnessComponentRegistry, implementationSpecSchema, skillImprovementArtifactSchema, specArtifactKindSchema, specEvidencePacketSchema, specTaskStatusSchema, type SpecArtifactKind } from '@nano-harness/shared'
 
 import { SpecWorkspaceService } from '../spec-workspace'
 
@@ -57,6 +57,42 @@ function parseDraftPrInput(value: Record<string, unknown>) {
   return { spec, changedFiles, validationOutputs, evidenceLinks }
 }
 
+function parseSkillImprovementInput(value: Record<string, unknown>): {
+  title: string
+  mode: 'create' | 'update'
+  targetSkillId?: string
+  rationale: string
+  evidence: string[]
+  skillName: string
+  description: string
+  triggers: string[]
+  tools: string[]
+  safetyNotes: string[]
+  body: string
+} {
+  const mode = value.mode === 'update' ? 'update' : 'create'
+  const title = parseString(value.title, 'title')
+  const targetSkillId = parseOptionalString(value.targetSkillId, 'targetSkillId')
+  const rationale = parseString(value.rationale, 'rationale')
+  const evidence = parseStringArray(value.evidence, 'evidence') ?? []
+  const skillName = parseString(value.skillName, 'skillName')
+  const description = parseString(value.description, 'description')
+  const triggers = parseStringArray(value.triggers, 'triggers') ?? []
+  const tools = parseStringArray(value.tools, 'tools') ?? []
+  const safetyNotes = parseStringArray(value.safetyNotes, 'safetyNotes') ?? []
+  const body = parseString(value.body, 'body')
+
+  if (mode === 'update' && !targetSkillId) {
+    throw new Error('targetSkillId is required when updating a skill')
+  }
+
+  if (evidence.length === 0) {
+    throw new Error('evidence must include at least one evidence link')
+  }
+
+  return { title, mode, targetSkillId, rationale, evidence, skillName, description, triggers, tools, safetyNotes, body }
+}
+
 function parseBoolean(value: unknown): boolean {
   return value === true
 }
@@ -103,6 +139,32 @@ function parseArtifactKind(value: unknown): SpecArtifactKind {
 
 function slugifyBranchName(value: string): string {
   return `spec/${value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 48) || 'task'}`
+}
+
+function slugifySkillId(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'skill'
+}
+
+function renderSkillMarkdown(input: {
+  skillName: string
+  description: string
+  triggers: string[]
+  tools: string[]
+  safetyNotes: string[]
+  body: string
+}): string {
+  return [
+    '---',
+    `name: ${input.skillName}`,
+    `description: ${input.description}`,
+    `triggers: ${input.triggers.join(', ')}`,
+    `tools: ${input.tools.join(', ')}`,
+    `safety: ${input.safetyNotes.join(', ')}`,
+    '---',
+    '',
+    input.body.trim(),
+    '',
+  ].join('\n')
 }
 
 export const artifactActionCommands: BuiltInActionCommand[] = [
@@ -384,6 +446,66 @@ export const artifactActionCommands: BuiltInActionCommand[] = [
         actionCallId: input.call.id,
         status: 'completed',
         output: comparison,
+      })
+    },
+  },
+  {
+    definition: {
+      id: 'create_skill_improvement_artifact',
+      title: 'Create Skill Improvement Artifact',
+      description: 'Create a draft skill patch or new skill folder proposal without mutating live skill files',
+      requiresApproval: false,
+      inputSchema: {
+        type: 'object',
+        properties: {
+          title: { type: 'string' },
+          mode: { type: 'string' },
+          targetSkillId: { type: 'string' },
+          rationale: { type: 'string' },
+          evidence: { type: 'array', items: { type: 'string' } },
+          skillName: { type: 'string' },
+          description: { type: 'string' },
+          triggers: { type: 'array', items: { type: 'string' } },
+          tools: { type: 'array', items: { type: 'string' } },
+          safetyNotes: { type: 'array', items: { type: 'string' } },
+          body: { type: 'string' },
+        },
+        required: ['title', 'rationale', 'evidence', 'skillName', 'description', 'body'],
+        additionalProperties: false,
+      },
+    },
+    async execute(input) {
+      const parsedInput = parseSkillImprovementInput(input.call.input)
+      const skillId = parsedInput.targetSkillId ?? slugifySkillId(parsedInput.skillName)
+      const relativePath = `.nano/skills/${skillId}/SKILL.md`
+      const content = renderSkillMarkdown(parsedInput)
+      const artifact = skillImprovementArtifactSchema.parse({
+        id: `skill-improvement-${input.call.id}`,
+        mode: parsedInput.mode,
+        targetSkillId: parsedInput.targetSkillId,
+        title: parsedInput.title,
+        rationale: parsedInput.rationale,
+        evidence: parsedInput.evidence,
+        proposedFiles: [{ relativePath, content }],
+        patchPreview: [
+          `diff --git a/${relativePath} b/${relativePath}`,
+          parsedInput.mode === 'create' ? 'new file mode 100644' : `--- a/${relativePath}`,
+          `+++ b/${relativePath}`,
+          '@@ proposed SKILL.md @@',
+          content,
+        ].join('\n'),
+        approvalRequiredForWrite: true,
+        createdAt: new Date().toISOString(),
+      })
+
+      return createActionResult({
+        actionCallId: input.call.id,
+        status: 'completed',
+        output: {
+          artifact,
+          liveMutationApplied: false,
+          approvalRequiredForWrite: true,
+        },
       })
     },
   },
