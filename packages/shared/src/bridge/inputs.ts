@@ -1,7 +1,9 @@
 import { z } from 'zod'
 
 import { approvalResolutionSchema } from '../approvals'
+import { agentRoleSchema } from '../roles'
 import { providerAuthMethodSchema, providerKeySchema } from '../settings'
+import { specArtifactKindSchema } from '../spec'
 
 export const providerCredentialInputSchema = z.object({
   provider: providerKeySchema,
@@ -54,6 +56,30 @@ export const getConversationInputSchema = z.object({
 })
 
 export type GetConversationInput = z.infer<typeof getConversationInputSchema>
+
+export const specChangeInputSchema = z.object({
+  changeId: z.string().min(1),
+})
+
+export type SpecChangeInput = z.infer<typeof specChangeInputSchema>
+
+export const readSpecArtifactInputSchema = z.object({
+  changeId: z.string().min(1).optional(),
+  artifactKind: specArtifactKindSchema,
+  relativePath: z.string().min(1).optional(),
+})
+
+export type ReadSpecArtifactInput = z.infer<typeof readSpecArtifactInputSchema>
+
+export const startSpecRunInputSchema = z.object({
+  conversationId: z.string().min(1),
+  changeId: z.string().min(1),
+  role: agentRoleSchema,
+  taskIds: z.array(z.string().min(1)).optional(),
+  workflowIntent: z.enum(['propose', 'plan', 'build', 'verify', 'archive']).optional(),
+})
+
+export type StartSpecRunInput = z.infer<typeof startSpecRunInputSchema>
 
 export const openExternalUrlInputSchema = z.object({
   url: z.url(),

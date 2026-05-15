@@ -110,6 +110,73 @@ describe('RunInspectorCard', () => {
     expect(items[1].textContent).toContain('Run started')
   })
 
+  it('links spec workflow events back to the workbench', () => {
+    window.desktop = createDesktopMock()
+
+    renderWithQueryClient(
+      <RunInspectorCard
+        run={createRun({ status: 'completed', startedAt: '2026-04-29T10:01:00.000Z' })}
+        events={[
+          event('spec.artifact_written', {
+            changeId: 'add-spec-workbench',
+            artifactKind: 'proposal',
+            path: '.nano/specs/changes/add-spec-workbench/proposal.md',
+          }),
+        ]}
+        pendingApproval={null}
+        streamingState={null}
+        onEvidenceExported={() => undefined}
+        onEvidenceExportError={() => undefined}
+      />,
+    )
+
+    expect(screen.getByRole('link', { name: 'Open in Specs' }).getAttribute('href')).toBe('/specs/add-spec-workbench')
+  })
+
+  it('shows recalled memory and pending suggestions in the inspector', () => {
+    window.desktop = createDesktopMock()
+
+    renderWithQueryClient(
+      <RunInspectorCard
+        run={createRun({ status: 'completed', startedAt: '2026-04-29T10:01:00.000Z' })}
+        events={[]}
+        pendingApproval={null}
+        streamingState={null}
+        memoryRecords={{
+          records: [{
+            id: 'memory-1',
+            category: 'workflow',
+            content: 'Run typecheck after renderer edits.',
+            source: 'proposal:proposal-1',
+            runId: 'run-1',
+            confidence: 0.8,
+            createdAt: '2026-04-29T10:00:00.000Z',
+            updatedAt: '2026-04-29T10:05:00.000Z',
+          }],
+        }}
+        memoryProposals={{
+          proposals: [{
+            id: 'proposal-2',
+            runId: 'run-1',
+            category: 'workflow',
+            content: 'Validate spec tasks before marking them done.',
+            rationale: 'Spec evidence was appended during this run.',
+            evidence: ['validation:pnpm typecheck passed'],
+            status: 'pending',
+            createdAt: '2026-04-29T10:06:00.000Z',
+          }],
+        }}
+        onEvidenceExported={() => undefined}
+        onEvidenceExportError={() => undefined}
+      />,
+    )
+
+    expect(screen.getByText('Memory')).toBeTruthy()
+    expect(screen.getByText('Run typecheck after renderer edits.')).toBeTruthy()
+    expect(screen.getByText('Validate spec tasks before marking them done.')).toBeTruthy()
+    expect(screen.getByText('Evidence: validation:pnpm typecheck passed')).toBeTruthy()
+  })
+
   it('surfaces mutation errors from run controls', async () => {
     const user = userEvent.setup()
     const cancelRun = vi.fn(async () => {

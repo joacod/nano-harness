@@ -33,7 +33,10 @@ describe('ComposerCard', () => {
 
   it('shows a validation error for blank prompts and does not start a run', async () => {
     const user = userEvent.setup()
-    const startRun = vi.fn(async (_input: RunCreateInput) => ({ runId: 'run-1' }))
+    const startRun = vi.fn(async (input: RunCreateInput) => {
+      void input
+      return { runId: 'run-1' }
+    })
 
     window.desktop = createDesktopMock({
       getProviderStatus: async () => createProviderStatus({ isReady: false, issues: ['Missing key'] }),
@@ -51,7 +54,10 @@ describe('ComposerCard', () => {
 
   it('trims prompts, starts a run, invalidates queries, and navigates to the conversation', async () => {
     const user = userEvent.setup()
-    const startRun = vi.fn(async (_input: RunCreateInput) => ({ runId: 'run-1' }))
+    const startRun = vi.fn(async (input: RunCreateInput) => {
+      void input
+      return { runId: 'run-1' }
+    })
     vi.stubGlobal('crypto', { randomUUID: () => 'uuid-123' })
 
     window.desktop = createDesktopMock({
@@ -89,7 +95,10 @@ describe('ComposerCard', () => {
 
   it('routes selected Plan mode to plan role runs', async () => {
     const user = userEvent.setup()
-    const startRun = vi.fn(async () => ({ runId: 'run-1' }))
+    const startRun = vi.fn(async (input: RunCreateInput) => {
+      void input
+      return { runId: 'run-1' }
+    })
     vi.stubGlobal('crypto', { randomUUID: () => 'uuid-123' })
     window.desktop = createDesktopMock({
       getProviderStatus: async () => createProviderStatus(),
@@ -114,7 +123,10 @@ describe('ComposerCard', () => {
 
   it('routes selected Review mode to review role runs', async () => {
     const user = userEvent.setup()
-    const startRun = vi.fn(async () => ({ runId: 'run-1' }))
+    const startRun = vi.fn(async (input: RunCreateInput) => {
+      void input
+      return { runId: 'run-1' }
+    })
     vi.stubGlobal('crypto', { randomUUID: () => 'uuid-123' })
     window.desktop = createDesktopMock({
       getProviderStatus: async () => createProviderStatus(),
@@ -139,7 +151,10 @@ describe('ComposerCard', () => {
 
   it('routes selected Spec mode through a bounded plan prompt', async () => {
     const user = userEvent.setup()
-    const startRun = vi.fn(async (_input: RunCreateInput) => ({ runId: 'run-1' }))
+    const startRun = vi.fn(async (input: RunCreateInput) => {
+      void input
+      return { runId: 'run-1' }
+    })
     vi.stubGlobal('crypto', { randomUUID: () => 'uuid-123' })
     window.desktop = createDesktopMock({
       getProviderStatus: async () => createProviderStatus(),

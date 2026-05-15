@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import path from 'node:path'
 
 import { createDefaultProviderSettings, type AppSettings } from '@nano-harness/shared'
 
@@ -13,9 +14,8 @@ const settings: AppSettings = {
         id: 'docs',
         label: 'Docs Server',
         enabled: true,
-        transport: 'stdio',
-        command: 'docs-mcp',
-        args: [],
+        transport: 'http',
+        url: 'https://example.com/mcp',
         allowedTools: ['search_docs'],
         allowedResources: ['docs://intro'],
         staticResources: [
@@ -83,6 +83,55 @@ describe('ConfiguredMcpRegistry', () => {
     })
     await expect(registry.readResource({ settings, serverId: 'docs', uri: 'docs://secret' })).rejects.toThrow('not allowed')
   })
+
+  it('lists and reads allow-listed live stdio MCP resources and tools', async () => {
+    const liveSettings = createLiveMcpSettings()
+    const registry = new ConfiguredMcpRegistry()
+    const inventory = await registry.getInventory(liveSettings)
+
+    expect(inventory.tools.map((tool) => tool.name)).toEqual(['search_docs'])
+    expect(inventory.resources.map((resource) => resource.uri)).toEqual(['docs://live'])
+    await expect(registry.readResource({ settings: liveSettings, serverId: 'live-docs', uri: 'docs://live' })).resolves.toMatchObject({
+      content: '# Live Docs',
+      mimeType: 'text/markdown',
+    })
+  })
+
+  it('reports live stdio inventory failures without hiding static inventory', async () => {
+    const registry = new ConfiguredMcpRegistry()
+    const inventory = await registry.getInventory({
+      ...settings,
+      mcp: {
+        servers: [{
+          id: 'broken-docs',
+          label: 'Broken Docs Server',
+          enabled: true,
+          transport: 'stdio',
+          command: path.join(process.cwd(), 'missing-mcp-server'),
+          args: [],
+          allowedTools: ['search_docs'],
+          allowedResources: ['docs://intro'],
+          staticResources: [{
+            serverId: 'broken-docs',
+            uri: 'docs://intro',
+            name: 'Intro',
+            content: '# Intro',
+          }],
+          staticTools: [{ serverId: 'broken-docs', name: 'search_docs' }],
+        }],
+      },
+    })
+
+    expect(inventory.servers).toEqual([
+      expect.objectContaining({
+        id: 'broken-docs',
+        status: 'unavailable',
+        statusMessage: expect.stringContaining('spawn'),
+      }),
+    ])
+    expect(inventory.resources.map((resource) => resource.uri)).toEqual(['docs://intro'])
+    expect(inventory.tools.map((tool) => tool.name)).toEqual(['search_docs'])
+  })
 })
 
 describe('McpActionExecutor', () => {
@@ -111,4 +160,46 @@ describe('McpActionExecutor', () => {
 
     expect(result).toMatchObject({ status: 'completed', output: { content: '# Intro' } })
   })
+
+  it('invokes allow-listed live stdio MCP tools through the action executor', async () => {
+    const executor = new McpActionExecutor(new ConfiguredMcpRegistry())
+    const result = await executor.execute({
+      run: { id: 'run-1', conversationId: 'conversation-1', status: 'started', role: 'build', createdAt: '2026-04-29T10:00:00.000Z' },
+      action: (await executor.getDefinition('invoke_mcp_tool'))!,
+      call: {
+        id: 'call-1',
+        runId: 'run-1',
+        actionId: 'invoke_mcp_tool',
+        input: { serverId: 'live-docs', toolName: 'search_docs', arguments: { query: 'intro' } },
+        requestedAt: '2026-04-29T10:00:00.000Z',
+      },
+      settings: createLiveMcpSettings(),
+      signal: new AbortController().signal,
+    })
+
+    expect(result).toMatchObject({
+      status: 'completed',
+      output: { serverId: 'live-docs', toolName: 'search_docs', output: { content: [{ type: 'text', text: 'searched:intro' }] } },
+    })
+  })
 })
+
+function createLiveMcpSettings(): AppSettings {
+  return {
+    ...settings,
+    mcp: {
+      servers: [{
+        id: 'live-docs',
+        label: 'Live Docs Server',
+        enabled: true,
+        transport: 'stdio',
+        command: process.execPath,
+        args: [path.join(process.cwd(), 'packages/infra/test/fixtures/fake-mcp-server.cjs')],
+        allowedTools: ['search_docs'],
+        allowedResources: ['docs://live'],
+        staticResources: [],
+        staticTools: [],
+      }],
+    },
+  }
+}

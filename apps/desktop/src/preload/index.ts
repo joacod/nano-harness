@@ -22,15 +22,23 @@ import {
   memoryRecordListSchema,
   resolveApprovalInputSchema,
   resolveMemoryProposalInputSchema,
+  readSpecArtifactInputSchema,
   runCreateInputSchema,
   runEventSchema,
   runIdInputSchema,
+  sessionCompactionListSchema,
+  sessionCompactionResultSchema,
   sessionExportResultSchema,
   sessionInputSchema,
   sessionListSchema,
   sessionMutationResultSchema,
   saveProviderAuthInputSchema,
   showItemInFolderInputSchema,
+  specArtifactReadResultSchema,
+  specChangeDetailResultSchema,
+  specChangeInputSchema,
+  specChangeListSchema,
+  startSpecRunInputSchema,
   startProviderOauthInputSchema,
   startProviderOauthResultSchema,
   startRunResultSchema,
@@ -65,6 +73,21 @@ const desktopApi: DesktopApi = {
   async resolveMemoryProposal(input) {
     const payload = resolveMemoryProposalInputSchema.parse(input)
     await ipcRenderer.invoke(desktopBridgeChannels.resolveMemoryProposal, payload)
+  },
+  async listSpecChanges() {
+    return specChangeListSchema.parse(await ipcRenderer.invoke(desktopBridgeChannels.listSpecChanges))
+  },
+  async getSpecChange(input) {
+    const payload = specChangeInputSchema.parse(input)
+    return specChangeDetailResultSchema.parse(await ipcRenderer.invoke(desktopBridgeChannels.getSpecChange, payload))
+  },
+  async readSpecArtifact(input) {
+    const payload = readSpecArtifactInputSchema.parse(input)
+    return specArtifactReadResultSchema.parse(await ipcRenderer.invoke(desktopBridgeChannels.readSpecArtifact, payload))
+  },
+  async startSpecRun(input) {
+    const payload = startSpecRunInputSchema.parse(input)
+    return startRunResultSchema.parse(await ipcRenderer.invoke(desktopBridgeChannels.startSpecRun, payload))
   },
   async getProviderCredentialStatus(input) {
     const payload = providerCredentialInputSchema.parse(input)
@@ -114,6 +137,14 @@ const desktopApi: DesktopApi = {
   async cloneSession(input) {
     const payload = sessionInputSchema.parse(input)
     return sessionMutationResultSchema.parse(await ipcRenderer.invoke(desktopBridgeChannels.cloneSession, payload))
+  },
+  async listSessionCompactions(input) {
+    const payload = sessionInputSchema.parse(input)
+    return sessionCompactionListSchema.parse(await ipcRenderer.invoke(desktopBridgeChannels.listSessionCompactions, payload))
+  },
+  async compactSession(input) {
+    const payload = sessionInputSchema.parse(input)
+    return sessionCompactionResultSchema.parse(await ipcRenderer.invoke(desktopBridgeChannels.compactSession, payload))
   },
   async exportSession(input) {
     const payload = sessionInputSchema.parse(input)

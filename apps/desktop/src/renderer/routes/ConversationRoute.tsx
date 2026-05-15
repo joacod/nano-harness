@@ -7,7 +7,7 @@ import { ChatTranscript } from '../components/ChatTranscript'
 import { SessionLayout } from '../components/SessionLayout'
 import { SessionTelemetry } from '../components/SessionTelemetry'
 import { Card, FeedbackText, Toast, type ToastMessage } from '../components/ui'
-import { conversationQueryOptions } from '../queries'
+import { conversationQueryOptions, memoryProposalsQueryOptions, memoryRecordsQueryOptions, sessionCompactionsQueryOptions } from '../queries'
 import { useRuntimeUi, useTechnicalUi } from '../runtime-ui'
 import { getFileName } from '../utils/files'
 import { getLatestConversationPendingApproval, getPendingApproval, mergeRunEvents } from '../utils/run-events'
@@ -18,6 +18,18 @@ export function ConversationRoute() {
   const queryClient = useQueryClient()
   const { advancedSettings, isAdvancedUiActive } = useTechnicalUi()
   const snapshotQuery = useQuery(conversationQueryOptions(conversationId))
+  const memoryRecordsQuery = useQuery({
+    ...memoryRecordsQueryOptions,
+    enabled: isAdvancedUiActive && advancedSettings.telemetrySidebar,
+  })
+  const memoryProposalsQuery = useQuery({
+    ...memoryProposalsQueryOptions,
+    enabled: isAdvancedUiActive && advancedSettings.telemetrySidebar,
+  })
+  const sessionCompactionsQuery = useQuery({
+    ...sessionCompactionsQueryOptions(conversationId),
+    enabled: isAdvancedUiActive && advancedSettings.telemetrySidebar,
+  })
   const { liveRunEvents, streamingRuns } = useRuntimeUi()
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null)
   const [toast, setToast] = useState<ToastMessage | null>(null)
@@ -158,6 +170,19 @@ export function ConversationRoute() {
     },
     onError: (error) => showSessionActionToast(error, setToast),
   })
+  const compactSessionMutation = useMutation({
+    mutationFn: async () => window.desktop.compactSession({ sessionId: conversationId }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['session-compactions', conversationId] })
+      setToast({
+        id: `session-compaction-${Date.now()}`,
+        title: 'Session compacted',
+        message: 'Saved a local compaction record for this session.',
+        variant: 'success',
+      })
+    },
+    onError: (error) => showSessionActionToast(error, setToast),
+  })
 
   if (snapshotQuery.isError) {
     return (
@@ -189,7 +214,7 @@ export function ConversationRoute() {
         title={snapshotQuery.data?.conversation?.title ?? 'Loading conversation…'}
         transcriptRef={transcriptPanelRef}
         onTranscriptScroll={handleTranscriptScroll}
-        isSessionActionPending={forkSessionMutation.isPending || cloneSessionMutation.isPending || exportSessionMutation.isPending}
+        isSessionActionPending={forkSessionMutation.isPending || cloneSessionMutation.isPending || exportSessionMutation.isPending || compactSessionMutation.isPending}
         onForkSession={() => forkSessionMutation.mutate()}
         onCloneSession={() => cloneSessionMutation.mutate()}
         onExportSession={() => exportSessionMutation.mutate()}
@@ -216,6 +241,11 @@ export function ConversationRoute() {
             selectedRun={selectedRun}
             selectedRunEvents={selectedRunEvents}
             pendingApproval={pendingApproval}
+            memoryRecords={memoryRecordsQuery.data ?? null}
+            memoryProposals={memoryProposalsQuery.data ?? null}
+            compactions={sessionCompactionsQuery.data ?? null}
+            isCompacting={compactSessionMutation.isPending}
+            onCompactSession={() => compactSessionMutation.mutate()}
             streamingState={selectedRun ? streamingRuns[selectedRun.id] ?? null : null}
             onRunEvidenceExported={(result) => {
               setToast({

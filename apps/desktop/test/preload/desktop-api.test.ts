@@ -126,6 +126,29 @@ describe('desktop preload bridge', () => {
     expect(invoke).toHaveBeenNthCalledWith(2, desktopBridgeChannels.cloneSession, { sessionId: 'session-1' })
   })
 
+  it('validates spec bridge payloads and parses spec responses', async () => {
+    invoke
+      .mockResolvedValueOnce({ changes: [] })
+      .mockResolvedValueOnce({ change: null })
+      .mockResolvedValueOnce({ kind: 'proposal', path: '.nano/specs/changes/change-1/proposal.md', content: '# Proposal\n' })
+      .mockResolvedValueOnce({ runId: 'run-1' })
+    const desktop = await loadDesktopApi()
+
+    await expect(desktop.listSpecChanges()).resolves.toEqual({ changes: [] })
+    await expect(desktop.getSpecChange({ changeId: 'change-1' })).resolves.toEqual({ change: null })
+    await expect(desktop.readSpecArtifact({ changeId: 'change-1', artifactKind: 'proposal' })).resolves.toMatchObject({
+      kind: 'proposal',
+      content: '# Proposal\n',
+    })
+    await expect(desktop.startSpecRun({ conversationId: 'conversation-1', changeId: 'change-1', role: 'plan' })).resolves.toEqual({ runId: 'run-1' })
+
+    expect(invoke).toHaveBeenNthCalledWith(1, desktopBridgeChannels.listSpecChanges)
+    expect(invoke).toHaveBeenNthCalledWith(2, desktopBridgeChannels.getSpecChange, { changeId: 'change-1' })
+    expect(invoke).toHaveBeenNthCalledWith(3, desktopBridgeChannels.readSpecArtifact, { changeId: 'change-1', artifactKind: 'proposal' })
+    expect(invoke).toHaveBeenNthCalledWith(4, desktopBridgeChannels.startSpecRun, { conversationId: 'conversation-1', changeId: 'change-1', role: 'plan' })
+    await expect(desktop.readSpecArtifact({ changeId: 'change-1', artifactKind: 'unknown' as 'proposal' })).rejects.toThrow()
+  })
+
   it('subscribes to parsed run events and unsubscribes correctly', async () => {
     const desktop = await loadDesktopApi()
     const listener = vi.fn()

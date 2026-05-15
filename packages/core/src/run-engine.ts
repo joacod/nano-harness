@@ -1,6 +1,7 @@
 import type {
   AppSettings,
   ApprovalResolution,
+  MemoryCategory,
   MemoryProposal,
   Message,
   Run,
@@ -99,6 +100,75 @@ function deriveConversationTitle(prompt: string): string {
 
 function isAbortError(error: unknown): boolean {
   return error instanceof Error && error.name === 'AbortError'
+}
+
+function collectMemoryEvidence(events: RunEvent[], editedActions: Array<Extract<RunEvent, { type: 'action.requested' }>['payload']['actionCall']>): {
+  category: MemoryCategory
+  content: string
+  rationale: string
+  evidenceLinks: string[]
+} {
+  const obligations = events.filter((event): event is Extract<RunEvent, { type: 'obligation.created' }> => event.type === 'obligation.created')
+  const specEvidenceEvents = events.filter((event): event is Extract<RunEvent, { type: 'spec.evidence_appended' }> => event.type === 'spec.evidence_appended')
+  const validationOutputs = uniqueStrings(specEvidenceEvents.flatMap((event) => event.payload.evidence.validationOutputs))
+  const benchmarkObservations = uniqueStrings(specEvidenceEvents.flatMap((event) => event.payload.evidence.benchmarkObservations))
+  const changedFiles = uniqueStrings([
+    ...obligations.flatMap((event) => event.payload.obligation.changedFiles),
+    ...specEvidenceEvents.flatMap((event) => event.payload.evidence.changedFiles),
+  ])
+  const validationCommands = uniqueStrings(obligations.flatMap((event) => event.payload.obligation.validationCommands))
+  const evidenceLinks = uniqueStrings([
+    ...obligations.map((event) => `event:${event.type}:${event.id}`),
+    ...specEvidenceEvents.map((event) => `event:${event.type}:${event.id}`),
+    ...editedActions.map((actionCall) => `action:${actionCall.actionId}:${actionCall.id}`),
+    ...changedFiles.map((filePath) => `file:${filePath}`),
+    ...validationOutputs.map((output) => `validation:${output}`),
+    ...benchmarkObservations.map((observation) => `benchmark:${observation}`),
+  ])
+
+  if (benchmarkObservations.length > 0) {
+    return {
+      category: 'benchmark_observation',
+      content: `Benchmark observation: ${benchmarkObservations[0]}`,
+      rationale: 'This run appended benchmark evidence to a spec change; approval keeps the observation durable without writing memory automatically.',
+      evidenceLinks,
+    }
+  }
+
+  if (validationOutputs.length > 0) {
+    return {
+      category: 'workflow',
+      content: `Validation evidence used in this workspace: ${validationOutputs.slice(0, 3).join('; ')}.`,
+      rationale: 'This run recorded validation evidence for a spec workflow; approval can preserve the validation pattern for future runs.',
+      evidenceLinks,
+    }
+  }
+
+  if (obligations.length > 0 || editedActions.length > 0) {
+    return {
+      category: 'workflow',
+      content: validationCommands.length > 0
+        ? `After edits, validate with: ${validationCommands.slice(0, 3).join('; ')}.`
+        : 'After file edits, run the relevant validation command before considering the task complete.',
+      rationale: 'This run created validation obligations after local edits; approval keeps the workflow guidance durable instead of writing memory automatically.',
+      evidenceLinks,
+    }
+  }
+
+  return {
+    category: 'workflow',
+    content: '',
+    rationale: '',
+    evidenceLinks: [],
+  }
+}
+
+function uniqueStrings(values: string[]): string[] {
+  return [...new Set(values.filter((value) => value.trim().length > 0))]
+}
+
+function normalizeMemoryProposalContent(value: string): string {
+  return value.toLowerCase().replace(/\s+/g, ' ').trim()
 }
 
 export class CoreRunEngine implements RunEngine {
@@ -553,27 +623,51 @@ export class CoreRunEngine implements RunEngine {
   }
 
   private async createPostRunMemoryProposal(run: Run): Promise<void> {
-    const events = await this.store.listRunEvents(run.id)
-    const requestedActions = events.flatMap((event) => event.type === 'action.requested' ? [event.payload.actionCall] : [])
-    const editedActions = requestedActions.filter((actionCall) => actionCall.actionId === 'write_file' || actionCall.actionId === 'apply_patch')
+    const settings = await this.requireSettings()
 
-    if (editedActions.length === 0) {
+    if (settings.memory?.enabled === false) {
       return
     }
 
-    const alreadyProposed = (await this.store.listMemoryProposals()).some((proposal) => proposal.runId === run.id)
+    const events = await this.store.listRunEvents(run.id)
+    const requestedActions = events.flatMap((event) => event.type === 'action.requested' ? [event.payload.actionCall] : [])
+    const editedActions = requestedActions.filter((actionCall) => actionCall.actionId === 'write_file' || actionCall.actionId === 'apply_patch')
+    const evidence = collectMemoryEvidence(events, editedActions)
+
+    if (evidence.evidenceLinks.length === 0) {
+      return
+    }
+
+    const existingProposals = await this.store.listMemoryProposals()
+    const alreadyProposed = existingProposals.some((proposal) => proposal.runId === run.id)
 
     if (alreadyProposed) {
+      return
+    }
+
+    if (settings.memory?.enabledCategories && !settings.memory.enabledCategories.includes(evidence.category)) {
+      return
+    }
+
+    const normalizedContent = normalizeMemoryProposalContent(evidence.content)
+    const duplicateProposal = existingProposals.some((proposal) =>
+      proposal.category === evidence.category && normalizeMemoryProposalContent(proposal.content) === normalizedContent,
+    )
+    const duplicateRecord = (await this.store.listMemoryRecords()).some((record) =>
+      record.category === evidence.category && normalizeMemoryProposalContent(record.content) === normalizedContent,
+    )
+
+    if (duplicateProposal || duplicateRecord) {
       return
     }
 
     const proposal: MemoryProposal = {
       id: this.createId(),
       runId: run.id,
-      category: 'workflow',
-      content: 'After file edits, run the relevant validation command before considering the task complete.',
-      rationale: 'This run edited files; durable workflow memory is proposed for approval instead of written automatically.',
-      evidence: editedActions.map((actionCall) => `${actionCall.actionId}:${actionCall.id}`),
+      category: evidence.category,
+      content: evidence.content,
+      rationale: evidence.rationale,
+      evidence: evidence.evidenceLinks,
       status: 'pending',
       createdAt: this.now(),
     }

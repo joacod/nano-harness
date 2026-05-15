@@ -2,13 +2,16 @@ import { describe, expect, it } from 'vitest'
 
 import {
   appSettingsSchema,
+  benchmarkRunArtifactSchema,
   clearProviderAuthInputSchema,
   getProviderDefinition,
+  harnessPromotionArtifactSchema,
   harnessChangeManifestSchema,
   harnessComponentRegistrySchema,
   implementationSpecSchema,
   createSpecWorkflowPrompt,
   messageSchema,
+  mcpInventorySchema,
   mcpServerSettingsSchema,
   providerAdapterIdSchema,
   providerDefaultModels,
@@ -20,6 +23,8 @@ import {
   runEventSchema,
   exportRunEvidenceResultSchema,
   runCreateInputSchema,
+  sessionCompactionResultSchema,
+  skillImprovementArtifactSchema,
   startProviderOauthInputSchema,
 } from '../src'
 
@@ -144,6 +149,55 @@ describe('shared contracts', () => {
     })).toMatchObject({ id: 'change-1' })
   })
 
+  it('validates harness promotion artifacts as benchmark-gated and non-mutating', () => {
+    expect(harnessPromotionArtifactSchema.parse({
+      manifest: {
+        id: 'change-1',
+        title: 'Improve validation reminder',
+        rootCause: 'Benchmark runs completed edits without validation.',
+        proposedFix: 'Update build instructions to require targeted validation after edits.',
+        predictedEffect: 'Higher benchmark validation pass rate.',
+        affectedComponents: ['core.instructions'],
+        evidence: ['run evidence export: validation missing'],
+        benchmarkSuites: ['local'],
+        tests: ['pnpm test'],
+        rollbackPlan: 'Revert the instruction text change.',
+        patchPreview: 'diff --git a/packages/core/src/instructions.ts b/packages/core/src/instructions.ts',
+        createdAt: '2026-04-29T10:00:00.000Z',
+      },
+      benchmarkComparison: {
+        before: { suite: 'local', passed: 2, failed: 1, score: 0.66 },
+        after: { suite: 'local', passed: 3, failed: 0, score: 1 },
+        passedDelta: 1,
+        failedDelta: -1,
+        scoreDelta: 0.34,
+        improved: true,
+      },
+      promotionReady: true,
+      blockers: [],
+      approvalRequiredForPromotion: true,
+      liveMutationApplied: false,
+      createdAt: '2026-04-29T10:00:00.000Z',
+    })).toMatchObject({ promotionReady: true, liveMutationApplied: false })
+  })
+
+  it('validates benchmark run artifacts as draft-only results', () => {
+    expect(benchmarkRunArtifactSchema.parse({
+      id: 'benchmark-local-1',
+      suite: 'local',
+      cases: [{ id: 'edit-and-test', title: 'Edit And Test', path: 'benchmarks/cases/edit-and-test.md' }],
+      results: [{ caseId: 'edit-and-test', status: 'passed', evidence: ['run:run-1'] }],
+      summary: { suite: 'local', passed: 1, failed: 0, score: 1 },
+      unknownCaseIds: [],
+      missingCaseIds: [],
+      evidence: ['export:run-1'],
+      outputPath: 'benchmarks/results/local.json',
+      approvalRequiredForWrite: true,
+      liveMutationApplied: false,
+      createdAt: '2026-04-29T10:00:00.000Z',
+    })).toMatchObject({ summary: { score: 1 }, liveMutationApplied: false })
+  })
+
   it('validates spec artifacts and creates spec workflow prompts', () => {
     expect(createSpecWorkflowPrompt('fix the settings crash')).toContain('fix the settings crash')
     expect(createSpecWorkflowPrompt('fix the settings crash')).toContain('Route the workflow through Plan, Build, and Review')
@@ -160,6 +214,37 @@ describe('shared contracts', () => {
       branchName: 'spec/fix-bug',
       createdAt: '2026-04-29T10:00:00.000Z',
     })).toMatchObject({ id: 'spec-1' })
+  })
+
+  it('validates skill improvement artifacts as draft-only proposals', () => {
+    expect(skillImprovementArtifactSchema.parse({
+      id: 'skill-improvement-1',
+      mode: 'create',
+      title: 'Add Release Notes skill',
+      rationale: 'Repeated release note requests need a focused workflow.',
+      evidence: ['run:run-1', 'event:event-1'],
+      proposedFiles: [{
+        relativePath: '.nano/skills/release-notes/SKILL.md',
+        content: '# Release Notes\nUse git diff evidence.',
+      }],
+      patchPreview: 'diff --git a/.nano/skills/release-notes/SKILL.md b/.nano/skills/release-notes/SKILL.md',
+      approvalRequiredForWrite: true,
+      createdAt: '2026-04-29T10:00:00.000Z',
+    })).toMatchObject({ approvalRequiredForWrite: true })
+  })
+
+  it('validates session compaction records', () => {
+    expect(sessionCompactionResultSchema.parse({
+      compaction: {
+        id: 'session-1-compaction-1',
+        sessionId: 'session-1',
+        conversationId: 'conversation-1',
+        summary: 'Compacted 2 messages across 1 run.',
+        sourceMessageCount: 2,
+        sourceRunIds: ['run-1'],
+        createdAt: '2026-04-29T10:00:00.000Z',
+      },
+    })).toMatchObject({ compaction: { sessionId: 'session-1' } })
   })
 
   it('parses assistant and tool messages with tool metadata', () => {
@@ -291,6 +376,21 @@ describe('shared contracts', () => {
   })
 
   it('validates transport-specific MCP server settings', () => {
+    expect(mcpInventorySchema.parse({
+      servers: [{
+        id: 'docs',
+        label: 'Docs Server',
+        enabled: true,
+        transport: 'stdio',
+        status: 'unavailable',
+        statusMessage: 'MCP request tools/list timed out',
+        allowedTools: [],
+        allowedResources: [],
+      }],
+      tools: [],
+      resources: [],
+    }).servers[0]).toMatchObject({ status: 'unavailable' })
+
     expect(
       mcpServerSettingsSchema.parse({
         id: 'docs',

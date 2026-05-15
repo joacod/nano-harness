@@ -1,6 +1,6 @@
 import { queryOptions } from '@tanstack/react-query'
 
-import type { AppSettings, ConversationSnapshot, ProviderCredentialStatus } from '../../../../packages/shared/src'
+import type { AppSettings, ConversationSnapshot, ProviderCredentialStatus, SessionCompactionList, SpecArtifactKind, SpecArtifactReadResult } from '../../../../packages/shared/src'
 
 export const contextQueryOptions = queryOptions({
   queryKey: ['desktop-context'],
@@ -37,8 +37,15 @@ export const memoryProposalsQueryOptions = queryOptions({
   queryFn: () => window.desktop.listMemoryProposals(),
 })
 
+export const specChangesQueryOptions = queryOptions({
+  queryKey: ['spec-changes'],
+  queryFn: () => window.desktop.listSpecChanges(),
+})
+
 type ProviderCredentialStatusQueryKey = readonly ['provider-credential-status', AppSettings['provider']['provider']]
 type ConversationQueryKey = readonly ['conversation', string]
+type SessionCompactionsQueryKey = readonly ['session-compactions', string]
+type SpecArtifactQueryKey = readonly ['spec-artifact', string | null, SpecArtifactKind, string | null]
 
 export function providerCredentialStatusQueryOptions(provider: AppSettings['provider']['provider']): ReturnType<typeof queryOptions<ProviderCredentialStatus, Error, ProviderCredentialStatus, ProviderCredentialStatusQueryKey>> {
   return queryOptions({
@@ -61,6 +68,30 @@ export function conversationQueryOptions(conversationId: string): ReturnType<typ
   return queryOptions({
     queryKey: ['conversation', conversationId] as const,
     queryFn: async (): Promise<ConversationSnapshot> => window.desktop.getConversation({ conversationId }),
+  })
+}
+
+export function sessionCompactionsQueryOptions(sessionId: string): ReturnType<typeof queryOptions<SessionCompactionList, Error, SessionCompactionList, SessionCompactionsQueryKey>> {
+  return queryOptions({
+    queryKey: ['session-compactions', sessionId] as const,
+    queryFn: async (): Promise<SessionCompactionList> => window.desktop.listSessionCompactions({ sessionId }),
+  })
+}
+
+export function specArtifactQueryOptions(input: {
+  changeId?: string
+  artifactKind: SpecArtifactKind
+  relativePath?: string
+  enabled?: boolean
+}): ReturnType<typeof queryOptions<SpecArtifactReadResult, Error, SpecArtifactReadResult, SpecArtifactQueryKey>> {
+  return queryOptions({
+    queryKey: ['spec-artifact', input.changeId ?? null, input.artifactKind, input.relativePath ?? null] as const,
+    queryFn: async (): Promise<SpecArtifactReadResult> => window.desktop.readSpecArtifact({
+      changeId: input.changeId,
+      artifactKind: input.artifactKind,
+      relativePath: input.relativePath,
+    }),
+    enabled: input.enabled ?? true,
   })
 }
 

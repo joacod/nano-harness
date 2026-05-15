@@ -12,6 +12,7 @@ import type {
   RunEvent,
   RunStatus,
   Session,
+  SessionCompaction,
   SessionExport,
 } from '@nano-harness/shared'
 
@@ -39,6 +40,8 @@ export interface Store {
   listSessions(): Promise<Session[]>
   forkSession(sessionId: string): Promise<Session>
   cloneSession(sessionId: string): Promise<Session>
+  listSessionCompactions(sessionId: string): Promise<SessionCompaction[]>
+  createSessionCompaction(sessionId: string): Promise<SessionCompaction>
   exportSession(sessionId: string): Promise<SessionExport>
   listRuns(statuses?: RunStatus[]): Promise<Run[]>
   getConversation(conversationId: string): Promise<ConversationSnapshot>

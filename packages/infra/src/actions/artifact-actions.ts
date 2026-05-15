@@ -1,9 +1,24 @@
-import { benchmarkRunSummarySchema, draftPrArtifactSchema, harnessChangeManifestSchema, harnessComponentRegistry, implementationSpecSchema, specEvidencePacketSchema } from '@nano-harness/shared'
+import { mkdir, writeFile } from 'node:fs/promises'
+import path from 'node:path'
+
+import { benchmarkCaseRegistry, benchmarkCaseResultSchema, benchmarkComparisonSchema, benchmarkRunArtifactSchema, benchmarkRunSummarySchema, draftPrArtifactSchema, harnessChangeManifestSchema, harnessComponentRegistry, harnessPromotionArtifactSchema, implementationSpecSchema, skillImprovementArtifactSchema, specArtifactKindSchema, specEvidencePacketSchema, specTaskStatusSchema, type BenchmarkRunArtifact, type SpecArtifactKind } from '@nano-harness/shared'
+
+import { SpecWorkspaceService } from '../spec-workspace'
 
 import { createActionResult, type BuiltInActionCommand } from './types'
+import { resolveWorkspacePath } from './workspace'
+
+const specWorkspaceService = new SpecWorkspaceService()
 
 function parseHarnessChangeManifestInput(value: Record<string, unknown>) {
   return harnessChangeManifestSchema.parse(value.manifest)
+}
+
+function parseHarnessPromotionInput(value: Record<string, unknown>) {
+  return {
+    manifest: harnessChangeManifestSchema.parse(value.manifest),
+    benchmarkComparison: benchmarkComparisonSchema.parse(value.benchmarkComparison),
+  }
 }
 
 function parseBenchmarkComparisonInput(value: Record<string, unknown>) {
@@ -11,6 +26,30 @@ function parseBenchmarkComparisonInput(value: Record<string, unknown>) {
     before: benchmarkRunSummarySchema.parse(value.before),
     after: benchmarkRunSummarySchema.parse(value.after),
   }
+}
+
+function parseBenchmarkRunInput(value: Record<string, unknown>) {
+  if (typeof value.suite !== 'string' || !value.suite.trim()) {
+    throw new Error('create_benchmark_run_artifact requires a non-empty suite')
+  }
+
+  return {
+    suite: value.suite.trim(),
+    results: Array.isArray(value.results) ? value.results.map((result) => benchmarkCaseResultSchema.parse(result)) : [],
+    evidence: parseStringArray(value.evidence, 'evidence'),
+  }
+}
+
+function parseWriteBenchmarkRunInput(value: Record<string, unknown>): { artifact: BenchmarkRunArtifact; path: string } {
+  const artifact = benchmarkRunArtifactSchema.parse(value.artifact)
+  const outputPath = typeof value.path === 'string' && value.path.trim() ? value.path.trim() : artifact.outputPath
+  const normalizedPath = outputPath.replace(/\\/g, '/')
+
+  if (!normalizedPath.startsWith('benchmarks/results/') || !normalizedPath.endsWith('.json')) {
+    throw new Error('write_benchmark_run_artifact path must be under benchmarks/results and end with .json')
+  }
+
+  return { artifact, path: normalizedPath }
 }
 
 function parseCreateSpecInput(value: Record<string, unknown>): {
@@ -53,11 +92,309 @@ function parseDraftPrInput(value: Record<string, unknown>) {
   return { spec, changedFiles, validationOutputs, evidenceLinks }
 }
 
+function parseSkillImprovementInput(value: Record<string, unknown>): {
+  title: string
+  mode: 'create' | 'update'
+  targetSkillId?: string
+  rationale: string
+  evidence: string[]
+  skillName: string
+  description: string
+  triggers: string[]
+  tools: string[]
+  safetyNotes: string[]
+  body: string
+} {
+  const mode = value.mode === 'update' ? 'update' : 'create'
+  const title = parseString(value.title, 'title')
+  const targetSkillId = parseOptionalString(value.targetSkillId, 'targetSkillId')
+  const rationale = parseString(value.rationale, 'rationale')
+  const evidence = parseStringArray(value.evidence, 'evidence') ?? []
+  const skillName = parseString(value.skillName, 'skillName')
+  const description = parseString(value.description, 'description')
+  const triggers = parseStringArray(value.triggers, 'triggers') ?? []
+  const tools = parseStringArray(value.tools, 'tools') ?? []
+  const safetyNotes = parseStringArray(value.safetyNotes, 'safetyNotes') ?? []
+  const body = parseString(value.body, 'body')
+
+  if (mode === 'update' && !targetSkillId) {
+    throw new Error('targetSkillId is required when updating a skill')
+  }
+
+  if (evidence.length === 0) {
+    throw new Error('evidence must include at least one evidence link')
+  }
+
+  return { title, mode, targetSkillId, rationale, evidence, skillName, description, triggers, tools, safetyNotes, body }
+}
+
+function parseBoolean(value: unknown): boolean {
+  return value === true
+}
+
+function parseString(value: unknown, fieldName: string): string {
+  if (typeof value !== 'string' || !value.trim()) {
+    throw new Error(`${fieldName} must be a non-empty string`)
+  }
+
+  return value
+}
+
+function parseStringContent(value: unknown, fieldName: string): string {
+  if (typeof value !== 'string') {
+    throw new Error(`${fieldName} must be a string`)
+  }
+
+  return value
+}
+
+function parseOptionalString(value: unknown, fieldName: string): string | undefined {
+  if (value === undefined) {
+    return undefined
+  }
+
+  return parseString(value, fieldName)
+}
+
+function parseStringArray(value: unknown, fieldName: string): string[] | undefined {
+  if (value === undefined) {
+    return undefined
+  }
+
+  if (!Array.isArray(value) || !value.every((item) => typeof item === 'string' && item.trim())) {
+    throw new Error(`${fieldName} must be an array of non-empty strings`)
+  }
+
+  return value
+}
+
+function parseArtifactKind(value: unknown): SpecArtifactKind {
+  return specArtifactKindSchema.parse(value)
+}
+
 function slugifyBranchName(value: string): string {
   return `spec/${value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 48) || 'task'}`
 }
 
+function slugifySkillId(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'skill'
+}
+
+function renderSkillMarkdown(input: {
+  skillName: string
+  description: string
+  triggers: string[]
+  tools: string[]
+  safetyNotes: string[]
+  body: string
+}): string {
+  return [
+    '---',
+    `name: ${input.skillName}`,
+    `description: ${input.description}`,
+    `triggers: ${input.triggers.join(', ')}`,
+    `tools: ${input.tools.join(', ')}`,
+    `safety: ${input.safetyNotes.join(', ')}`,
+    '---',
+    '',
+    input.body.trim(),
+    '',
+  ].join('\n')
+}
+
 export const artifactActionCommands: BuiltInActionCommand[] = [
+  {
+    definition: {
+      id: 'list_spec_changes',
+      title: 'List Spec Changes',
+      description: 'List local Spec Workbench changes from .nano/specs inside the configured workspace',
+      requiresApproval: false,
+      inputSchema: {
+        type: 'object',
+        properties: {
+          includeArchived: { type: 'boolean' },
+        },
+        additionalProperties: false,
+      },
+    },
+    async execute(input) {
+      const changes = await specWorkspaceService.listChanges(input.settings.workspace.rootPath, {
+        includeArchived: parseBoolean(input.call.input.includeArchived),
+      })
+
+      return createActionResult({
+        actionCallId: input.call.id,
+        status: 'completed',
+        output: { changes },
+      })
+    },
+  },
+  {
+    definition: {
+      id: 'read_spec_artifact',
+      title: 'Read Spec Artifact',
+      description: 'Read a local spec artifact from .nano/specs inside the configured workspace',
+      requiresApproval: false,
+      inputSchema: {
+        type: 'object',
+        properties: {
+          changeId: { type: 'string' },
+          artifactKind: { type: 'string' },
+          relativePath: { type: 'string' },
+        },
+        required: ['artifactKind'],
+        additionalProperties: false,
+      },
+    },
+    async execute(input) {
+      const artifact = await specWorkspaceService.readArtifact(input.settings.workspace.rootPath, {
+        changeId: parseOptionalString(input.call.input.changeId, 'changeId'),
+        kind: parseArtifactKind(input.call.input.artifactKind),
+        relativePath: parseOptionalString(input.call.input.relativePath, 'relativePath'),
+      })
+
+      return createActionResult({
+        actionCallId: input.call.id,
+        status: 'completed',
+        output: artifact,
+      })
+    },
+  },
+  {
+    definition: {
+      id: 'write_spec_artifact',
+      title: 'Write Spec Artifact',
+      description: 'Write a local spec artifact under .nano/specs after approval',
+      requiresApproval: true,
+      inputSchema: {
+        type: 'object',
+        properties: {
+          changeId: { type: 'string' },
+          artifactKind: { type: 'string' },
+          relativePath: { type: 'string' },
+          content: { type: 'string' },
+        },
+        required: ['artifactKind', 'content'],
+        additionalProperties: false,
+      },
+    },
+    async execute(input) {
+      const artifactKind = parseArtifactKind(input.call.input.artifactKind)
+      const result = await specWorkspaceService.writeArtifact(input.settings.workspace.rootPath, {
+        changeId: parseOptionalString(input.call.input.changeId, 'changeId'),
+        kind: artifactKind,
+        relativePath: parseOptionalString(input.call.input.relativePath, 'relativePath'),
+        content: parseStringContent(input.call.input.content, 'content'),
+      })
+
+      return createActionResult({
+        actionCallId: input.call.id,
+        status: 'completed',
+        output: {
+          ...result,
+          artifactKind,
+          ...(input.call.input.changeId === undefined ? {} : { changeId: parseString(input.call.input.changeId, 'changeId') }),
+        },
+      })
+    },
+  },
+  {
+    definition: {
+      id: 'update_spec_task',
+      title: 'Update Spec Task',
+      description: 'Update one markdown task checkbox in a local spec change after approval',
+      requiresApproval: true,
+      inputSchema: {
+        type: 'object',
+        properties: {
+          changeId: { type: 'string' },
+          taskId: { type: 'string' },
+          status: { type: 'string' },
+        },
+        required: ['changeId', 'taskId', 'status'],
+        additionalProperties: false,
+      },
+    },
+    async execute(input) {
+      const result = await specWorkspaceService.updateTask(input.settings.workspace.rootPath, {
+        changeId: parseString(input.call.input.changeId, 'changeId'),
+        taskId: parseString(input.call.input.taskId, 'taskId'),
+        status: specTaskStatusSchema.parse(input.call.input.status),
+      })
+
+      return createActionResult({
+        actionCallId: input.call.id,
+        status: 'completed',
+        output: result,
+      })
+    },
+  },
+  {
+    definition: {
+      id: 'append_spec_evidence',
+      title: 'Append Spec Evidence',
+      description: 'Append run, approval, changed-file, validation, or benchmark evidence to a local spec change after approval',
+      requiresApproval: true,
+      inputSchema: {
+        type: 'object',
+        properties: {
+          changeId: { type: 'string' },
+          runs: { type: 'array', items: { type: 'string' } },
+          approvals: { type: 'array', items: { type: 'string' } },
+          changedFiles: { type: 'array', items: { type: 'string' } },
+          validation: { type: 'array', items: { type: 'string' } },
+          benchmarkObservations: { type: 'array', items: { type: 'string' } },
+        },
+        required: ['changeId'],
+        additionalProperties: false,
+      },
+    },
+    async execute(input) {
+      const evidence = await specWorkspaceService.appendEvidence(input.settings.workspace.rootPath, {
+        changeId: parseString(input.call.input.changeId, 'changeId'),
+        runs: parseStringArray(input.call.input.runs, 'runs'),
+        approvals: parseStringArray(input.call.input.approvals, 'approvals'),
+        changedFiles: parseStringArray(input.call.input.changedFiles, 'changedFiles'),
+        validation: parseStringArray(input.call.input.validation, 'validation'),
+        benchmarkObservations: parseStringArray(input.call.input.benchmarkObservations, 'benchmarkObservations'),
+        updatedAt: new Date().toISOString(),
+      })
+
+      return createActionResult({
+        actionCallId: input.call.id,
+        status: 'completed',
+        output: evidence,
+      })
+    },
+  },
+  {
+    definition: {
+      id: 'archive_spec_change',
+      title: 'Archive Spec Change',
+      description: 'Move a local spec change from .nano/specs/changes to .nano/specs/archive after approval',
+      requiresApproval: true,
+      inputSchema: {
+        type: 'object',
+        properties: {
+          changeId: { type: 'string' },
+        },
+        required: ['changeId'],
+        additionalProperties: false,
+      },
+    },
+    async execute(input) {
+      const archivedPath = await specWorkspaceService.archiveChange(input.settings.workspace.rootPath, parseString(input.call.input.changeId, 'changeId'))
+
+      return createActionResult({
+        actionCallId: input.call.id,
+        status: 'completed',
+        output: {
+          changeId: parseString(input.call.input.changeId, 'changeId'),
+          archivedPath,
+        },
+      })
+    },
+  },
   {
     definition: {
       id: 'list_harness_components',
@@ -115,6 +452,91 @@ export const artifactActionCommands: BuiltInActionCommand[] = [
   },
   {
     definition: {
+      id: 'create_benchmark_run_artifact',
+      title: 'Create Benchmark Run Artifact',
+      description: 'Create a local benchmark result artifact from tracked case outcomes without mutating benchmark files',
+      requiresApproval: false,
+      inputSchema: {
+        type: 'object',
+        properties: {
+          suite: { type: 'string' },
+          results: { type: 'array', items: { type: 'object' } },
+          evidence: { type: 'array', items: { type: 'string' } },
+        },
+        required: ['suite', 'results'],
+        additionalProperties: false,
+      },
+    },
+    async execute(input) {
+      const parsedInput = parseBenchmarkRunInput(input.call.input)
+      const knownCaseIds = new Set(benchmarkCaseRegistry.cases.map((benchmarkCase) => benchmarkCase.id))
+      const resultCaseIds = new Set(parsedInput.results.map((result) => result.caseId))
+      const passed = parsedInput.results.filter((result) => result.status === 'passed').length
+      const failed = parsedInput.results.filter((result) => result.status === 'failed').length
+      const total = passed + failed
+      const artifact = benchmarkRunArtifactSchema.parse({
+        id: `benchmark-${parsedInput.suite}-${Date.now().toString(36)}`,
+        suite: parsedInput.suite,
+        cases: benchmarkCaseRegistry.cases,
+        results: parsedInput.results,
+        summary: {
+          suite: parsedInput.suite,
+          passed,
+          failed,
+          score: total === 0 ? 0 : passed / total,
+        },
+        unknownCaseIds: parsedInput.results.map((result) => result.caseId).filter((caseId) => !knownCaseIds.has(caseId)),
+        missingCaseIds: benchmarkCaseRegistry.cases.map((benchmarkCase) => benchmarkCase.id).filter((caseId) => !resultCaseIds.has(caseId)),
+        evidence: parsedInput.evidence,
+        outputPath: `benchmarks/results/${parsedInput.suite}.json`,
+        approvalRequiredForWrite: true,
+        liveMutationApplied: false,
+        createdAt: new Date().toISOString(),
+      })
+
+      return createActionResult({
+        actionCallId: input.call.id,
+        status: 'completed',
+        output: artifact,
+      })
+    },
+  },
+  {
+    definition: {
+      id: 'write_benchmark_run_artifact',
+      title: 'Write Benchmark Run Artifact',
+      description: 'Validate and write a benchmark result artifact under benchmarks/results after approval',
+      requiresApproval: true,
+      inputSchema: {
+        type: 'object',
+        properties: {
+          artifact: { type: 'object' },
+          path: { type: 'string' },
+        },
+        required: ['artifact'],
+        additionalProperties: false,
+      },
+    },
+    async execute(input) {
+      const parsedInput = parseWriteBenchmarkRunInput(input.call.input)
+      const resolvedPath = resolveWorkspacePath(input.settings.workspace.rootPath, parsedInput.path)
+      const content = `${JSON.stringify({ ...parsedInput.artifact, outputPath: parsedInput.path }, null, 2)}\n`
+
+      await mkdir(path.dirname(resolvedPath), { recursive: true })
+      await writeFile(resolvedPath, content, 'utf8')
+
+      return createActionResult({
+        actionCallId: input.call.id,
+        status: 'completed',
+        output: {
+          path: parsedInput.path,
+          bytesWritten: Buffer.byteLength(content, 'utf8'),
+        },
+      })
+    },
+  },
+  {
+    definition: {
       id: 'compare_benchmark_results',
       title: 'Compare Benchmark Results',
       description: 'Compare before and after benchmark summaries to determine whether a harness proposal helped',
@@ -144,6 +566,111 @@ export const artifactActionCommands: BuiltInActionCommand[] = [
         actionCallId: input.call.id,
         status: 'completed',
         output: comparison,
+      })
+    },
+  },
+  {
+    definition: {
+      id: 'create_harness_promotion_artifact',
+      title: 'Create Harness Promotion Artifact',
+      description: 'Check whether a harness change has benchmark evidence before any approval-gated live promotion',
+      requiresApproval: false,
+      inputSchema: {
+        type: 'object',
+        properties: {
+          manifest: { type: 'object' },
+          benchmarkComparison: { type: 'object' },
+        },
+        required: ['manifest', 'benchmarkComparison'],
+        additionalProperties: false,
+      },
+    },
+    async execute(input) {
+      const parsedInput = parseHarnessPromotionInput(input.call.input)
+      const registeredComponentIds = new Set(harnessComponentRegistry.components.map((component) => component.id))
+      const unknownComponents = parsedInput.manifest.affectedComponents.filter((componentId) => !registeredComponentIds.has(componentId))
+      const blockerCandidates = [
+        ...unknownComponents.map((componentId) => `Unknown harness component: ${componentId}`),
+        parsedInput.benchmarkComparison.improved ? null : 'Benchmark comparison did not improve.',
+        parsedInput.benchmarkComparison.failedDelta > 0 ? 'Benchmark comparison increased failures.' : null,
+        parsedInput.benchmarkComparison.before.suite === parsedInput.benchmarkComparison.after.suite ? null : 'Benchmark comparison suites do not match.',
+        parsedInput.manifest.benchmarkSuites.includes(parsedInput.benchmarkComparison.after.suite) ? null : 'Manifest does not list the compared benchmark suite.',
+      ]
+      const blockers = blockerCandidates.filter((blocker): blocker is string => blocker !== null)
+      const artifact = harnessPromotionArtifactSchema.parse({
+        manifest: parsedInput.manifest,
+        benchmarkComparison: parsedInput.benchmarkComparison,
+        promotionReady: blockers.length === 0,
+        blockers,
+        approvalRequiredForPromotion: true,
+        liveMutationApplied: false,
+        createdAt: new Date().toISOString(),
+      })
+
+      return createActionResult({
+        actionCallId: input.call.id,
+        status: 'completed',
+        output: artifact,
+      })
+    },
+  },
+  {
+    definition: {
+      id: 'create_skill_improvement_artifact',
+      title: 'Create Skill Improvement Artifact',
+      description: 'Create a draft skill patch or new skill folder proposal without mutating live skill files',
+      requiresApproval: false,
+      inputSchema: {
+        type: 'object',
+        properties: {
+          title: { type: 'string' },
+          mode: { type: 'string' },
+          targetSkillId: { type: 'string' },
+          rationale: { type: 'string' },
+          evidence: { type: 'array', items: { type: 'string' } },
+          skillName: { type: 'string' },
+          description: { type: 'string' },
+          triggers: { type: 'array', items: { type: 'string' } },
+          tools: { type: 'array', items: { type: 'string' } },
+          safetyNotes: { type: 'array', items: { type: 'string' } },
+          body: { type: 'string' },
+        },
+        required: ['title', 'rationale', 'evidence', 'skillName', 'description', 'body'],
+        additionalProperties: false,
+      },
+    },
+    async execute(input) {
+      const parsedInput = parseSkillImprovementInput(input.call.input)
+      const skillId = parsedInput.targetSkillId ?? slugifySkillId(parsedInput.skillName)
+      const relativePath = `.nano/skills/${skillId}/SKILL.md`
+      const content = renderSkillMarkdown(parsedInput)
+      const artifact = skillImprovementArtifactSchema.parse({
+        id: `skill-improvement-${input.call.id}`,
+        mode: parsedInput.mode,
+        targetSkillId: parsedInput.targetSkillId,
+        title: parsedInput.title,
+        rationale: parsedInput.rationale,
+        evidence: parsedInput.evidence,
+        proposedFiles: [{ relativePath, content }],
+        patchPreview: [
+          `diff --git a/${relativePath} b/${relativePath}`,
+          parsedInput.mode === 'create' ? 'new file mode 100644' : `--- a/${relativePath}`,
+          `+++ b/${relativePath}`,
+          '@@ proposed SKILL.md @@',
+          content,
+        ].join('\n'),
+        approvalRequiredForWrite: true,
+        createdAt: new Date().toISOString(),
+      })
+
+      return createActionResult({
+        actionCallId: input.call.id,
+        status: 'completed',
+        output: {
+          artifact,
+          liveMutationApplied: false,
+          approvalRequiredForWrite: true,
+        },
       })
     },
   },

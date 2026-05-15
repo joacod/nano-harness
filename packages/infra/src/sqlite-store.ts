@@ -16,6 +16,7 @@ import {
   type MemoryProposal,
   memoryRecordSchema,
   memorySettingsSchema,
+  sessionCompactionSchema,
   sessionExportSchema,
   sessionSchema,
   providerKeySchema,
@@ -40,6 +41,7 @@ import {
   runEventsTable,
   runsTable,
   schema,
+  sessionCompactionsTable,
   sessionsTable,
   settingsTable,
 } from './schema'
@@ -148,6 +150,41 @@ export class SqliteStore implements Store {
     return await this.createChildSession(sessionId, 'Clone')
   }
 
+  async listSessionCompactions(sessionId: string) {
+    const rows = await this.db
+      .select()
+      .from(sessionCompactionsTable)
+      .where(eq(sessionCompactionsTable.sessionId, sessionId))
+      .orderBy(desc(sessionCompactionsTable.createdAt))
+
+    return rows.map(deserializeSessionCompaction)
+  }
+
+  async createSessionCompaction(sessionId: string) {
+    const [sessionRow] = await this.db.select().from(sessionsTable).where(eq(sessionsTable.id, sessionId))
+
+    if (!sessionRow) {
+      throw new Error(`Session ${sessionId} not found`)
+    }
+
+    const session = sessionSchema.parse(normalizeNullableSessionRow(sessionRow))
+    const snapshot = await this.getConversation(session.conversationId)
+    const now = new Date().toISOString()
+    const compaction = sessionCompactionSchema.parse({
+      id: `${session.id}-compaction-${Date.now().toString(36)}`,
+      sessionId: session.id,
+      conversationId: session.conversationId,
+      summary: buildSessionCompactionSummary(snapshot),
+      sourceMessageCount: snapshot.messages.length,
+      sourceRunIds: snapshot.runs.map((run) => run.id),
+      createdAt: now,
+    })
+
+    await this.db.insert(sessionCompactionsTable).values(serializeSessionCompaction(compaction))
+
+    return compaction
+  }
+
   private async createChildSession(sessionId: string, label: string) {
     const [parentRow] = await this.db.select().from(sessionsTable).where(eq(sessionsTable.id, sessionId))
 
@@ -189,11 +226,13 @@ export class SqliteStore implements Store {
 
     const session = sessionSchema.parse(normalizeNullableSessionRow(sessionRow))
     const snapshot = await this.getConversation(session.conversationId)
+    const compactions = await this.listSessionCompactions(session.id)
     const lineageRows = await this.db.select().from(sessionsTable).where(eq(sessionsTable.rootSessionId, session.rootSessionId)).orderBy(asc(sessionsTable.createdAt))
 
     return sessionExportSchema.parse({
       session,
       lineage: lineageRows.map((row) => sessionSchema.parse(normalizeNullableSessionRow(row))),
+      compactions,
       runs: snapshot.runs,
       messages: snapshot.messages,
       events: snapshot.events,
@@ -364,7 +403,8 @@ export class SqliteStore implements Store {
 
     const rows = await this.db.select().from(memoryRecordsTable).orderBy(asc(memoryRecordsTable.updatedAt))
     const enabledCategories = new Set(memorySettings.enabledCategories)
-    const terms = input.query.toLowerCase().split(/\s+/).filter((term) => term.length > 2)
+    const query = normalizeMemoryText(input.query)
+    const terms = tokenizeMemoryText(query)
     const records = rows
       .map((row) => memoryRecordSchema.parse({
         ...row,
@@ -372,7 +412,7 @@ export class SqliteStore implements Store {
         confidence: Number.parseFloat(row.confidence),
       }))
       .filter((record) => enabledCategories.has(record.category))
-      .map((record) => ({ record, score: scoreMemoryRecord(record.content, terms) }))
+      .map((record) => ({ record, score: scoreMemoryRecord(record, query, terms) }))
       .filter((item) => item.score > 0 || terms.length === 0)
       .sort((left, right) => right.score - left.score || right.record.updatedAt.localeCompare(left.record.updatedAt))
       .slice(0, memorySettings.maxSnippets)
@@ -625,13 +665,101 @@ export class SqliteStore implements Store {
   }
 }
 
-function scoreMemoryRecord(content: string, terms: string[]): number {
-  if (terms.length === 0) {
-    return 1
+function serializeSessionCompaction(compaction: ReturnType<typeof sessionCompactionSchema.parse>) {
+  return {
+    ...compaction,
+    sourceMessageCount: String(compaction.sourceMessageCount),
+    sourceRunIds: serializeJson(compaction.sourceRunIds),
+  }
+}
+
+function deserializeSessionCompaction(row: {
+  id: string
+  sessionId: string
+  conversationId: string
+  summary: string
+  sourceMessageCount: string
+  sourceRunIds: string
+  createdAt: string
+}) {
+  return sessionCompactionSchema.parse({
+    ...row,
+    sourceMessageCount: Number.parseInt(row.sourceMessageCount, 10),
+    sourceRunIds: parseJson<string[]>(row.sourceRunIds),
+  })
+}
+
+function buildSessionCompactionSummary(snapshot: ConversationSnapshot): string {
+  const lines = [
+    `Compacted ${snapshot.messages.length} messages across ${snapshot.runs.length} runs.`,
+    `Approvals: ${snapshot.approvalRequests.length} requested, ${snapshot.approvalResolutions.length} resolved.`,
+  ]
+  const recentMessages = snapshot.messages.slice(-8)
+
+  if (recentMessages.length > 0) {
+    lines.push('', 'Recent transcript:')
+
+    for (const message of recentMessages) {
+      lines.push(`- ${message.role}: ${truncateCompactionLine(message.content)}`)
+    }
   }
 
-  const normalized = content.toLowerCase()
-  return terms.reduce((score, term) => score + (normalized.includes(term) ? 1 : 0), 0)
+  return lines.join('\n')
+}
+
+function truncateCompactionLine(value: string): string {
+  const normalized = value.replace(/\s+/g, ' ').trim()
+  return normalized.length > 240 ? `${normalized.slice(0, 237)}...` : normalized
+}
+
+function scoreMemoryRecord(record: ReturnType<typeof memoryRecordSchema.parse>, query: string, terms: string[]): number {
+  if (terms.length === 0) {
+    return record.confidence + categoryWeight(record.category)
+  }
+
+  const content = normalizeMemoryText(record.content)
+  const source = normalizeMemoryText(record.source)
+  const contentTokens = tokenizeMemoryText(content)
+  const sourceTokens = tokenizeMemoryText(source)
+  const contentTokenSet = new Set(contentTokens)
+  const sourceTokenSet = new Set(sourceTokens)
+  const exactPhraseScore = query.length > 0 && content.includes(query) ? 8 : 0
+  const contentTermScore = terms.reduce((score, term) => score + (contentTokenSet.has(term) ? 2 : content.includes(term) ? 1 : 0), 0)
+  const sourceTermScore = terms.reduce((score, term) => score + (sourceTokenSet.has(term) ? 0.5 : 0), 0)
+  const categoryTermScore = terms.includes(record.category.replace('_', '-')) || terms.includes(record.category.replace('_', ' ')) ? 1 : 0
+  const recencyScore = Math.max(0, Date.parse(record.updatedAt) / 8.64e13) * 0.01
+
+  return exactPhraseScore
+    + contentTermScore
+    + sourceTermScore
+    + categoryTermScore
+    + record.confidence
+    + categoryWeight(record.category)
+    + recencyScore
+}
+
+function normalizeMemoryText(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9_/-]+/g, ' ').trim()
+}
+
+function tokenizeMemoryText(value: string): string[] {
+  return normalizeMemoryText(value).split(/\s+/).filter((term) => term.length > 2)
+}
+
+function categoryWeight(category: ReturnType<typeof memoryRecordSchema.parse>['category']): number {
+  if (category === 'preference') {
+    return 0.4
+  }
+
+  if (category === 'workflow') {
+    return 0.3
+  }
+
+  if (category === 'project_fact') {
+    return 0.2
+  }
+
+  return 0.1
 }
 
 function formatMemoryMarkdown(title: string, records: Array<ReturnType<typeof memoryRecordSchema.parse>>): string {

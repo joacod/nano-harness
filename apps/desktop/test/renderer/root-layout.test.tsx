@@ -1,5 +1,7 @@
 // @vitest-environment jsdom
 
+import type { ReactNode } from 'react'
+
 import { cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -16,6 +18,7 @@ vi.mock('@tanstack/react-router', async (importOriginal) => {
 
   return {
     ...actual,
+    Link: ({ children, to, className }: { children: ReactNode; to: string; className?: string }) => <a className={className} href={to}>{children}</a>,
     Outlet: () => <section>Route content</section>,
     useNavigate: () => routerMocks.navigate,
     useRouterState: ({ select }: { select: (state: { location: { pathname: string } }) => string }) =>
@@ -28,7 +31,30 @@ vi.mock('@tanstack/react-query', async (importOriginal) => {
 
   return {
     ...actual,
-    useQuery: () => ({ data: { isReady: true } }),
+    useQuery: (options: { queryKey?: readonly string[] }) => {
+      if (options.queryKey?.[0] === 'spec-changes') {
+        return {
+          data: {
+            changes: [{
+              summary: {
+                id: 'add-spec-workbench',
+                title: 'Add Spec Workbench',
+                status: 'proposed',
+                path: '.nano/specs/changes/add-spec-workbench',
+                taskCounts: { total: 1, todo: 1, inProgress: 0, done: 0, blocked: 0 },
+                updatedAt: '2026-05-14T10:00:00.000Z',
+                linkedRunIds: [],
+              },
+              artifactPaths: [],
+              tasks: [],
+              evidenceLinks: { runIds: [], eventIds: [], approvalIds: [], changedFiles: [], validationOutputs: [], benchmarkObservations: [] },
+            }],
+          },
+        }
+      }
+
+      return { data: { isReady: true } }
+    },
   }
 })
 
@@ -102,5 +128,12 @@ describe('RootLayout', () => {
 
     await user.click(screen.getByRole('button', { name: 'Settings' }))
     expect(routerMocks.navigate).toHaveBeenLastCalledWith({ to: '/' })
+  })
+
+  it('shows specs navigation with active count', () => {
+    render(<RootLayout />)
+
+    expect(screen.getByRole('link', { name: /Specs/i }).getAttribute('href')).toBe('/specs')
+    expect(screen.getByLabelText('1 active spec changes').textContent).toBe('1')
   })
 })

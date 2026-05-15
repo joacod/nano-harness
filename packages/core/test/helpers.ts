@@ -14,6 +14,7 @@ import type {
   RunEvent,
   RunStatus,
   Session,
+  SessionCompaction,
   SessionExport,
 } from '@nano-harness/shared'
 import { createDefaultProviderSettings } from '@nano-harness/shared'
@@ -86,6 +87,7 @@ export class FakeStore implements Store {
   memoryProposals: MemoryProposal[] = []
   settings: AppSettings | null = structuredClone(testSettings)
   sessions: Session[] = []
+  sessionCompactions: SessionCompaction[] = []
 
   async initialize(): Promise<void> {}
 
@@ -120,6 +122,32 @@ export class FakeStore implements Store {
     return this.createChildSession(sessionId, 'clone')
   }
 
+  async listSessionCompactions(sessionId: string): Promise<SessionCompaction[]> {
+    return this.sessionCompactions.filter((compaction) => compaction.sessionId === sessionId)
+  }
+
+  async createSessionCompaction(sessionId: string): Promise<SessionCompaction> {
+    const session = this.sessions.find((item) => item.id === sessionId)
+
+    if (!session) {
+      throw new Error(`Session ${sessionId} not found`)
+    }
+
+    const snapshot = await this.getConversation(session.conversationId)
+    const compaction: SessionCompaction = {
+      id: `${sessionId}-compaction-${this.sessionCompactions.length + 1}`,
+      sessionId,
+      conversationId: session.conversationId,
+      summary: `Compacted ${snapshot.messages.length} messages across ${snapshot.runs.length} runs.`,
+      sourceMessageCount: snapshot.messages.length,
+      sourceRunIds: snapshot.runs.map((run) => run.id),
+      createdAt: '2026-04-29T10:00:00.000Z',
+    }
+
+    this.sessionCompactions.push(compaction)
+    return compaction
+  }
+
   async exportSession(sessionId: string): Promise<SessionExport> {
     const session = this.sessions.find((item) => item.id === sessionId)
 
@@ -131,6 +159,7 @@ export class FakeStore implements Store {
     return {
       session,
       lineage: this.sessions.filter((item) => item.rootSessionId === session.rootSessionId),
+      compactions: await this.listSessionCompactions(session.id),
       runs: snapshot.runs,
       messages: snapshot.messages,
       events: snapshot.events,

@@ -9,6 +9,7 @@ import { providerReasoningDeltaSchema } from './reasoning'
 import { runSchema } from './runs'
 import { hookPhaseSchema, hookResultSchema, permissionDecisionSchema } from './safety'
 import { skillSummarySchema } from './skills'
+import { specArtifactKindSchema, specChangeSummarySchema, specEvidenceLinkSchema, specTaskSchema } from './spec'
 
 const eventBaseSchema = z.object({
   id: z.string().min(1),
@@ -62,6 +63,82 @@ export const memoryProposalCreatedEventSchema = eventBaseSchema.extend({
   type: z.literal('memory.proposal_created'),
   payload: z.object({
     proposal: memoryProposalSchema,
+  }),
+})
+
+export const specChangeCreatedEventSchema = eventBaseSchema.extend({
+  type: z.literal('spec.change_created'),
+  payload: z.object({
+    change: specChangeSummarySchema,
+  }),
+})
+
+export const specArtifactWrittenEventSchema = eventBaseSchema.extend({
+  type: z.literal('spec.artifact_written'),
+  payload: z.object({
+    changeId: z.string().min(1),
+    artifactKind: specArtifactKindSchema,
+    path: z.string().min(1),
+  }),
+})
+
+export const specTaskUpdatedEventSchema = eventBaseSchema.extend({
+  type: z.literal('spec.task_updated'),
+  payload: z.object({
+    changeId: z.string().min(1),
+    task: specTaskSchema,
+  }),
+})
+
+export const specEvidenceAppendedEventSchema = eventBaseSchema.extend({
+  type: z.literal('spec.evidence_appended'),
+  payload: z.object({
+    changeId: z.string().min(1),
+    evidence: specEvidenceLinkSchema,
+  }),
+})
+
+export const specChangeArchivedEventSchema = eventBaseSchema.extend({
+  type: z.literal('spec.change_archived'),
+  payload: z.object({
+    changeId: z.string().min(1),
+    archivedPath: z.string().min(1),
+  }),
+})
+
+export const validationObligationSchema = z.object({
+  id: z.string().min(1),
+  reason: z.string().min(1),
+  sourceActionCallIds: z.array(z.string().min(1)).default([]),
+  changedFiles: z.array(z.string().min(1)).default([]),
+  validationCommands: z.array(z.string().min(1)).default([]),
+  createdAt: z.iso.datetime(),
+})
+
+export type ValidationObligation = z.infer<typeof validationObligationSchema>
+
+export const obligationCreatedEventSchema = eventBaseSchema.extend({
+  type: z.literal('obligation.created'),
+  payload: z.object({
+    obligation: validationObligationSchema,
+  }),
+})
+
+export const obligationSatisfiedEventSchema = eventBaseSchema.extend({
+  type: z.literal('obligation.satisfied'),
+  payload: z.object({
+    obligationId: z.string().min(1),
+    evidence: z.array(z.string().min(1)).default([]),
+    satisfiedAt: z.iso.datetime(),
+  }),
+})
+
+export const obligationUnmetEventSchema = eventBaseSchema.extend({
+  type: z.literal('obligation.unmet'),
+  payload: z.object({
+    obligationId: z.string().min(1),
+    reason: z.string().min(1),
+    checkedAt: z.iso.datetime(),
   }),
 })
 
@@ -224,6 +301,14 @@ export const runEventSchema = z.discriminatedUnion('type', [
   runStartedEventSchema,
   runDryRunPreviewEventSchema,
   memoryProposalCreatedEventSchema,
+  specChangeCreatedEventSchema,
+  specArtifactWrittenEventSchema,
+  specTaskUpdatedEventSchema,
+  specEvidenceAppendedEventSchema,
+  specChangeArchivedEventSchema,
+  obligationCreatedEventSchema,
+  obligationSatisfiedEventSchema,
+  obligationUnmetEventSchema,
   runWaitingApprovalEventSchema,
   runCompletedEventSchema,
   runFailedEventSchema,

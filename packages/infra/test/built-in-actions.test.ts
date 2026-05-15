@@ -432,6 +432,59 @@ describe('BuiltInActionExecutor', () => {
         },
       }),
     )
+    const benchmarkArtifactResult = await executor.execute(
+      createExecutionInput({
+        actionId: 'create_benchmark_run_artifact',
+        settings: { ...workspaceSettings, workspace: { ...workspaceSettings.workspace, rootPath } },
+        input: {
+          suite: 'local',
+          results: [
+            { caseId: 'edit-and-test', status: 'passed', evidence: ['run:run-1'] },
+            { caseId: 'validation-obligations', status: 'failed', notes: 'Missing evidence export.' },
+          ],
+          evidence: ['session export: local'],
+        },
+      }),
+    )
+    const writeBenchmarkArtifactResult = await executor.execute(
+      createExecutionInput({
+        actionId: 'write_benchmark_run_artifact',
+        settings: { ...workspaceSettings, workspace: { ...workspaceSettings.workspace, rootPath } },
+        input: {
+          artifact: expectActionOutput(benchmarkArtifactResult.output),
+        },
+      }),
+    )
+    const promotionResult = await executor.execute(
+      createExecutionInput({
+        actionId: 'create_harness_promotion_artifact',
+        settings: { ...workspaceSettings, workspace: { ...workspaceSettings.workspace, rootPath } },
+        input: {
+          manifest: {
+            id: 'change-1',
+            title: 'Tighten provider instructions',
+            rootCause: 'Benchmark evidence shows missing validation reminders.',
+            proposedFix: 'Add a concise validation reminder to build mode.',
+            predictedEffect: 'More runs will validate edits before completion.',
+            affectedComponents: ['core.instructions'],
+            evidence: ['benchmark local-edit failed validation'],
+            benchmarkSuites: ['local'],
+            tests: ['pnpm test'],
+            rollbackPlan: 'Revert the instruction text change in packages/core/src/instructions.ts.',
+            patchPreview: 'diff --git a/packages/core/src/instructions.ts b/packages/core/src/instructions.ts',
+            createdAt: '2026-04-29T10:00:00.000Z',
+          },
+          benchmarkComparison: {
+            before: { suite: 'local', passed: 2, failed: 1, score: 0.66 },
+            after: { suite: 'local', passed: 3, failed: 0, score: 1 },
+            passedDelta: 1,
+            failedDelta: -1,
+            scoreDelta: 0.33999999999999997,
+            improved: true,
+          },
+        },
+      }),
+    )
 
     expect(componentsResult).toMatchObject({ status: 'completed' })
     expect(componentsResult.output).toMatchObject({
@@ -444,6 +497,116 @@ describe('BuiltInActionExecutor', () => {
     expect(comparisonResult).toMatchObject({
       status: 'completed',
       output: { passedDelta: 1, failedDelta: -1, scoreDelta: 0.33999999999999997, improved: true },
+    })
+    expect(benchmarkArtifactResult).toMatchObject({
+      status: 'completed',
+      output: {
+        summary: { suite: 'local', passed: 1, failed: 1, score: 0.5 },
+        outputPath: 'benchmarks/results/local.json',
+        approvalRequiredForWrite: true,
+        liveMutationApplied: false,
+      },
+    })
+    expect(benchmarkArtifactResult.output).toMatchObject({
+      missingCaseIds: expect.arrayContaining(['approval-pause-resume']),
+      unknownCaseIds: [],
+    })
+    expect(writeBenchmarkArtifactResult).toMatchObject({
+      status: 'completed',
+      output: { path: 'benchmarks/results/local.json' },
+    })
+    await expect(readFile(path.join(rootPath, 'benchmarks/results/local.json'), 'utf8')).resolves.toContain('"suite": "local"')
+    expect(promotionResult).toMatchObject({
+      status: 'completed',
+      output: {
+        promotionReady: true,
+        blockers: [],
+        approvalRequiredForPromotion: true,
+        liveMutationApplied: false,
+      },
+    })
+  })
+
+  it('blocks harness promotion artifacts when benchmark comparison regresses', async () => {
+    const rootPath = await createWorkspace()
+    const result = await createExecutor().execute(
+      createExecutionInput({
+        actionId: 'create_harness_promotion_artifact',
+        settings: { ...workspaceSettings, workspace: { ...workspaceSettings.workspace, rootPath } },
+        input: {
+          manifest: {
+            id: 'change-1',
+            title: 'Tighten provider instructions',
+            rootCause: 'Benchmark evidence shows missing validation reminders.',
+            proposedFix: 'Add a concise validation reminder to build mode.',
+            predictedEffect: 'More runs will validate edits before completion.',
+            affectedComponents: ['core.instructions'],
+            evidence: ['benchmark local-edit failed validation'],
+            benchmarkSuites: ['local'],
+            tests: ['pnpm test'],
+            rollbackPlan: 'Revert the instruction text change in packages/core/src/instructions.ts.',
+            patchPreview: 'diff --git a/packages/core/src/instructions.ts b/packages/core/src/instructions.ts',
+            createdAt: '2026-04-29T10:00:00.000Z',
+          },
+          benchmarkComparison: {
+            before: { suite: 'local', passed: 3, failed: 0, score: 1 },
+            after: { suite: 'local', passed: 2, failed: 1, score: 0.66 },
+            passedDelta: -1,
+            failedDelta: 1,
+            scoreDelta: -0.33999999999999997,
+            improved: false,
+          },
+        },
+      }),
+    )
+
+    expect(result).toMatchObject({
+      status: 'completed',
+      output: {
+        promotionReady: false,
+        blockers: ['Benchmark comparison did not improve.', 'Benchmark comparison increased failures.'],
+        approvalRequiredForPromotion: true,
+        liveMutationApplied: false,
+      },
+    })
+  })
+
+  it('creates draft skill improvement artifacts without mutating skill files', async () => {
+    const rootPath = await createWorkspace()
+    const executor = createExecutor()
+    const result = await executor.execute(
+      createExecutionInput({
+        actionId: 'create_skill_improvement_artifact',
+        settings: { ...workspaceSettings, workspace: { ...workspaceSettings.workspace, rootPath } },
+        input: {
+          title: 'Add release notes workflow skill',
+          mode: 'create',
+          rationale: 'Repeated release note tasks need a focused evidence workflow.',
+          evidence: ['run:run-1', 'validation:pnpm typecheck passed'],
+          skillName: 'Release Notes',
+          description: 'Draft release notes from local git evidence.',
+          triggers: ['release', 'changelog'],
+          tools: ['git_diff', 'read_file'],
+          safetyNotes: ['Do not invent user-facing changes.'],
+          body: '# Release Notes\nUse git diff and changed files as evidence.',
+        },
+      }),
+    )
+
+    expect(result).toMatchObject({
+      status: 'completed',
+      output: {
+        liveMutationApplied: false,
+        approvalRequiredForWrite: true,
+        artifact: {
+          mode: 'create',
+          approvalRequiredForWrite: true,
+          proposedFiles: [{
+            relativePath: '.nano/skills/release-notes/SKILL.md',
+            content: expect.stringContaining('name: Release Notes'),
+          }],
+        },
+      },
     })
   })
 
@@ -497,6 +660,110 @@ describe('BuiltInActionExecutor', () => {
       },
     })
   })
+
+  it('manages local spec workspace artifacts through approval-gated spec actions', async () => {
+    const rootPath = await createWorkspace()
+    const executor = createExecutor()
+    const settings = { ...workspaceSettings, workspace: { ...workspaceSettings.workspace, rootPath } }
+
+    const writeProposalResult = await executor.execute(createExecutionInput({
+      actionId: 'write_spec_artifact',
+      settings,
+      input: {
+        changeId: 'add-spec-workbench',
+        artifactKind: 'proposal',
+        content: '# Add Spec Workbench\n\nCreate a visible specs screen.\n',
+      },
+    }))
+    const writeTasksResult = await executor.execute(createExecutionInput({
+      actionId: 'write_spec_artifact',
+      settings,
+      input: {
+        changeId: 'add-spec-workbench',
+        artifactKind: 'tasks',
+        content: '- [ ] contracts: Add shared schemas\n- [ ] ui: Add route\n',
+      },
+    }))
+    const appendEvidenceResult = await executor.execute(createExecutionInput({
+      actionId: 'append_spec_evidence',
+      settings,
+      input: {
+        changeId: 'add-spec-workbench',
+        runs: ['run-1'],
+        approvals: ['approval-1'],
+        changedFiles: ['packages/shared/src/spec.ts'],
+        validation: ['pnpm typecheck passed'],
+      },
+    }))
+    const updateTaskResult = await executor.execute(createExecutionInput({
+      actionId: 'update_spec_task',
+      settings,
+      input: {
+        changeId: 'add-spec-workbench',
+        taskId: 'contracts',
+        status: 'done',
+      },
+    }))
+    const listResult = await executor.execute(createExecutionInput({
+      actionId: 'list_spec_changes',
+      settings,
+      input: {},
+    }))
+    const readResult = await executor.execute(createExecutionInput({
+      actionId: 'read_spec_artifact',
+      settings,
+      input: {
+        changeId: 'add-spec-workbench',
+        artifactKind: 'tasks',
+      },
+    }))
+    const archiveResult = await executor.execute(createExecutionInput({
+      actionId: 'archive_spec_change',
+      settings,
+      input: {
+        changeId: 'add-spec-workbench',
+      },
+    }))
+
+    expect(writeProposalResult).toMatchObject({ status: 'completed', output: { path: '.nano/specs/changes/add-spec-workbench/proposal.md' } })
+    expect(writeTasksResult).toMatchObject({ status: 'completed', output: { path: '.nano/specs/changes/add-spec-workbench/tasks.md' } })
+    expect(appendEvidenceResult).toMatchObject({
+      status: 'completed',
+      output: {
+        changeId: 'add-spec-workbench',
+        runs: ['run-1'],
+        approvals: ['approval-1'],
+        changedFiles: ['packages/shared/src/spec.ts'],
+        validation: ['pnpm typecheck passed'],
+      },
+    })
+    expect(updateTaskResult).toMatchObject({ status: 'completed', output: { task: { id: 'contracts', status: 'done' } } })
+    expect(listResult).toMatchObject({
+      status: 'completed',
+      output: {
+        changes: [expect.objectContaining({
+          summary: expect.objectContaining({
+            id: 'add-spec-workbench',
+            title: 'Add Spec Workbench',
+            linkedRunIds: ['run-1'],
+          }),
+        })],
+      },
+    })
+    expect(readResult).toMatchObject({ status: 'completed', output: { content: '- [x] contracts: Add shared schemas\n- [ ] ui: Add route\n' } })
+    expect(archiveResult).toMatchObject({ status: 'completed', output: { archivedPath: '.nano/specs/archive/add-spec-workbench' } })
+  })
+
+  it('exposes spec action approval requirements in definitions', async () => {
+    const executor = createExecutor()
+
+    await expect(executor.getDefinition('list_spec_changes')).resolves.toMatchObject({ requiresApproval: false })
+    await expect(executor.getDefinition('read_spec_artifact')).resolves.toMatchObject({ requiresApproval: false })
+    await expect(executor.getDefinition('write_spec_artifact')).resolves.toMatchObject({ requiresApproval: true })
+    await expect(executor.getDefinition('update_spec_task')).resolves.toMatchObject({ requiresApproval: true })
+    await expect(executor.getDefinition('append_spec_evidence')).resolves.toMatchObject({ requiresApproval: true })
+    await expect(executor.getDefinition('archive_spec_change')).resolves.toMatchObject({ requiresApproval: true })
+  })
 })
 
 function createExecutor() {
@@ -511,7 +778,7 @@ function createExecutionInput(input: {
   const action: ActionDefinition = {
     id: input.actionId,
     title: input.actionId,
-    requiresApproval: input.actionId === 'write_file' || input.actionId === 'apply_patch' || input.actionId === 'run_command' || input.actionId === 'propose_harness_change',
+    requiresApproval: ['write_file', 'apply_patch', 'run_command', 'propose_harness_change', 'write_benchmark_run_artifact', 'write_spec_artifact', 'update_spec_task', 'append_spec_evidence', 'archive_spec_change'].includes(input.actionId),
     inputSchema: {
       type: 'object',
       properties: {},
@@ -532,6 +799,11 @@ function createExecutionInput(input: {
     settings: input.settings,
     signal: new AbortController().signal,
   }
+}
+
+function expectActionOutput(output: JsonValue | undefined): JsonValue {
+  expect(output).toBeDefined()
+  return output as JsonValue
 }
 
 async function createWorkspace(): Promise<string> {

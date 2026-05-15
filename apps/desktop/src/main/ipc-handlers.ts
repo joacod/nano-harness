@@ -5,6 +5,7 @@ import {
   desktopBridgeChannels,
   desktopContextSchema,
   exportRunEvidenceInputSchema,
+  readSpecArtifactInputSchema,
   sessionInputSchema,
   getConversationInputSchema,
   getProviderDefinition,
@@ -17,11 +18,22 @@ import {
   saveProviderAuthInputSchema,
   showItemInFolderInputSchema,
   clearProviderAuthInputSchema,
+  specArtifactKindSchema,
+  specArtifactReadResultSchema,
+  specChangeDetailResultSchema,
+  specChangeInputSchema,
+  specChangeListSchema,
+  startSpecRunInputSchema,
   startProviderOauthInputSchema,
   startProviderOauthResultSchema,
   startRunResultSchema,
+  type AgentRole,
+  type AppSettings,
+  type SpecArtifactKind,
+  type SpecChangeDetail,
   type ProviderAuthMethod,
 } from '../../../../packages/shared/src'
+import { SpecWorkspaceService } from '../../../../packages/infra/src'
 import { exportData, importData } from './data-transfer'
 import { startOpenAIChatGptOAuth } from './openai-chatgpt-auth'
 import type { DesktopRuntime } from './runtime'
@@ -52,6 +64,8 @@ type IpcRuntime = {
     getRun: DesktopRuntime['store']['getRun']
     forkSession: DesktopRuntime['store']['forkSession']
     cloneSession: DesktopRuntime['store']['cloneSession']
+    listSessionCompactions: DesktopRuntime['store']['listSessionCompactions']
+    createSessionCompaction: DesktopRuntime['store']['createSessionCompaction']
     exportSession: DesktopRuntime['store']['exportSession']
     backupToFile: DesktopRuntime['store']['backupToFile']
     sanitizeDatabaseFile: DesktopRuntime['store']['sanitizeDatabaseFile']
@@ -72,6 +86,8 @@ type IpcRuntime = {
     resolveApproval: DesktopRuntime['runEngine']['resolveApproval']
   }
 }
+
+const specWorkspaceService = new SpecWorkspaceService()
 
 function parseExternalUrl(payload: unknown): string {
   const { url } = openExternalUrlInputSchema.parse(payload)
@@ -147,6 +163,54 @@ export function setupIpcHandlers(runtime: IpcRuntime): void {
   ipcMain.handle(desktopBridgeChannels.resolveMemoryProposal, async (_event, payload) => {
     const input = resolveMemoryProposalInputSchema.parse(payload)
     await runtime.store.resolveMemoryProposal(input)
+  })
+
+  ipcMain.handle(desktopBridgeChannels.listSpecChanges, async () => {
+    const settings = await runtime.store.getSettings()
+
+    if (!settings) {
+      return specChangeListSchema.parse({ changes: [] })
+    }
+
+    return specChangeListSchema.parse({ changes: await specWorkspaceService.listChanges(settings.workspace.rootPath, { includeArchived: true }) })
+  })
+
+  ipcMain.handle(desktopBridgeChannels.getSpecChange, async (_event, payload) => {
+    const input = specChangeInputSchema.parse(payload)
+    const settings = await requireSettings(runtime)
+
+    return specChangeDetailResultSchema.parse({
+      change: await specWorkspaceService.getChange(settings.workspace.rootPath, input.changeId),
+    })
+  })
+
+  ipcMain.handle(desktopBridgeChannels.readSpecArtifact, async (_event, payload) => {
+    const input = readSpecArtifactInputSchema.parse(payload)
+    const settings = await requireSettings(runtime)
+
+    return specArtifactReadResultSchema.parse(await specWorkspaceService.readArtifact(settings.workspace.rootPath, {
+      changeId: input.changeId,
+      kind: input.artifactKind,
+      relativePath: input.relativePath,
+    }))
+  })
+
+  ipcMain.handle(desktopBridgeChannels.startSpecRun, async (_event, payload) => {
+    const input = startSpecRunInputSchema.parse(payload)
+    const settings = await requireSettings(runtime)
+    const change = await specWorkspaceService.getChange(settings.workspace.rootPath, input.changeId)
+
+    if (!change) {
+      throw new Error(`Spec change ${input.changeId} not found`)
+    }
+
+    const handle = await runtime.runEngine.startRun({
+      conversationId: input.conversationId,
+      role: input.role,
+      prompt: await buildSpecRunPrompt(settings, change, input.role, input.taskIds ?? [], input.workflowIntent ?? getDefaultSpecWorkflowIntent(input.role)),
+    })
+
+    return startRunResultSchema.parse({ runId: handle.runId })
   })
 
   ipcMain.handle(desktopBridgeChannels.getProviderCredentialStatus, async (_event, payload) => {
@@ -239,6 +303,16 @@ export function setupIpcHandlers(runtime: IpcRuntime): void {
     return { sessionId: session.id, conversationId: session.conversationId }
   })
 
+  ipcMain.handle(desktopBridgeChannels.listSessionCompactions, async (_event, payload) => {
+    const input = sessionInputSchema.parse(payload)
+    return { compactions: await runtime.store.listSessionCompactions(input.sessionId) }
+  })
+
+  ipcMain.handle(desktopBridgeChannels.compactSession, async (_event, payload) => {
+    const input = sessionInputSchema.parse(payload)
+    return { compaction: await runtime.store.createSessionCompaction(input.sessionId) }
+  })
+
   ipcMain.handle(desktopBridgeChannels.exportSession, async (_event, payload) => {
     const input = sessionInputSchema.parse(payload)
     return await exportSession(runtime, input.sessionId)
@@ -275,4 +349,97 @@ export function setupIpcHandlers(runtime: IpcRuntime): void {
     const input = showItemInFolderInputSchema.parse(payload)
     shell.showItemInFolder(input.filePath)
   })
+}
+
+async function requireSettings(runtime: IpcRuntime): Promise<AppSettings> {
+  const settings = await runtime.store.getSettings()
+
+  if (!settings) {
+    throw new Error('App settings must be configured before using specs')
+  }
+
+  return settings
+}
+
+async function buildSpecRunPrompt(settings: AppSettings, change: SpecChangeDetail, role: AgentRole, taskIds: string[], workflowIntent: SpecWorkflowIntent): Promise<string> {
+  const artifactKinds = getSpecRunArtifactKinds(role)
+  const artifacts = await Promise.all(artifactKinds.map(async (artifactKind) => readOptionalSpecArtifact(settings, change.summary.id, artifactKind)))
+  const selectedTasks = taskIds.length > 0
+    ? change.tasks.filter((task) => taskIds.includes(task.id))
+    : change.tasks
+
+  return [
+    `Continue spec change ${change.summary.id} in ${role} mode.`,
+    `Workflow intent: ${workflowIntent}.`,
+    `Status: ${change.summary.status}`,
+    selectedTasks.length > 0
+      ? ['Selected tasks:', ...selectedTasks.map((task) => `- [${task.status}] ${task.id}: ${task.title}`)].join('\n')
+      : 'Selected tasks: all available tasks for this change.',
+    ...artifacts.filter((artifact): artifact is { kind: SpecArtifactKind; content: string } => artifact !== null).map((artifact) => [
+      `Artifact: ${artifact.kind}`,
+      artifact.content,
+    ].join('\n\n')),
+    getSpecRunInstruction(role, workflowIntent),
+  ].join('\n\n---\n\n')
+}
+
+type SpecWorkflowIntent = 'propose' | 'plan' | 'build' | 'verify' | 'archive'
+
+function getDefaultSpecWorkflowIntent(role: AgentRole): SpecWorkflowIntent {
+  if (role === 'review') {
+    return 'verify'
+  }
+
+  return role
+}
+
+function getSpecRunArtifactKinds(role: AgentRole): SpecArtifactKind[] {
+  if (role === 'plan') {
+    return ['proposal', 'design', 'tasks', 'evidence']
+  }
+
+  if (role === 'review') {
+    return ['proposal', 'tasks', 'evidence']
+  }
+
+  return ['proposal', 'design', 'tasks']
+}
+
+function getSpecRunInstruction(role: AgentRole, workflowIntent: SpecWorkflowIntent): string {
+  if (workflowIntent === 'propose') {
+    return 'Propose or refine this spec change. Generate or update proposal, design, tasks, and delta specs through approval-gated spec artifact actions; do not edit application code.'
+  }
+
+  if (workflowIntent === 'archive') {
+    return 'Archive this spec change only if the evidence shows it is ready. Review proposal, tasks, changed files, validation output, and unmet obligations first; if ready, use the approval-gated archive_spec_change action.'
+  }
+
+  if (role === 'plan') {
+    return 'Plan only. Inspect context, refine the implementation approach, and keep all mutation approval-gated.'
+  }
+
+  if (role === 'review') {
+    return 'Review against the spec, tasks, diff, validation output, and evidence. Surface unmet validation obligations before declaring success.'
+  }
+
+  return 'Build the selected task(s) with the smallest focused changes. Use approval-gated actions for all mutations.'
+}
+
+async function readOptionalSpecArtifact(settings: AppSettings, changeId: string, kind: SpecArtifactKind): Promise<{ kind: SpecArtifactKind; content: string } | null> {
+  const parsedKind = specArtifactKindSchema.parse(kind)
+
+  try {
+    const artifact = await specWorkspaceService.readArtifact(settings.workspace.rootPath, {
+      changeId,
+      kind: parsedKind,
+    })
+
+    return { kind: parsedKind, content: artifact.content }
+  } catch (error) {
+    if (error instanceof Error && 'code' in error && error.code === 'ENOENT') {
+      return null
+    }
+
+    throw error
+  }
 }

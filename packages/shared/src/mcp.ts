@@ -63,7 +63,8 @@ export const mcpInventoryServerSchema = z.object({
   label: z.string().min(1),
   enabled: z.boolean(),
   transport: z.enum(['stdio', 'http']),
-  status: z.enum(['disabled', 'configured', 'unconfigured']),
+  status: z.enum(['disabled', 'configured', 'unconfigured', 'unavailable']),
+  statusMessage: z.string().min(1).optional(),
   allowedTools: z.array(z.string()),
   allowedResources: z.array(z.string()),
 })
