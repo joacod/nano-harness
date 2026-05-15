@@ -141,6 +141,12 @@ describe('setupIpcHandlers', () => {
       sessionId: 'conversation-1-clone',
       conversationId: 'conversation-1-clone',
     })
+    await expect(invokeHandler(desktopBridgeChannels.listSessionCompactions, { sessionId: 'conversation-1' })).resolves.toEqual({
+      compactions: [],
+    })
+    await expect(invokeHandler(desktopBridgeChannels.compactSession, { sessionId: 'conversation-1' })).resolves.toMatchObject({
+      compaction: { sessionId: 'conversation-1' },
+    })
     await expect(invokeHandler(desktopBridgeChannels.exportSession, { sessionId: 'conversation-1' })).resolves.toMatchObject({
       exportedFilePath: expect.stringContaining('conversation-1-session.json'),
     })
@@ -401,6 +407,16 @@ function createRuntime(settingsOverride?: Partial<AppSettings>) {
         createdAt: '2026-04-29T10:00:00.000Z',
         updatedAt: '2026-04-29T10:00:00.000Z',
       })),
+      listSessionCompactions: vi.fn(async () => []),
+      createSessionCompaction: vi.fn(async (sessionId: string) => ({
+        id: `${sessionId}-compaction-1`,
+        sessionId,
+        conversationId: sessionId,
+        summary: 'Compacted 0 messages across 0 runs.',
+        sourceMessageCount: 0,
+        sourceRunIds: [],
+        createdAt: '2026-04-29T10:00:00.000Z',
+      })),
       exportSession: vi.fn(async () => ({
         session: {
           id: 'session-1',
@@ -412,6 +428,7 @@ function createRuntime(settingsOverride?: Partial<AppSettings>) {
           updatedAt: '2026-04-29T10:00:00.000Z',
         },
         lineage: [],
+        compactions: [],
         runs: [],
         messages: [],
         events: [],

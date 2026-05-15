@@ -1,6 +1,6 @@
 import { queryOptions } from '@tanstack/react-query'
 
-import type { AppSettings, ConversationSnapshot, ProviderCredentialStatus, SpecArtifactKind, SpecArtifactReadResult } from '../../../../packages/shared/src'
+import type { AppSettings, ConversationSnapshot, ProviderCredentialStatus, SessionCompactionList, SpecArtifactKind, SpecArtifactReadResult } from '../../../../packages/shared/src'
 
 export const contextQueryOptions = queryOptions({
   queryKey: ['desktop-context'],
@@ -44,6 +44,7 @@ export const specChangesQueryOptions = queryOptions({
 
 type ProviderCredentialStatusQueryKey = readonly ['provider-credential-status', AppSettings['provider']['provider']]
 type ConversationQueryKey = readonly ['conversation', string]
+type SessionCompactionsQueryKey = readonly ['session-compactions', string]
 type SpecArtifactQueryKey = readonly ['spec-artifact', string | null, SpecArtifactKind, string | null]
 
 export function providerCredentialStatusQueryOptions(provider: AppSettings['provider']['provider']): ReturnType<typeof queryOptions<ProviderCredentialStatus, Error, ProviderCredentialStatus, ProviderCredentialStatusQueryKey>> {
@@ -67,6 +68,13 @@ export function conversationQueryOptions(conversationId: string): ReturnType<typ
   return queryOptions({
     queryKey: ['conversation', conversationId] as const,
     queryFn: async (): Promise<ConversationSnapshot> => window.desktop.getConversation({ conversationId }),
+  })
+}
+
+export function sessionCompactionsQueryOptions(sessionId: string): ReturnType<typeof queryOptions<SessionCompactionList, Error, SessionCompactionList, SessionCompactionsQueryKey>> {
+  return queryOptions({
+    queryKey: ['session-compactions', sessionId] as const,
+    queryFn: async (): Promise<SessionCompactionList> => window.desktop.listSessionCompactions({ sessionId }),
   })
 }
 

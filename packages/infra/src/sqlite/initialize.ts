@@ -1,6 +1,7 @@
 export const requiredDatabaseTables = [
   'conversations',
   'sessions',
+  'session_compactions',
   'runs',
   'messages',
   'run_events',
@@ -34,6 +35,16 @@ export const initializationStatements = [
     updated_at TEXT NOT NULL
   )`,
   `CREATE INDEX IF NOT EXISTS sessions_root_session_id_idx ON sessions (root_session_id, created_at)`,
+  `CREATE TABLE IF NOT EXISTS session_compactions (
+    id TEXT PRIMARY KEY NOT NULL,
+    session_id TEXT NOT NULL,
+    conversation_id TEXT NOT NULL,
+    summary TEXT NOT NULL,
+    source_message_count TEXT NOT NULL,
+    source_run_ids TEXT NOT NULL,
+    created_at TEXT NOT NULL
+  )`,
+  `CREATE INDEX IF NOT EXISTS session_compactions_session_id_created_at_idx ON session_compactions (session_id, created_at)`,
   `CREATE TABLE IF NOT EXISTS runs (
     id TEXT PRIMARY KEY NOT NULL,
     conversation_id TEXT NOT NULL,

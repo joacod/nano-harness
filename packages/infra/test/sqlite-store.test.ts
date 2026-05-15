@@ -247,9 +247,19 @@ describe('SqliteStore', () => {
 
       const forkedSession = await store.forkSession('conversation-1')
       expect(forkedSession).toMatchObject({ parentSessionId: 'conversation-1', rootSessionId: 'conversation-1' })
+      const compaction = await store.createSessionCompaction('conversation-1')
+      expect(compaction).toMatchObject({
+        sessionId: 'conversation-1',
+        conversationId: 'conversation-1',
+        sourceMessageCount: 2,
+        sourceRunIds: ['run-1', 'run-2'],
+      })
+      expect(compaction.summary).toContain('Compacted 2 messages across 2 runs.')
+      expect(await store.listSessionCompactions('conversation-1')).toEqual([compaction])
       const exportedSession = await store.exportSession('conversation-1')
       expect(exportedSession).toMatchObject({
         session: { id: 'conversation-1' },
+        compactions: [{ id: compaction.id }],
         runs: [{ id: 'run-1' }, { id: 'run-2' }],
       })
       expect(exportedSession.lineage.map((session) => session.id)).toContain(forkedSession.id)

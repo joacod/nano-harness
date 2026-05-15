@@ -1,7 +1,8 @@
-import type { ApprovalRequest, ConversationSnapshot, ExportRunEvidenceResult, MemoryProposalList, MemoryRecordList, RunEvent } from '../../../../../packages/shared/src'
+import type { ApprovalRequest, ConversationSnapshot, ExportRunEvidenceResult, MemoryProposalList, MemoryRecordList, RunEvent, SessionCompactionList } from '../../../../../packages/shared/src'
 import type { StreamingRunState } from '../utils/run-events'
 import { RunInspectorCard } from './RunInspectorCard'
 import { RunListCard } from './RunListCard'
+import { SessionCompactionCard } from './SessionCompactionCard'
 
 export function SessionTelemetry({
   events,
@@ -11,6 +12,9 @@ export function SessionTelemetry({
   pendingApproval,
   memoryProposals = null,
   memoryRecords = null,
+  compactions = null,
+  isCompacting = false,
+  onCompactSession,
   runs,
   selectedRun,
   selectedRunEvents,
@@ -24,6 +28,9 @@ export function SessionTelemetry({
   pendingApproval: ApprovalRequest | null
   memoryProposals?: MemoryProposalList | null
   memoryRecords?: MemoryRecordList | null
+  compactions?: SessionCompactionList | null
+  isCompacting?: boolean
+  onCompactSession?: () => void
   runs: ConversationSnapshot['runs']
   selectedRun: ConversationSnapshot['runs'][number] | null
   selectedRunEvents: RunEvent[]
@@ -33,6 +40,7 @@ export function SessionTelemetry({
   return (
     <>
       <RunListCard runs={runs} events={events} selectedRunId={selectedRunId} onSelectRun={onSelectRun} />
+      {onCompactSession ? <SessionCompactionCard compactions={compactions} isCompacting={isCompacting} onCompactSession={onCompactSession} /> : null}
       <RunInspectorCard
         run={selectedRun}
         events={selectedRunEvents}

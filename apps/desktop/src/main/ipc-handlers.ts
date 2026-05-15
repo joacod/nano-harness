@@ -64,6 +64,8 @@ type IpcRuntime = {
     getRun: DesktopRuntime['store']['getRun']
     forkSession: DesktopRuntime['store']['forkSession']
     cloneSession: DesktopRuntime['store']['cloneSession']
+    listSessionCompactions: DesktopRuntime['store']['listSessionCompactions']
+    createSessionCompaction: DesktopRuntime['store']['createSessionCompaction']
     exportSession: DesktopRuntime['store']['exportSession']
     backupToFile: DesktopRuntime['store']['backupToFile']
     sanitizeDatabaseFile: DesktopRuntime['store']['sanitizeDatabaseFile']
@@ -299,6 +301,16 @@ export function setupIpcHandlers(runtime: IpcRuntime): void {
     const input = sessionInputSchema.parse(payload)
     const session = await runtime.store.cloneSession(input.sessionId)
     return { sessionId: session.id, conversationId: session.conversationId }
+  })
+
+  ipcMain.handle(desktopBridgeChannels.listSessionCompactions, async (_event, payload) => {
+    const input = sessionInputSchema.parse(payload)
+    return { compactions: await runtime.store.listSessionCompactions(input.sessionId) }
+  })
+
+  ipcMain.handle(desktopBridgeChannels.compactSession, async (_event, payload) => {
+    const input = sessionInputSchema.parse(payload)
+    return { compaction: await runtime.store.createSessionCompaction(input.sessionId) }
   })
 
   ipcMain.handle(desktopBridgeChannels.exportSession, async (_event, payload) => {

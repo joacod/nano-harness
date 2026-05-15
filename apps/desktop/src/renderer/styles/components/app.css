@@ -2067,6 +2067,11 @@
   color: var(--color-text-warning);
 }
 
+.session-compaction-summary {
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
 .success-copy {
   color: var(--color-text-success);
 }

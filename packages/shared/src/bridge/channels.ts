@@ -24,6 +24,8 @@ export const desktopBridgeChannels = {
   getConversation: 'desktop:get-conversation',
   forkSession: 'desktop:fork-session',
   cloneSession: 'desktop:clone-session',
+  listSessionCompactions: 'desktop:list-session-compactions',
+  compactSession: 'desktop:compact-session',
   exportSession: 'desktop:export-session',
   startRun: 'desktop:start-run',
   resumeRun: 'desktop:resume-run',

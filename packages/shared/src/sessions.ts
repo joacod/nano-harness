@@ -27,9 +27,34 @@ export const sessionInputSchema = z.object({
 
 export type SessionInput = z.infer<typeof sessionInputSchema>
 
+export const sessionCompactionSchema = z.object({
+  id: z.string().min(1),
+  sessionId: z.string().min(1),
+  conversationId: z.string().min(1),
+  summary: z.string().min(1),
+  sourceMessageCount: z.number().int().nonnegative(),
+  sourceRunIds: z.array(z.string().min(1)),
+  createdAt: z.iso.datetime(),
+})
+
+export type SessionCompaction = z.infer<typeof sessionCompactionSchema>
+
+export const sessionCompactionListSchema = z.object({
+  compactions: z.array(sessionCompactionSchema),
+})
+
+export type SessionCompactionList = z.infer<typeof sessionCompactionListSchema>
+
+export const sessionCompactionResultSchema = z.object({
+  compaction: sessionCompactionSchema,
+})
+
+export type SessionCompactionResult = z.infer<typeof sessionCompactionResultSchema>
+
 export const sessionExportSchema = z.object({
   session: sessionSchema,
   lineage: z.array(sessionSchema),
+  compactions: z.array(sessionCompactionSchema),
   runs: z.array(runSchema),
   messages: z.array(messageSchema),
   events: z.array(runEventSchema),

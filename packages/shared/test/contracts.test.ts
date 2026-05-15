@@ -22,6 +22,7 @@ import {
   runEventSchema,
   exportRunEvidenceResultSchema,
   runCreateInputSchema,
+  sessionCompactionResultSchema,
   skillImprovementArtifactSchema,
   startProviderOauthInputSchema,
 } from '../src'
@@ -212,6 +213,20 @@ describe('shared contracts', () => {
       approvalRequiredForWrite: true,
       createdAt: '2026-04-29T10:00:00.000Z',
     })).toMatchObject({ approvalRequiredForWrite: true })
+  })
+
+  it('validates session compaction records', () => {
+    expect(sessionCompactionResultSchema.parse({
+      compaction: {
+        id: 'session-1-compaction-1',
+        sessionId: 'session-1',
+        conversationId: 'conversation-1',
+        summary: 'Compacted 2 messages across 1 run.',
+        sourceMessageCount: 2,
+        sourceRunIds: ['run-1'],
+        createdAt: '2026-04-29T10:00:00.000Z',
+      },
+    })).toMatchObject({ compaction: { sessionId: 'session-1' } })
   })
 
   it('parses assistant and tool messages with tool metadata', () => {

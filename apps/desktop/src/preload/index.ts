@@ -26,6 +26,8 @@ import {
   runCreateInputSchema,
   runEventSchema,
   runIdInputSchema,
+  sessionCompactionListSchema,
+  sessionCompactionResultSchema,
   sessionExportResultSchema,
   sessionInputSchema,
   sessionListSchema,
@@ -135,6 +137,14 @@ const desktopApi: DesktopApi = {
   async cloneSession(input) {
     const payload = sessionInputSchema.parse(input)
     return sessionMutationResultSchema.parse(await ipcRenderer.invoke(desktopBridgeChannels.cloneSession, payload))
+  },
+  async listSessionCompactions(input) {
+    const payload = sessionInputSchema.parse(input)
+    return sessionCompactionListSchema.parse(await ipcRenderer.invoke(desktopBridgeChannels.listSessionCompactions, payload))
+  },
+  async compactSession(input) {
+    const payload = sessionInputSchema.parse(input)
+    return sessionCompactionResultSchema.parse(await ipcRenderer.invoke(desktopBridgeChannels.compactSession, payload))
   },
   async exportSession(input) {
     const payload = sessionInputSchema.parse(input)

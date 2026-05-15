@@ -6,7 +6,7 @@ import { appSettingsSchema } from '../settings'
 import type { SkillInventory } from '../skills'
 import type { McpInventory } from '../mcp'
 import type { MemoryProposalList, MemoryRecordList, ResolveMemoryProposalInput } from '../memory'
-import type { SessionExportResult, SessionInput, SessionList, SessionMutationResult } from '../sessions'
+import type { SessionCompactionList, SessionCompactionResult, SessionExportResult, SessionInput, SessionList, SessionMutationResult } from '../sessions'
 import type { ClearProviderAuthInput, ExportRunEvidenceInput, GetConversationInput, OpenExternalUrlInput, ProviderCredentialInput, ReadSpecArtifactInput, ResolveApprovalInput, RunIdInput, SaveProviderAuthInput, ShowItemInFolderInput, SpecChangeInput, StartProviderOauthInput, StartSpecRunInput } from './inputs'
 import type {
   ConversationList,
@@ -50,6 +50,8 @@ export type DesktopApi = {
   getConversation(input: GetConversationInput): Promise<ConversationSnapshot>
   forkSession(input: SessionInput): Promise<SessionMutationResult>
   cloneSession(input: SessionInput): Promise<SessionMutationResult>
+  listSessionCompactions(input: SessionInput): Promise<SessionCompactionList>
+  compactSession(input: SessionInput): Promise<SessionCompactionResult>
   exportSession(input: SessionInput): Promise<SessionExportResult>
   startRun(input: z.infer<typeof runCreateInputSchema>): Promise<StartRunResult>
   resumeRun(input: RunIdInput): Promise<void>

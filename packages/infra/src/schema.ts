@@ -21,6 +21,20 @@ export const sessionsTable = sqliteTable(
   (table) => [index('sessions_root_session_id_idx').on(table.rootSessionId, table.createdAt)],
 )
 
+export const sessionCompactionsTable = sqliteTable(
+  'session_compactions',
+  {
+    id: text('id').primaryKey(),
+    sessionId: text('session_id').notNull(),
+    conversationId: text('conversation_id').notNull(),
+    summary: text('summary').notNull(),
+    sourceMessageCount: text('source_message_count').notNull(),
+    sourceRunIds: text('source_run_ids').notNull(),
+    createdAt: text('created_at').notNull(),
+  },
+  (table) => [index('session_compactions_session_id_created_at_idx').on(table.sessionId, table.createdAt)],
+)
+
 export const runsTable = sqliteTable(
   'runs',
   {
@@ -138,6 +152,7 @@ export const providerCredentialsTable = sqliteTable(
 export const schema = {
   conversationsTable,
   sessionsTable,
+  sessionCompactionsTable,
   runsTable,
   messagesTable,
   runEventsTable,

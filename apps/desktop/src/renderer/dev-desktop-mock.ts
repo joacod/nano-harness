@@ -76,6 +76,18 @@ function createDevDesktopMock(): DesktopApi {
     }),
     forkSession: async (input) => ({ sessionId: `${input.sessionId}-fork`, conversationId: `${input.sessionId}-fork` }),
     cloneSession: async (input) => ({ sessionId: `${input.sessionId}-clone`, conversationId: `${input.sessionId}-clone` }),
+    listSessionCompactions: async () => ({ compactions: [] }),
+    compactSession: async (input) => ({
+      compaction: {
+        id: `${input.sessionId}-compaction-1`,
+        sessionId: input.sessionId,
+        conversationId: conversation.id,
+        summary: 'Compacted 0 messages across 0 runs.',
+        sourceMessageCount: 0,
+        sourceRunIds: [],
+        createdAt: now,
+      },
+    }),
     exportSession: async () => ({ exportedFilePath: '/tmp/session.json' }),
     startRun: async () => ({ runId: 'run-1' }),
     resumeRun: async () => undefined,

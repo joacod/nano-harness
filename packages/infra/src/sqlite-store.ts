@@ -16,6 +16,7 @@ import {
   type MemoryProposal,
   memoryRecordSchema,
   memorySettingsSchema,
+  sessionCompactionSchema,
   sessionExportSchema,
   sessionSchema,
   providerKeySchema,
@@ -40,6 +41,7 @@ import {
   runEventsTable,
   runsTable,
   schema,
+  sessionCompactionsTable,
   sessionsTable,
   settingsTable,
 } from './schema'
@@ -148,6 +150,41 @@ export class SqliteStore implements Store {
     return await this.createChildSession(sessionId, 'Clone')
   }
 
+  async listSessionCompactions(sessionId: string) {
+    const rows = await this.db
+      .select()
+      .from(sessionCompactionsTable)
+      .where(eq(sessionCompactionsTable.sessionId, sessionId))
+      .orderBy(desc(sessionCompactionsTable.createdAt))
+
+    return rows.map(deserializeSessionCompaction)
+  }
+
+  async createSessionCompaction(sessionId: string) {
+    const [sessionRow] = await this.db.select().from(sessionsTable).where(eq(sessionsTable.id, sessionId))
+
+    if (!sessionRow) {
+      throw new Error(`Session ${sessionId} not found`)
+    }
+
+    const session = sessionSchema.parse(normalizeNullableSessionRow(sessionRow))
+    const snapshot = await this.getConversation(session.conversationId)
+    const now = new Date().toISOString()
+    const compaction = sessionCompactionSchema.parse({
+      id: `${session.id}-compaction-${Date.now().toString(36)}`,
+      sessionId: session.id,
+      conversationId: session.conversationId,
+      summary: buildSessionCompactionSummary(snapshot),
+      sourceMessageCount: snapshot.messages.length,
+      sourceRunIds: snapshot.runs.map((run) => run.id),
+      createdAt: now,
+    })
+
+    await this.db.insert(sessionCompactionsTable).values(serializeSessionCompaction(compaction))
+
+    return compaction
+  }
+
   private async createChildSession(sessionId: string, label: string) {
     const [parentRow] = await this.db.select().from(sessionsTable).where(eq(sessionsTable.id, sessionId))
 
@@ -189,11 +226,13 @@ export class SqliteStore implements Store {
 
     const session = sessionSchema.parse(normalizeNullableSessionRow(sessionRow))
     const snapshot = await this.getConversation(session.conversationId)
+    const compactions = await this.listSessionCompactions(session.id)
     const lineageRows = await this.db.select().from(sessionsTable).where(eq(sessionsTable.rootSessionId, session.rootSessionId)).orderBy(asc(sessionsTable.createdAt))
 
     return sessionExportSchema.parse({
       session,
       lineage: lineageRows.map((row) => sessionSchema.parse(normalizeNullableSessionRow(row))),
+      compactions,
       runs: snapshot.runs,
       messages: snapshot.messages,
       events: snapshot.events,
@@ -624,6 +663,53 @@ export class SqliteStore implements Store {
   async close(): Promise<void> {
     await this.client.close()
   }
+}
+
+function serializeSessionCompaction(compaction: ReturnType<typeof sessionCompactionSchema.parse>) {
+  return {
+    ...compaction,
+    sourceMessageCount: String(compaction.sourceMessageCount),
+    sourceRunIds: serializeJson(compaction.sourceRunIds),
+  }
+}
+
+function deserializeSessionCompaction(row: {
+  id: string
+  sessionId: string
+  conversationId: string
+  summary: string
+  sourceMessageCount: string
+  sourceRunIds: string
+  createdAt: string
+}) {
+  return sessionCompactionSchema.parse({
+    ...row,
+    sourceMessageCount: Number.parseInt(row.sourceMessageCount, 10),
+    sourceRunIds: parseJson<string[]>(row.sourceRunIds),
+  })
+}
+
+function buildSessionCompactionSummary(snapshot: ConversationSnapshot): string {
+  const lines = [
+    `Compacted ${snapshot.messages.length} messages across ${snapshot.runs.length} runs.`,
+    `Approvals: ${snapshot.approvalRequests.length} requested, ${snapshot.approvalResolutions.length} resolved.`,
+  ]
+  const recentMessages = snapshot.messages.slice(-8)
+
+  if (recentMessages.length > 0) {
+    lines.push('', 'Recent transcript:')
+
+    for (const message of recentMessages) {
+      lines.push(`- ${message.role}: ${truncateCompactionLine(message.content)}`)
+    }
+  }
+
+  return lines.join('\n')
+}
+
+function truncateCompactionLine(value: string): string {
+  const normalized = value.replace(/\s+/g, ' ').trim()
+  return normalized.length > 240 ? `${normalized.slice(0, 237)}...` : normalized
 }
 
 function scoreMemoryRecord(record: ReturnType<typeof memoryRecordSchema.parse>, query: string, terms: string[]): number {
