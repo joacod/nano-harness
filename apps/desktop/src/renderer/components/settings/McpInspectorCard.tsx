@@ -21,9 +21,10 @@ export function McpInspectorCard({ inventory }: { inventory: McpInventory | null
               <div className="timeline-card">
                 <div className="timeline-header">
                   <strong>{server.label}</strong>
-                  <StatusBadge status={server.enabled ? 'completed' : 'cancelled'}>{server.status}</StatusBadge>
+                  <StatusBadge status={getServerBadgeStatus(server.status)}>{server.status}</StatusBadge>
                 </div>
                 <p className="timeline-type">{server.id} · {server.transport}</p>
+                {server.statusMessage ? <small className="error-copy">{server.statusMessage}</small> : null}
                 <small className="muted-copy">Allowed tools: {server.allowedTools.length ? server.allowedTools.join(', ') : 'none'}</small>
                 <small className="muted-copy">Allowed resources: {server.allowedResources.length ? server.allowedResources.join(', ') : 'none'}</small>
               </div>
@@ -34,4 +35,16 @@ export function McpInspectorCard({ inventory }: { inventory: McpInventory | null
       <FeedbackText>{resources.length} resources and {tools.length} tools are currently exposed to runs.</FeedbackText>
     </div>
   )
+}
+
+function getServerBadgeStatus(status: McpInventory['servers'][number]['status']): string {
+  if (status === 'configured') {
+    return 'completed'
+  }
+
+  if (status === 'unavailable') {
+    return 'failed'
+  }
+
+  return 'cancelled'
 }

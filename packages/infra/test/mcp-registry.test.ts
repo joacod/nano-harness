@@ -14,9 +14,8 @@ const settings: AppSettings = {
         id: 'docs',
         label: 'Docs Server',
         enabled: true,
-        transport: 'stdio',
-        command: 'docs-mcp',
-        args: [],
+        transport: 'http',
+        url: 'https://example.com/mcp',
         allowedTools: ['search_docs'],
         allowedResources: ['docs://intro'],
         staticResources: [
@@ -96,6 +95,42 @@ describe('ConfiguredMcpRegistry', () => {
       content: '# Live Docs',
       mimeType: 'text/markdown',
     })
+  })
+
+  it('reports live stdio inventory failures without hiding static inventory', async () => {
+    const registry = new ConfiguredMcpRegistry()
+    const inventory = await registry.getInventory({
+      ...settings,
+      mcp: {
+        servers: [{
+          id: 'broken-docs',
+          label: 'Broken Docs Server',
+          enabled: true,
+          transport: 'stdio',
+          command: path.join(process.cwd(), 'missing-mcp-server'),
+          args: [],
+          allowedTools: ['search_docs'],
+          allowedResources: ['docs://intro'],
+          staticResources: [{
+            serverId: 'broken-docs',
+            uri: 'docs://intro',
+            name: 'Intro',
+            content: '# Intro',
+          }],
+          staticTools: [{ serverId: 'broken-docs', name: 'search_docs' }],
+        }],
+      },
+    })
+
+    expect(inventory.servers).toEqual([
+      expect.objectContaining({
+        id: 'broken-docs',
+        status: 'unavailable',
+        statusMessage: expect.stringContaining('spawn'),
+      }),
+    ])
+    expect(inventory.resources.map((resource) => resource.uri)).toEqual(['docs://intro'])
+    expect(inventory.tools.map((tool) => tool.name)).toEqual(['search_docs'])
   })
 })
 

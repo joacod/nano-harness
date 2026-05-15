@@ -48,17 +48,10 @@ export class ConfiguredMcpRegistry implements McpRegistry {
     const servers = settings.mcp?.servers ?? []
     const enabledServers = servers.filter((server) => server.enabled)
     const liveInventories = await Promise.all(enabledServers.map(async (server) => getLiveInventory(server)))
+    const liveInventoryByServerId = new Map(enabledServers.map((server, index) => [server.id, liveInventories[index]]))
 
     return mcpInventorySchema.parse({
-      servers: servers.map((server) => ({
-        id: server.id,
-        label: server.label,
-        enabled: server.enabled,
-        transport: server.transport,
-        status: server.enabled ? isServerConfigured(server) ? 'configured' : 'unconfigured' : 'disabled',
-        allowedTools: server.allowedTools,
-        allowedResources: server.allowedResources,
-      })),
+      servers: servers.map((server) => createInventoryServer(server, liveInventoryByServerId.get(server.id)?.errorMessage)),
       tools: enabledServers.flatMap((server, index) => [
         ...server.staticTools,
         ...liveInventories[index].tools,
@@ -111,7 +104,9 @@ export class ConfiguredMcpRegistry implements McpRegistry {
   }
 }
 
-async function getLiveInventory(server: McpServerSettings): Promise<{ tools: McpTool[]; resources: McpResource[] }> {
+type LiveInventoryResult = { tools: McpTool[]; resources: McpResource[]; errorMessage?: string }
+
+async function getLiveInventory(server: McpServerSettings): Promise<LiveInventoryResult> {
   if (server.transport !== 'stdio' || !server.command) {
     return { tools: [], resources: [] }
   }
@@ -127,8 +122,8 @@ async function getLiveInventory(server: McpServerSettings): Promise<{ tools: Mcp
         resources: parseMcpResources(server.id, resourcesResult),
       }
     })
-  } catch {
-    return { tools: [], resources: [] }
+  } catch (error) {
+    return { tools: [], resources: [], errorMessage: error instanceof Error ? error.message : 'Unknown MCP inventory failure' }
   }
 }
 
@@ -385,6 +380,27 @@ export class McpActionExecutor implements ActionExecutor {
 
 function isServerConfigured(server: McpServerSettings): boolean {
   return server.transport === 'http' ? Boolean(server.url) : Boolean(server.command)
+}
+
+function createInventoryServer(server: McpServerSettings, errorMessage?: string): McpInventory['servers'][number] {
+  const status = !server.enabled
+    ? 'disabled'
+    : !isServerConfigured(server)
+      ? 'unconfigured'
+      : errorMessage
+        ? 'unavailable'
+        : 'configured'
+
+  return {
+    id: server.id,
+    label: server.label,
+    enabled: server.enabled,
+    transport: server.transport,
+    status,
+    ...(errorMessage ? { statusMessage: errorMessage } : {}),
+    allowedTools: server.allowedTools,
+    allowedResources: server.allowedResources,
+  }
 }
 
 function findEnabledServer(settings: AppSettings, serverId: string) {

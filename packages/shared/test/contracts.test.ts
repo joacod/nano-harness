@@ -10,6 +10,7 @@ import {
   implementationSpecSchema,
   createSpecWorkflowPrompt,
   messageSchema,
+  mcpInventorySchema,
   mcpServerSettingsSchema,
   providerAdapterIdSchema,
   providerDefaultModels,
@@ -342,6 +343,21 @@ describe('shared contracts', () => {
   })
 
   it('validates transport-specific MCP server settings', () => {
+    expect(mcpInventorySchema.parse({
+      servers: [{
+        id: 'docs',
+        label: 'Docs Server',
+        enabled: true,
+        transport: 'stdio',
+        status: 'unavailable',
+        statusMessage: 'MCP request tools/list timed out',
+        allowedTools: [],
+        allowedResources: [],
+      }],
+      tools: [],
+      resources: [],
+    }).servers[0]).toMatchObject({ status: 'unavailable' })
+
     expect(
       mcpServerSettingsSchema.parse({
         id: 'docs',
