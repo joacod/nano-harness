@@ -52,6 +52,18 @@ export const benchmarkComparisonSchema = z.object({
 
 export type BenchmarkComparison = z.infer<typeof benchmarkComparisonSchema>
 
+export const harnessPromotionArtifactSchema = z.object({
+  manifest: harnessChangeManifestSchema,
+  benchmarkComparison: benchmarkComparisonSchema,
+  promotionReady: z.boolean(),
+  blockers: z.array(z.string().min(1)),
+  approvalRequiredForPromotion: z.literal(true),
+  liveMutationApplied: z.literal(false),
+  createdAt: z.iso.datetime(),
+})
+
+export type HarnessPromotionArtifact = z.infer<typeof harnessPromotionArtifactSchema>
+
 export const harnessComponentRegistrySchema = z.object({
   components: z.array(harnessComponentSchema),
 })

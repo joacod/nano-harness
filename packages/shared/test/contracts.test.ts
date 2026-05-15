@@ -4,6 +4,7 @@ import {
   appSettingsSchema,
   clearProviderAuthInputSchema,
   getProviderDefinition,
+  harnessPromotionArtifactSchema,
   harnessChangeManifestSchema,
   harnessComponentRegistrySchema,
   implementationSpecSchema,
@@ -143,6 +144,38 @@ describe('shared contracts', () => {
       patchPreview: 'diff --git a/packages/core/src/instructions.ts b/packages/core/src/instructions.ts',
       createdAt: '2026-04-29T10:00:00.000Z',
     })).toMatchObject({ id: 'change-1' })
+  })
+
+  it('validates harness promotion artifacts as benchmark-gated and non-mutating', () => {
+    expect(harnessPromotionArtifactSchema.parse({
+      manifest: {
+        id: 'change-1',
+        title: 'Improve validation reminder',
+        rootCause: 'Benchmark runs completed edits without validation.',
+        proposedFix: 'Update build instructions to require targeted validation after edits.',
+        predictedEffect: 'Higher benchmark validation pass rate.',
+        affectedComponents: ['core.instructions'],
+        evidence: ['run evidence export: validation missing'],
+        benchmarkSuites: ['local'],
+        tests: ['pnpm test'],
+        rollbackPlan: 'Revert the instruction text change.',
+        patchPreview: 'diff --git a/packages/core/src/instructions.ts b/packages/core/src/instructions.ts',
+        createdAt: '2026-04-29T10:00:00.000Z',
+      },
+      benchmarkComparison: {
+        before: { suite: 'local', passed: 2, failed: 1, score: 0.66 },
+        after: { suite: 'local', passed: 3, failed: 0, score: 1 },
+        passedDelta: 1,
+        failedDelta: -1,
+        scoreDelta: 0.34,
+        improved: true,
+      },
+      promotionReady: true,
+      blockers: [],
+      approvalRequiredForPromotion: true,
+      liveMutationApplied: false,
+      createdAt: '2026-04-29T10:00:00.000Z',
+    })).toMatchObject({ promotionReady: true, liveMutationApplied: false })
   })
 
   it('validates spec artifacts and creates spec workflow prompts', () => {

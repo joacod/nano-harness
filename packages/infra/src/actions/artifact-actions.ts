@@ -1,4 +1,4 @@
-import { benchmarkRunSummarySchema, draftPrArtifactSchema, harnessChangeManifestSchema, harnessComponentRegistry, implementationSpecSchema, skillImprovementArtifactSchema, specArtifactKindSchema, specEvidencePacketSchema, specTaskStatusSchema, type SpecArtifactKind } from '@nano-harness/shared'
+import { benchmarkComparisonSchema, benchmarkRunSummarySchema, draftPrArtifactSchema, harnessChangeManifestSchema, harnessComponentRegistry, harnessPromotionArtifactSchema, implementationSpecSchema, skillImprovementArtifactSchema, specArtifactKindSchema, specEvidencePacketSchema, specTaskStatusSchema, type SpecArtifactKind } from '@nano-harness/shared'
 
 import { SpecWorkspaceService } from '../spec-workspace'
 
@@ -8,6 +8,13 @@ const specWorkspaceService = new SpecWorkspaceService()
 
 function parseHarnessChangeManifestInput(value: Record<string, unknown>) {
   return harnessChangeManifestSchema.parse(value.manifest)
+}
+
+function parseHarnessPromotionInput(value: Record<string, unknown>) {
+  return {
+    manifest: harnessChangeManifestSchema.parse(value.manifest),
+    benchmarkComparison: benchmarkComparisonSchema.parse(value.benchmarkComparison),
+  }
 }
 
 function parseBenchmarkComparisonInput(value: Record<string, unknown>) {
@@ -446,6 +453,51 @@ export const artifactActionCommands: BuiltInActionCommand[] = [
         actionCallId: input.call.id,
         status: 'completed',
         output: comparison,
+      })
+    },
+  },
+  {
+    definition: {
+      id: 'create_harness_promotion_artifact',
+      title: 'Create Harness Promotion Artifact',
+      description: 'Check whether a harness change has benchmark evidence before any approval-gated live promotion',
+      requiresApproval: false,
+      inputSchema: {
+        type: 'object',
+        properties: {
+          manifest: { type: 'object' },
+          benchmarkComparison: { type: 'object' },
+        },
+        required: ['manifest', 'benchmarkComparison'],
+        additionalProperties: false,
+      },
+    },
+    async execute(input) {
+      const parsedInput = parseHarnessPromotionInput(input.call.input)
+      const registeredComponentIds = new Set(harnessComponentRegistry.components.map((component) => component.id))
+      const unknownComponents = parsedInput.manifest.affectedComponents.filter((componentId) => !registeredComponentIds.has(componentId))
+      const blockerCandidates = [
+        ...unknownComponents.map((componentId) => `Unknown harness component: ${componentId}`),
+        parsedInput.benchmarkComparison.improved ? null : 'Benchmark comparison did not improve.',
+        parsedInput.benchmarkComparison.failedDelta > 0 ? 'Benchmark comparison increased failures.' : null,
+        parsedInput.benchmarkComparison.before.suite === parsedInput.benchmarkComparison.after.suite ? null : 'Benchmark comparison suites do not match.',
+        parsedInput.manifest.benchmarkSuites.includes(parsedInput.benchmarkComparison.after.suite) ? null : 'Manifest does not list the compared benchmark suite.',
+      ]
+      const blockers = blockerCandidates.filter((blocker): blocker is string => blocker !== null)
+      const artifact = harnessPromotionArtifactSchema.parse({
+        manifest: parsedInput.manifest,
+        benchmarkComparison: parsedInput.benchmarkComparison,
+        promotionReady: blockers.length === 0,
+        blockers,
+        approvalRequiredForPromotion: true,
+        liveMutationApplied: false,
+        createdAt: new Date().toISOString(),
+      })
+
+      return createActionResult({
+        actionCallId: input.call.id,
+        status: 'completed',
+        output: artifact,
       })
     },
   },

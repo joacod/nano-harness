@@ -432,6 +432,36 @@ describe('BuiltInActionExecutor', () => {
         },
       }),
     )
+    const promotionResult = await executor.execute(
+      createExecutionInput({
+        actionId: 'create_harness_promotion_artifact',
+        settings: { ...workspaceSettings, workspace: { ...workspaceSettings.workspace, rootPath } },
+        input: {
+          manifest: {
+            id: 'change-1',
+            title: 'Tighten provider instructions',
+            rootCause: 'Benchmark evidence shows missing validation reminders.',
+            proposedFix: 'Add a concise validation reminder to build mode.',
+            predictedEffect: 'More runs will validate edits before completion.',
+            affectedComponents: ['core.instructions'],
+            evidence: ['benchmark local-edit failed validation'],
+            benchmarkSuites: ['local'],
+            tests: ['pnpm test'],
+            rollbackPlan: 'Revert the instruction text change in packages/core/src/instructions.ts.',
+            patchPreview: 'diff --git a/packages/core/src/instructions.ts b/packages/core/src/instructions.ts',
+            createdAt: '2026-04-29T10:00:00.000Z',
+          },
+          benchmarkComparison: {
+            before: { suite: 'local', passed: 2, failed: 1, score: 0.66 },
+            after: { suite: 'local', passed: 3, failed: 0, score: 1 },
+            passedDelta: 1,
+            failedDelta: -1,
+            scoreDelta: 0.33999999999999997,
+            improved: true,
+          },
+        },
+      }),
+    )
 
     expect(componentsResult).toMatchObject({ status: 'completed' })
     expect(componentsResult.output).toMatchObject({
@@ -444,6 +474,59 @@ describe('BuiltInActionExecutor', () => {
     expect(comparisonResult).toMatchObject({
       status: 'completed',
       output: { passedDelta: 1, failedDelta: -1, scoreDelta: 0.33999999999999997, improved: true },
+    })
+    expect(promotionResult).toMatchObject({
+      status: 'completed',
+      output: {
+        promotionReady: true,
+        blockers: [],
+        approvalRequiredForPromotion: true,
+        liveMutationApplied: false,
+      },
+    })
+  })
+
+  it('blocks harness promotion artifacts when benchmark comparison regresses', async () => {
+    const rootPath = await createWorkspace()
+    const result = await createExecutor().execute(
+      createExecutionInput({
+        actionId: 'create_harness_promotion_artifact',
+        settings: { ...workspaceSettings, workspace: { ...workspaceSettings.workspace, rootPath } },
+        input: {
+          manifest: {
+            id: 'change-1',
+            title: 'Tighten provider instructions',
+            rootCause: 'Benchmark evidence shows missing validation reminders.',
+            proposedFix: 'Add a concise validation reminder to build mode.',
+            predictedEffect: 'More runs will validate edits before completion.',
+            affectedComponents: ['core.instructions'],
+            evidence: ['benchmark local-edit failed validation'],
+            benchmarkSuites: ['local'],
+            tests: ['pnpm test'],
+            rollbackPlan: 'Revert the instruction text change in packages/core/src/instructions.ts.',
+            patchPreview: 'diff --git a/packages/core/src/instructions.ts b/packages/core/src/instructions.ts',
+            createdAt: '2026-04-29T10:00:00.000Z',
+          },
+          benchmarkComparison: {
+            before: { suite: 'local', passed: 3, failed: 0, score: 1 },
+            after: { suite: 'local', passed: 2, failed: 1, score: 0.66 },
+            passedDelta: -1,
+            failedDelta: 1,
+            scoreDelta: -0.33999999999999997,
+            improved: false,
+          },
+        },
+      }),
+    )
+
+    expect(result).toMatchObject({
+      status: 'completed',
+      output: {
+        promotionReady: false,
+        blockers: ['Benchmark comparison did not improve.', 'Benchmark comparison increased failures.'],
+        approvalRequiredForPromotion: true,
+        liveMutationApplied: false,
+      },
     })
   })
 
