@@ -37,6 +37,11 @@ export const memoryProposalsQueryOptions = queryOptions({
   queryFn: () => window.desktop.listMemoryProposals(),
 })
 
+export const specChangesQueryOptions = queryOptions({
+  queryKey: ['spec-changes'],
+  queryFn: () => window.desktop.listSpecChanges(),
+})
+
 type ProviderCredentialStatusQueryKey = readonly ['provider-credential-status', AppSettings['provider']['provider']]
 type ConversationQueryKey = readonly ['conversation', string]
 

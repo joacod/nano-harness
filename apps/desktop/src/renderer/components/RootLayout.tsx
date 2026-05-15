@@ -1,9 +1,9 @@
 import { useEffect, useRef } from 'react'
 
-import { Outlet, useNavigate, useRouterState } from '@tanstack/react-router'
+import { Link, Outlet, useNavigate, useRouterState } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 
-import { providerStatusQueryOptions } from '../queries'
+import { providerStatusQueryOptions, specChangesQueryOptions } from '../queries'
 import { useTechnicalUi } from '../runtime-ui'
 import { ConversationNav } from './sidebar/ConversationNav'
 import { Button, RuntimePill, Switch } from './ui'
@@ -14,7 +14,9 @@ export function RootLayout() {
   const lastSessionPathRef = useRef('/')
   const { advancedSettings, isAdvancedUiActive, isSidebarCollapsed, toggleSidebarCollapsed, toggleTechnicalInfo } = useTechnicalUi()
   const providerStatusQuery = useQuery(providerStatusQueryOptions)
+  const specChangesQuery = useQuery(specChangesQueryOptions)
   const providerStatus = providerStatusQuery.data
+  const activeSpecCount = specChangesQuery.data?.changes?.filter((change) => change.summary.status !== 'archived' && change.summary.status !== 'verified').length ?? 0
   const advancedFeaturesEnabled = advancedSettings?.enabled ?? true
   const isSettingsOpen = currentPath === '/settings'
 
@@ -61,6 +63,17 @@ export function RootLayout() {
       {!isSidebarCollapsed ? (
         <aside className="sidebar" aria-label="Workspace navigation">
           <ConversationNav />
+
+          <div className="sidebar-section sidebar-collapsible-content">
+            <Link
+              to="/specs"
+              className="ghost-link sidebar-wide-link"
+              activeProps={{ className: 'ghost-link ghost-link-active sidebar-wide-link' }}
+            >
+              <span>Specs</span>
+              {activeSpecCount > 0 ? <span className="sidebar-count-badge" aria-label={`${activeSpecCount} active spec changes`}>{activeSpecCount}</span> : null}
+            </Link>
+          </div>
 
           <div className="sidebar-section sidebar-footer sidebar-collapsible-content">
             <button

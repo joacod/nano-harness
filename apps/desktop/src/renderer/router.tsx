@@ -4,6 +4,7 @@ import { RootLayout } from './components/RootLayout'
 import { ConversationRoute } from './routes/ConversationRoute'
 import { HomeRoute } from './routes/HomeRoute'
 import { SettingsRoute } from './routes/SettingsRoute'
+import { SpecsRoute } from './routes/SpecsRoute'
 
 const rootRoute = createRootRoute({
   component: RootLayout,
@@ -27,7 +28,13 @@ const settingsRoute = createRoute({
   component: SettingsRoute,
 })
 
-const routeTree = rootRoute.addChildren([homeRoute, conversationRoute, settingsRoute])
+const specsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/specs',
+  component: SpecsRoute,
+})
+
+const routeTree = rootRoute.addChildren([homeRoute, conversationRoute, settingsRoute, specsRoute])
 
 export const router = createRouter({
   routeTree,
