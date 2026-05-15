@@ -169,6 +169,47 @@ describe('RunInspectorCard', () => {
     expect(screen.getByText('1 unmet')).toBeTruthy()
   })
 
+  it('shows dry-run selected memory with provenance', () => {
+    window.desktop = createDesktopMock()
+
+    renderWithQueryClient(
+      <RunInspectorCard
+        run={createRun({ status: 'completed', startedAt: '2026-04-29T10:01:00.000Z' })}
+        events={[
+          event('run.dry_run_preview', {
+            provider: { provider: 'openrouter', model: providerDefaultModels.openrouter },
+            workspace: { rootPath: '/tmp/workspace', approvalPolicy: 'on-request' },
+            actions: [],
+            permissions: { denied: [], risky: [], activeRules: [], activeHooks: [] },
+            skills: { available: [], selected: [] },
+            mcp: { servers: [], tools: [], resources: [] },
+            memory: {
+              selected: [{
+                id: 'memory-1',
+                category: 'workflow',
+                content: 'Use Spec Workbench for durable planned changes.',
+                source: 'proposal:proposal-1',
+                runId: 'run-source-1',
+                confidence: 0.75,
+                createdAt: '2026-04-29T10:00:00.000Z',
+                updatedAt: '2026-04-29T10:05:00.000Z',
+              }],
+              excludedCategories: [],
+            },
+          }),
+        ]}
+        pendingApproval={null}
+        streamingState={null}
+        onEvidenceExported={() => undefined}
+        onEvidenceExportError={() => undefined}
+      />,
+    )
+
+    expect(screen.getByText('Dry-Run Memory')).toBeTruthy()
+    expect(screen.getByText('Use Spec Workbench for durable planned changes.')).toBeTruthy()
+    expect(screen.getByText('Source: proposal:proposal-1 · Run run-source-1 · Confidence 75%')).toBeTruthy()
+  })
+
   it('shows recalled memory and pending suggestions in the inspector', () => {
     window.desktop = createDesktopMock()
 

@@ -27,6 +27,7 @@ export function RunInspectorCard({
   const queryClient = useQueryClient()
   const recoverableAction = run ? getRecoverableRunAction(run, pendingApproval) : null
   const latestFirstEvents = [...events].reverse()
+  const dryRunMemory = getLatestDryRunMemory(events)
   const recalledMemory = memoryRecords?.records.slice(0, 3) ?? []
   const pendingMemoryProposals = memoryProposals?.proposals.filter((proposal) => proposal.status === 'pending').slice(0, 3) ?? []
   const validationObligations = getValidationObligationSummary(events)
@@ -134,6 +135,26 @@ export function RunInspectorCard({
             </FeedbackText>
           ) : null}
 
+          {dryRunMemory.length > 0 ? (
+            <section className="inspector-dry-run-memory" aria-labelledby="inspector-dry-run-memory-heading">
+              <div className="inspector-section-heading">
+                <p className="eyebrow" id="inspector-dry-run-memory-heading">Dry-Run Memory</p>
+                <p>Memory selected for this run before the provider call, with provenance.</p>
+              </div>
+              <div className="inspector-memory-group">
+                {dryRunMemory.map((record) => (
+                  <article className="memory-item" key={record.id}>
+                    <span className="field-label">{record.category}</span>
+                    <p>{record.content}</p>
+                    <small className="muted-copy">
+                      Source: {record.source}{record.runId ? ` · Run ${record.runId}` : ''} · Confidence {formatConfidence(record.confidence)}
+                    </small>
+                  </article>
+                ))}
+              </div>
+            </section>
+          ) : null}
+
           <section className="inspector-memory-context" aria-labelledby="inspector-memory-heading">
             <div className="inspector-section-heading">
               <p className="eyebrow" id="inspector-memory-heading">Memory</p>
@@ -217,6 +238,17 @@ export function RunInspectorCard({
       ) : null}
     </Card>
   )
+}
+
+function getLatestDryRunMemory(events: RunEvent[]) {
+  return [...events]
+    .reverse()
+    .find((event): event is Extract<RunEvent, { type: 'run.dry_run_preview' }> => event.type === 'run.dry_run_preview')
+    ?.payload.memory.selected.slice(0, 5) ?? []
+}
+
+function formatConfidence(value: number): string {
+  return new Intl.NumberFormat(undefined, { maximumFractionDigits: 0, style: 'percent' }).format(value)
 }
 
 function getSpecEventChangeId(event: RunEvent): string | null {

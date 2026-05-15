@@ -1324,6 +1324,7 @@
 }
 
 .inspector-memory-context,
+.inspector-dry-run-memory,
 .inspector-validation-context,
 .inspector-memory-group {
   display: flex;
