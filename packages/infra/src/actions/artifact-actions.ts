@@ -1,7 +1,7 @@
 import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 
-import { benchmarkCaseRegistry, benchmarkCaseResultSchema, benchmarkComparisonSchema, benchmarkResultIndexSchema, benchmarkRunArtifactSchema, benchmarkRunPlanArtifactSchema, benchmarkRunSummarySchema, draftPrArtifactSchema, harnessChangeManifestSchema, harnessComponentRegistry, harnessPromotionArtifactSchema, implementationSpecSchema, skillImprovementArtifactSchema, specArtifactKindSchema, specEvidencePacketSchema, specTaskStatusSchema, type BenchmarkCase, type BenchmarkRunArtifact, type BenchmarkRunPlanCase, type SkillImprovementArtifact, type SpecArtifactKind } from '@nano-harness/shared'
+import { benchmarkCaseRegistry, benchmarkCaseResultSchema, benchmarkComparisonSchema, benchmarkResultIndexSchema, benchmarkRunArtifactSchema, benchmarkRunPlanArtifactSchema, benchmarkRunSummarySchema, draftPrArtifactSchema, harnessChangeManifestSchema, harnessComponentRegistry, harnessPromotionArtifactSchema, implementationSpecSchema, skillImprovementArtifactSchema, specArtifactKindSchema, specEvidencePacketSchema, specTaskStatusSchema, type BenchmarkCase, type BenchmarkRunArtifact, type BenchmarkRunPlanCase, type HarnessPromotionArtifact, type SkillImprovementArtifact, type SpecArtifactKind } from '@nano-harness/shared'
 
 import { SpecWorkspaceService } from '../spec-workspace'
 
@@ -19,6 +19,24 @@ function parseHarnessPromotionInput(value: Record<string, unknown>) {
     manifest: harnessChangeManifestSchema.parse(value.manifest),
     benchmarkComparison: benchmarkComparisonSchema.parse(value.benchmarkComparison),
   }
+}
+
+function parseWriteHarnessPromotionInput(value: Record<string, unknown>): { artifact: HarnessPromotionArtifact; path: string } {
+  const artifact = harnessPromotionArtifactSchema.parse(value.artifact)
+  const outputPath = typeof value.path === 'string' && value.path.trim()
+    ? value.path.trim()
+    : `.nano/harness/promotions/${slugifyArtifactId(artifact.manifest.id)}.json`
+  const normalizedPath = outputPath.replace(/\\/g, '/')
+
+  if (!artifact.promotionReady) {
+    throw new Error('write_harness_promotion_artifact requires a promotion-ready artifact')
+  }
+
+  if (!/^\.nano\/harness\/promotions\/[a-z0-9][a-z0-9-]*\.json$/.test(normalizedPath)) {
+    throw new Error('write_harness_promotion_artifact path must match .nano/harness/promotions/<promotion-id>.json')
+  }
+
+  return { artifact, path: normalizedPath }
 }
 
 function parseBenchmarkComparisonInput(value: Record<string, unknown>) {
@@ -203,6 +221,10 @@ function slugifyBranchName(value: string): string {
 
 function slugifySkillId(value: string): string {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'skill'
+}
+
+function slugifyArtifactId(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'artifact'
 }
 
 function renderSkillMarkdown(input: {
@@ -796,6 +818,41 @@ export const artifactActionCommands: BuiltInActionCommand[] = [
         actionCallId: input.call.id,
         status: 'completed',
         output: artifact,
+      })
+    },
+  },
+  {
+    definition: {
+      id: 'write_harness_promotion_artifact',
+      title: 'Write Harness Promotion Artifact',
+      description: 'Persist a promotion-ready harness artifact under .nano/harness/promotions after approval',
+      requiresApproval: true,
+      inputSchema: {
+        type: 'object',
+        properties: {
+          artifact: { type: 'object' },
+          path: { type: 'string' },
+        },
+        required: ['artifact'],
+        additionalProperties: false,
+      },
+    },
+    async execute(input) {
+      const parsedInput = parseWriteHarnessPromotionInput(input.call.input)
+      const resolvedPath = resolveWorkspacePath(input.settings.workspace.rootPath, parsedInput.path)
+      const content = `${JSON.stringify({ ...parsedInput.artifact, liveMutationApplied: false }, null, 2)}\n`
+
+      await mkdir(path.dirname(resolvedPath), { recursive: true })
+      await writeFile(resolvedPath, content, 'utf8')
+
+      return createActionResult({
+        actionCallId: input.call.id,
+        status: 'completed',
+        output: {
+          path: parsedInput.path,
+          bytesWritten: Buffer.byteLength(content, 'utf8'),
+          liveMutationApplied: false,
+        },
       })
     },
   },

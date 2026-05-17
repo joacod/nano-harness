@@ -524,6 +524,15 @@ describe('BuiltInActionExecutor', () => {
         },
       }),
     )
+    const writePromotionResult = await executor.execute(
+      createExecutionInput({
+        actionId: 'write_harness_promotion_artifact',
+        settings: { ...workspaceSettings, workspace: { ...workspaceSettings.workspace, rootPath } },
+        input: {
+          artifact: expectActionOutput(promotionResult.output),
+        },
+      }),
+    )
 
     expect(componentsResult).toMatchObject({ status: 'completed' })
     expect(componentsResult.output).toMatchObject({
@@ -587,6 +596,14 @@ describe('BuiltInActionExecutor', () => {
         liveMutationApplied: false,
       },
     })
+    expect(writePromotionResult).toMatchObject({
+      status: 'completed',
+      output: {
+        path: '.nano/harness/promotions/change-1.json',
+        liveMutationApplied: false,
+      },
+    })
+    await expect(readFile(path.join(rootPath, '.nano/harness/promotions/change-1.json'), 'utf8')).resolves.toContain('"promotionReady": true')
   })
 
   it('blocks harness promotion artifacts when benchmark comparison regresses', async () => {
@@ -630,6 +647,99 @@ describe('BuiltInActionExecutor', () => {
         approvalRequiredForPromotion: true,
         liveMutationApplied: false,
       },
+    })
+  })
+
+  it('rejects harness promotion artifact writes when not promotion-ready', async () => {
+    const rootPath = await createWorkspace()
+    const executor = createExecutor()
+
+    await expect(executor.execute(
+      createExecutionInput({
+        actionId: 'write_harness_promotion_artifact',
+        settings: { ...workspaceSettings, workspace: { ...workspaceSettings.workspace, rootPath } },
+        input: {
+          artifact: {
+            manifest: {
+              id: 'change-1',
+              title: 'Tighten provider instructions',
+              rootCause: 'Benchmark evidence shows missing validation reminders.',
+              proposedFix: 'Add a concise validation reminder to build mode.',
+              predictedEffect: 'More runs will validate edits before completion.',
+              affectedComponents: ['core.instructions'],
+              evidence: ['benchmark local-edit failed validation'],
+              benchmarkSuites: ['local'],
+              tests: ['pnpm test'],
+              rollbackPlan: 'Revert the instruction text change in packages/core/src/instructions.ts.',
+              patchPreview: 'diff --git a/packages/core/src/instructions.ts b/packages/core/src/instructions.ts',
+              createdAt: '2026-04-29T10:00:00.000Z',
+            },
+            benchmarkComparison: {
+              before: { suite: 'local', passed: 3, failed: 0, score: 1 },
+              after: { suite: 'local', passed: 2, failed: 1, score: 0.66 },
+              passedDelta: -1,
+              failedDelta: 1,
+              scoreDelta: -0.33999999999999997,
+              improved: false,
+            },
+            promotionReady: false,
+            blockers: ['Benchmark comparison did not improve.'],
+            approvalRequiredForPromotion: true,
+            liveMutationApplied: false,
+            createdAt: '2026-04-29T10:00:00.000Z',
+          },
+        },
+      }),
+    )).resolves.toMatchObject({
+      status: 'failed',
+      errorMessage: 'write_harness_promotion_artifact requires a promotion-ready artifact',
+    })
+  })
+
+  it('rejects harness promotion artifact writes outside promotion paths', async () => {
+    const rootPath = await createWorkspace()
+    const executor = createExecutor()
+
+    await expect(executor.execute(
+      createExecutionInput({
+        actionId: 'write_harness_promotion_artifact',
+        settings: { ...workspaceSettings, workspace: { ...workspaceSettings.workspace, rootPath } },
+        input: {
+          path: 'benchmarks/results/change-1.json',
+          artifact: {
+            manifest: {
+              id: 'change-1',
+              title: 'Tighten provider instructions',
+              rootCause: 'Benchmark evidence shows missing validation reminders.',
+              proposedFix: 'Add a concise validation reminder to build mode.',
+              predictedEffect: 'More runs will validate edits before completion.',
+              affectedComponents: ['core.instructions'],
+              evidence: ['benchmark local-edit failed validation'],
+              benchmarkSuites: ['local'],
+              tests: ['pnpm test'],
+              rollbackPlan: 'Revert the instruction text change in packages/core/src/instructions.ts.',
+              patchPreview: 'diff --git a/packages/core/src/instructions.ts b/packages/core/src/instructions.ts',
+              createdAt: '2026-04-29T10:00:00.000Z',
+            },
+            benchmarkComparison: {
+              before: { suite: 'local', passed: 2, failed: 1, score: 0.66 },
+              after: { suite: 'local', passed: 3, failed: 0, score: 1 },
+              passedDelta: 1,
+              failedDelta: -1,
+              scoreDelta: 0.33999999999999997,
+              improved: true,
+            },
+            promotionReady: true,
+            blockers: [],
+            approvalRequiredForPromotion: true,
+            liveMutationApplied: false,
+            createdAt: '2026-04-29T10:00:00.000Z',
+          },
+        },
+      }),
+    )).resolves.toMatchObject({
+      status: 'failed',
+      errorMessage: 'write_harness_promotion_artifact path must match .nano/harness/promotions/<promotion-id>.json',
     })
   })
 
@@ -896,6 +1006,7 @@ describe('BuiltInActionExecutor', () => {
     await expect(executor.getDefinition('update_spec_task')).resolves.toMatchObject({ requiresApproval: true })
     await expect(executor.getDefinition('append_spec_evidence')).resolves.toMatchObject({ requiresApproval: true })
     await expect(executor.getDefinition('archive_spec_change')).resolves.toMatchObject({ requiresApproval: true })
+    await expect(executor.getDefinition('write_harness_promotion_artifact')).resolves.toMatchObject({ requiresApproval: true })
     await expect(executor.getDefinition('write_skill_improvement_artifact')).resolves.toMatchObject({ requiresApproval: true })
   })
 })
@@ -912,7 +1023,7 @@ function createExecutionInput(input: {
   const action: ActionDefinition = {
     id: input.actionId,
     title: input.actionId,
-    requiresApproval: ['write_file', 'apply_patch', 'run_command', 'propose_harness_change', 'write_benchmark_run_artifact', 'write_skill_improvement_artifact', 'write_spec_artifact', 'update_spec_task', 'append_spec_evidence', 'archive_spec_change'].includes(input.actionId),
+    requiresApproval: ['write_file', 'apply_patch', 'run_command', 'propose_harness_change', 'write_benchmark_run_artifact', 'write_harness_promotion_artifact', 'write_skill_improvement_artifact', 'write_spec_artifact', 'update_spec_task', 'append_spec_evidence', 'archive_spec_change'].includes(input.actionId),
     inputSchema: {
       type: 'object',
       properties: {},
