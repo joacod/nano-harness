@@ -19,7 +19,7 @@ export function SkillsHubCard({
       <p className="eyebrow">Skills</p>
       <h2>Skills hub</h2>
       <FeedbackText>
-        Markdown skills are loaded from bundled defaults, `~/.nano/skills`, and `.nano/skills`. Enabled skills are available automatically on every run.
+        Markdown skills are loaded from bundled defaults, `~/.nano/skills`, and `.nano/skills`. Enabled skills are available automatically on every run. Use `/new-skill &lt;task&gt;` in chat to draft a project-local skill proposal.
       </FeedbackText>
       {error ? <FeedbackText variant="error" live>{error}</FeedbackText> : null}
       {skills.length === 0 ? <FeedbackText>No skills discovered.</FeedbackText> : null}

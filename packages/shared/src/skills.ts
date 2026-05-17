@@ -66,3 +66,13 @@ export const skillContextSchema = z.object({
 })
 
 export type SkillContext = z.infer<typeof skillContextSchema>
+
+export function createSkillDraftPrompt(task: string): string {
+  return [
+    'Create a project-local Agent Skill draft for this request.',
+    'Use create_skill_improvement_artifact to produce a proposed .nano/skills/<skill-id>/SKILL.md file with required name and description frontmatter.',
+    'Do not write skill files directly unless the user explicitly approves a separate write action.',
+    'Include concrete triggers, relevant tools, safety notes, and concise reusable instructions.',
+    task.trim(),
+  ].join('\n\n')
+}
