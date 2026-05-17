@@ -238,6 +238,32 @@ describe('setupIpcHandlers', () => {
     }))
   })
 
+  it('starts one run per selected tracked benchmark case', async () => {
+    const workspaceRoot = await mkdtemp(path.join(tmpdir(), 'nano-harness-ipc-benchmarks-'))
+    cleanupPaths.push(workspaceRoot)
+    await writeBenchmarkCase(workspaceRoot, 'spec-workbench')
+    const runtime = createRuntime({ workspace: { rootPath: workspaceRoot, approvalPolicy: 'on-request' } })
+    setupIpcHandlers(runtime)
+
+    await expect(invokeHandler(desktopBridgeChannels.startBenchmarkSuite, {
+      suite: 'local',
+      caseIds: ['spec-workbench', 'missing-case'],
+    })).resolves.toMatchObject({
+      suite: 'local',
+      runs: [expect.objectContaining({ caseId: 'spec-workbench', runId: 'run-123' })],
+      unknownCaseIds: ['missing-case'],
+    })
+
+    expect(runtime.runEngine.startRun).toHaveBeenCalledWith(expect.objectContaining({
+      role: 'build',
+      conversationId: expect.stringMatching(/^benchmark-local-spec-workbench-/),
+      prompt: expect.stringContaining('Run Nano benchmark case spec-workbench from suite local.'),
+    }))
+    expect(runtime.runEngine.startRun).toHaveBeenCalledWith(expect.objectContaining({
+      prompt: expect.stringContaining('Create a spec for adding a small renderer affordance'),
+    }))
+  })
+
   it('exports run evidence through the dedicated handler', async () => {
     const runtime = createRuntime()
     setupIpcHandlers(runtime)
@@ -489,6 +515,18 @@ async function writeSpecChange(workspaceRoot: string, changeId: string): Promise
     validation: [],
     draftPr: null,
   }, null, 2)}\n`, 'utf8')
+}
+
+async function writeBenchmarkCase(workspaceRoot: string, caseId: string): Promise<void> {
+  const casePath = path.join(workspaceRoot, 'benchmarks', 'cases', `${caseId}.md`)
+
+  await mkdir(path.dirname(casePath), { recursive: true })
+  await writeFile(casePath, [
+    '# Spec Workbench',
+    '',
+    '## Prompt',
+    'Create a spec for adding a small renderer affordance, plan it, build one selected task, review the result, and export run evidence.',
+  ].join('\n'), 'utf8')
 }
 
 async function invokeHandler(channel: string, payload?: unknown) {

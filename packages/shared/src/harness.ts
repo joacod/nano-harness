@@ -125,6 +125,22 @@ export const benchmarkResultIndexSchema = z.object({
 
 export type BenchmarkResultIndex = z.infer<typeof benchmarkResultIndexSchema>
 
+export const benchmarkSuiteRunSchema = z.object({
+  caseId: z.string().min(1),
+  conversationId: z.string().min(1),
+  runId: z.string().min(1),
+})
+
+export type BenchmarkSuiteRun = z.infer<typeof benchmarkSuiteRunSchema>
+
+export const benchmarkSuiteRunResultSchema = z.object({
+  suite: z.string().min(1),
+  runs: z.array(benchmarkSuiteRunSchema),
+  unknownCaseIds: z.array(z.string().min(1)),
+})
+
+export type BenchmarkSuiteRunResult = z.infer<typeof benchmarkSuiteRunResultSchema>
+
 export const benchmarkComparisonSchema = z.object({
   before: benchmarkRunSummarySchema,
   after: benchmarkRunSummarySchema,

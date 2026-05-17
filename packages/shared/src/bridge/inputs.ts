@@ -81,6 +81,13 @@ export const startSpecRunInputSchema = z.object({
 
 export type StartSpecRunInput = z.infer<typeof startSpecRunInputSchema>
 
+export const startBenchmarkSuiteInputSchema = z.object({
+  suite: z.string().min(1),
+  caseIds: z.array(z.string().min(1)).optional(),
+})
+
+export type StartBenchmarkSuiteInput = z.infer<typeof startBenchmarkSuiteInputSchema>
+
 export const openExternalUrlInputSchema = z.object({
   url: z.url(),
 })
