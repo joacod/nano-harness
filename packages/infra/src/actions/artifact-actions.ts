@@ -1,7 +1,7 @@
-import { mkdir, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 
-import { benchmarkCaseRegistry, benchmarkCaseResultSchema, benchmarkComparisonSchema, benchmarkRunArtifactSchema, benchmarkRunSummarySchema, draftPrArtifactSchema, harnessChangeManifestSchema, harnessComponentRegistry, harnessPromotionArtifactSchema, implementationSpecSchema, skillImprovementArtifactSchema, specArtifactKindSchema, specEvidencePacketSchema, specTaskStatusSchema, type BenchmarkRunArtifact, type SpecArtifactKind } from '@nano-harness/shared'
+import { benchmarkCaseRegistry, benchmarkCaseResultSchema, benchmarkComparisonSchema, benchmarkRunArtifactSchema, benchmarkRunPlanArtifactSchema, benchmarkRunSummarySchema, draftPrArtifactSchema, harnessChangeManifestSchema, harnessComponentRegistry, harnessPromotionArtifactSchema, implementationSpecSchema, skillImprovementArtifactSchema, specArtifactKindSchema, specEvidencePacketSchema, specTaskStatusSchema, type BenchmarkCase, type BenchmarkRunArtifact, type BenchmarkRunPlanCase, type SpecArtifactKind } from '@nano-harness/shared'
 
 import { SpecWorkspaceService } from '../spec-workspace'
 
@@ -37,6 +37,17 @@ function parseBenchmarkRunInput(value: Record<string, unknown>) {
     suite: value.suite.trim(),
     results: Array.isArray(value.results) ? value.results.map((result) => benchmarkCaseResultSchema.parse(result)) : [],
     evidence: parseStringArray(value.evidence, 'evidence'),
+  }
+}
+
+function parseBenchmarkRunPlanInput(value: Record<string, unknown>) {
+  if (typeof value.suite !== 'string' || !value.suite.trim()) {
+    throw new Error('create_benchmark_run_plan requires a non-empty suite')
+  }
+
+  return {
+    suite: value.suite.trim(),
+    caseIds: parseStringArray(value.caseIds, 'caseIds'),
   }
 }
 
@@ -200,6 +211,48 @@ function renderSkillMarkdown(input: {
     input.body.trim(),
     '',
   ].join('\n')
+}
+
+async function readBenchmarkPlanCase(workspaceRoot: string, benchmarkCase: BenchmarkCase): Promise<BenchmarkRunPlanCase> {
+  const content = await readFile(resolveWorkspacePath(workspaceRoot, benchmarkCase.path), 'utf8')
+  const sections = parseMarkdownSections(content)
+
+  return {
+    ...benchmarkCase,
+    goal: sections.get('Goal')?.[0],
+    setup: sections.get('Setup') ?? [],
+    prompt: sections.get('Prompt')?.join('\n'),
+    expectedCapabilities: sections.get('Expected Capabilities') ?? [],
+    successCriteria: sections.get('Success Criteria') ?? [],
+    scoringNotes: sections.get('Scoring Notes') ?? [],
+  }
+}
+
+function parseMarkdownSections(content: string): Map<string, string[]> {
+  const sections = new Map<string, string[]>()
+  let currentSection: string | null = null
+
+  for (const line of content.split('\n')) {
+    const heading = /^##\s+(?<title>.+?)\s*$/.exec(line)?.groups?.title
+
+    if (heading) {
+      currentSection = heading
+      sections.set(currentSection, [])
+      continue
+    }
+
+    if (!currentSection) {
+      continue
+    }
+
+    const value = line.replace(/^\s*-\s*/, '').trim()
+
+    if (value) {
+      sections.get(currentSection)?.push(value)
+    }
+  }
+
+  return sections
 }
 
 export const artifactActionCommands: BuiltInActionCommand[] = [
@@ -447,6 +500,55 @@ export const artifactActionCommands: BuiltInActionCommand[] = [
           liveMutationApplied: false,
           approvalRequiredForPromotion: true,
         },
+      })
+    },
+  },
+  {
+    definition: {
+      id: 'create_benchmark_run_plan',
+      title: 'Create Benchmark Run Plan',
+      description: 'Create a repeatable benchmark suite plan from tracked benchmark case markdown without executing runs',
+      requiresApproval: false,
+      inputSchema: {
+        type: 'object',
+        properties: {
+          suite: { type: 'string' },
+          caseIds: { type: 'array', items: { type: 'string' } },
+        },
+        required: ['suite'],
+        additionalProperties: false,
+      },
+    },
+    async execute(input) {
+      const parsedInput = parseBenchmarkRunPlanInput(input.call.input)
+      const requestedCaseIds = parsedInput.caseIds ?? benchmarkCaseRegistry.cases.map((benchmarkCase) => benchmarkCase.id)
+      const knownCases = new Map(benchmarkCaseRegistry.cases.map((benchmarkCase) => [benchmarkCase.id, benchmarkCase]))
+      const selectedCases = requestedCaseIds.flatMap((caseId) => {
+        const benchmarkCase = knownCases.get(caseId)
+        return benchmarkCase ? [benchmarkCase] : []
+      })
+      const unknownCaseIds = requestedCaseIds.filter((caseId) => !knownCases.has(caseId))
+      const planCases = await Promise.all(selectedCases.map((benchmarkCase) => readBenchmarkPlanCase(input.settings.workspace.rootPath, benchmarkCase)))
+      const artifact = benchmarkRunPlanArtifactSchema.parse({
+        id: `benchmark-plan-${parsedInput.suite}-${Date.now().toString(36)}`,
+        suite: parsedInput.suite,
+        cases: planCases,
+        unknownCaseIds,
+        resultTemplate: planCases.map((benchmarkCase) => ({
+          caseId: benchmarkCase.id,
+          status: null,
+          evidence: [],
+        })),
+        outputPath: `benchmarks/results/${parsedInput.suite}.json`,
+        approvalRequiredForWrite: false,
+        liveMutationApplied: false,
+        createdAt: new Date().toISOString(),
+      })
+
+      return createActionResult({
+        actionCallId: input.call.id,
+        status: 'completed',
+        output: artifact,
       })
     },
   },

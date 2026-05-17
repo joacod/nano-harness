@@ -49,6 +49,36 @@ export const benchmarkCaseSchema = z.object({
 
 export type BenchmarkCase = z.infer<typeof benchmarkCaseSchema>
 
+export const benchmarkRunPlanCaseSchema = benchmarkCaseSchema.extend({
+  goal: z.string().min(1).optional(),
+  setup: z.array(z.string().min(1)).default([]),
+  prompt: z.string().min(1).optional(),
+  expectedCapabilities: z.array(z.string().min(1)).default([]),
+  successCriteria: z.array(z.string().min(1)).default([]),
+  scoringNotes: z.array(z.string().min(1)).default([]),
+})
+
+export type BenchmarkRunPlanCase = z.infer<typeof benchmarkRunPlanCaseSchema>
+
+export const benchmarkRunPlanArtifactSchema = z.object({
+  id: z.string().min(1),
+  suite: z.string().min(1),
+  cases: z.array(benchmarkRunPlanCaseSchema).min(1),
+  unknownCaseIds: z.array(z.string().min(1)),
+  resultTemplate: z.array(z.object({
+    caseId: z.string().min(1),
+    status: z.enum(['passed', 'failed']).nullable(),
+    notes: z.string().min(1).optional(),
+    evidence: z.array(z.string().min(1)).default([]),
+  })),
+  outputPath: z.string().min(1),
+  approvalRequiredForWrite: z.literal(false),
+  liveMutationApplied: z.literal(false),
+  createdAt: z.iso.datetime(),
+})
+
+export type BenchmarkRunPlanArtifact = z.infer<typeof benchmarkRunPlanArtifactSchema>
+
 export const benchmarkCaseResultSchema = z.object({
   caseId: z.string().min(1),
   status: z.enum(['passed', 'failed']),

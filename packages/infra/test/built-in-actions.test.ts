@@ -392,6 +392,27 @@ describe('BuiltInActionExecutor', () => {
 
   it('validates harness manifests and compares benchmark results without live mutation', async () => {
     const rootPath = await createWorkspace()
+    await writeBenchmarkCase(rootPath, 'spec-workbench', [
+      '# Spec Workbench',
+      '',
+      '## Goal',
+      'Create and drive one local spec change through the visible Spec Workbench flow.',
+      '',
+      '## Prompt',
+      'Create a spec for adding a small renderer affordance, plan it, build one selected task, review the result, and export run evidence.',
+      '',
+      '## Success Criteria',
+      '- The Spec Workbench shows exactly one active change for the benchmark task.',
+    ].join('\n'))
+    await writeBenchmarkCase(rootPath, 'validation-obligations', [
+      '# Validation Obligations',
+      '',
+      '## Goal',
+      'Verify that local edits create explicit validation obligations and that subsequent validation evidence is inspectable.',
+      '',
+      '## Success Criteria',
+      '- The run timeline shows obligation.created after the edit action completes.',
+    ].join('\n'))
     const executor = createExecutor()
     const componentsResult = await executor.execute(
       createExecutionInput({
@@ -429,6 +450,16 @@ describe('BuiltInActionExecutor', () => {
         input: {
           before: { suite: 'local', passed: 2, failed: 1, score: 0.66 },
           after: { suite: 'local', passed: 3, failed: 0, score: 1 },
+        },
+      }),
+    )
+    const benchmarkPlanResult = await executor.execute(
+      createExecutionInput({
+        actionId: 'create_benchmark_run_plan',
+        settings: { ...workspaceSettings, workspace: { ...workspaceSettings.workspace, rootPath } },
+        input: {
+          suite: 'local',
+          caseIds: ['spec-workbench', 'validation-obligations', 'missing-case'],
         },
       }),
     )
@@ -497,6 +528,22 @@ describe('BuiltInActionExecutor', () => {
     expect(comparisonResult).toMatchObject({
       status: 'completed',
       output: { passedDelta: 1, failedDelta: -1, scoreDelta: 0.33999999999999997, improved: true },
+    })
+    expect(benchmarkPlanResult).toMatchObject({
+      status: 'completed',
+      output: {
+        suite: 'local',
+        outputPath: 'benchmarks/results/local.json',
+        unknownCaseIds: ['missing-case'],
+        cases: expect.arrayContaining([
+          expect.objectContaining({
+            id: 'spec-workbench',
+            prompt: expect.stringContaining('Create a spec'),
+            successCriteria: expect.arrayContaining(['The Spec Workbench shows exactly one active change for the benchmark task.']),
+          }),
+        ]),
+        resultTemplate: expect.arrayContaining([expect.objectContaining({ caseId: 'spec-workbench', status: null })]),
+      },
     })
     expect(benchmarkArtifactResult).toMatchObject({
       status: 'completed',
@@ -810,4 +857,10 @@ async function createWorkspace(): Promise<string> {
   const rootPath = await mkdtemp(path.join(tmpdir(), 'nano-harness-actions-'))
   cleanupPaths.push(rootPath)
   return rootPath
+}
+
+async function writeBenchmarkCase(rootPath: string, caseId: string, content: string): Promise<void> {
+  const casePath = path.join(rootPath, 'benchmarks/cases', `${caseId}.md`)
+  await mkdir(path.dirname(casePath), { recursive: true })
+  await writeFile(casePath, `${content}\n`, 'utf8')
 }
