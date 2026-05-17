@@ -672,6 +672,77 @@ describe('BuiltInActionExecutor', () => {
     })
   })
 
+  it('writes approved skill improvement artifacts under .nano/skills', async () => {
+    const rootPath = await createWorkspace()
+    const executor = createExecutor()
+    const createResult = await executor.execute(
+      createExecutionInput({
+        actionId: 'create_skill_improvement_artifact',
+        settings: { ...workspaceSettings, workspace: { ...workspaceSettings.workspace, rootPath } },
+        input: {
+          title: 'Add release notes workflow skill',
+          mode: 'create',
+          rationale: 'Repeated release note tasks need a focused evidence workflow.',
+          evidence: ['run:run-1'],
+          skillName: 'Release Notes',
+          description: 'Draft release notes from local git evidence.',
+          body: '# Release Notes\nUse git diff and changed files as evidence.',
+        },
+      }),
+    )
+
+    if (!createResult.output || Array.isArray(createResult.output) || typeof createResult.output !== 'object' || !('artifact' in createResult.output)) {
+      throw new Error('Expected create_skill_improvement_artifact to return an artifact')
+    }
+
+    const writeResult = await executor.execute(
+      createExecutionInput({
+        actionId: 'write_skill_improvement_artifact',
+        settings: { ...workspaceSettings, workspace: { ...workspaceSettings.workspace, rootPath } },
+        input: {
+          artifact: createResult.output.artifact,
+        },
+      }),
+    )
+
+    await expect(readFile(path.join(rootPath, '.nano/skills/release-notes/SKILL.md'), 'utf8')).resolves.toContain('name: Release Notes')
+    expect(writeResult).toMatchObject({
+      status: 'completed',
+      output: {
+        liveMutationApplied: true,
+        writtenFiles: [{ path: '.nano/skills/release-notes/SKILL.md' }],
+      },
+    })
+  })
+
+  it('rejects skill improvement writes outside skill SKILL.md paths', async () => {
+    const rootPath = await createWorkspace()
+    const executor = createExecutor()
+
+    await expect(executor.execute(
+      createExecutionInput({
+        actionId: 'write_skill_improvement_artifact',
+        settings: { ...workspaceSettings, workspace: { ...workspaceSettings.workspace, rootPath } },
+        input: {
+          artifact: {
+            id: 'skill-improvement-1',
+            mode: 'create',
+            title: 'Bad path',
+            rationale: 'Validate path constraints.',
+            evidence: ['run:run-1'],
+            proposedFiles: [{ relativePath: '.nano/skills/release-notes/README.md', content: 'nope' }],
+            patchPreview: 'diff --git a/.nano/skills/release-notes/README.md b/.nano/skills/release-notes/README.md',
+            approvalRequiredForWrite: true,
+            createdAt: '2026-04-29T10:00:00.000Z',
+          },
+        },
+      }),
+    )).resolves.toMatchObject({
+      status: 'failed',
+      errorMessage: 'write_skill_improvement_artifact paths must match .nano/skills/<skill-id>/SKILL.md',
+    })
+  })
+
   it('creates spec and draft PR artifacts without remote push', async () => {
     const rootPath = await createWorkspace()
     const executor = createExecutor()
@@ -825,6 +896,7 @@ describe('BuiltInActionExecutor', () => {
     await expect(executor.getDefinition('update_spec_task')).resolves.toMatchObject({ requiresApproval: true })
     await expect(executor.getDefinition('append_spec_evidence')).resolves.toMatchObject({ requiresApproval: true })
     await expect(executor.getDefinition('archive_spec_change')).resolves.toMatchObject({ requiresApproval: true })
+    await expect(executor.getDefinition('write_skill_improvement_artifact')).resolves.toMatchObject({ requiresApproval: true })
   })
 })
 
@@ -840,7 +912,7 @@ function createExecutionInput(input: {
   const action: ActionDefinition = {
     id: input.actionId,
     title: input.actionId,
-    requiresApproval: ['write_file', 'apply_patch', 'run_command', 'propose_harness_change', 'write_benchmark_run_artifact', 'write_spec_artifact', 'update_spec_task', 'append_spec_evidence', 'archive_spec_change'].includes(input.actionId),
+    requiresApproval: ['write_file', 'apply_patch', 'run_command', 'propose_harness_change', 'write_benchmark_run_artifact', 'write_skill_improvement_artifact', 'write_spec_artifact', 'update_spec_task', 'append_spec_evidence', 'archive_spec_change'].includes(input.actionId),
     inputSchema: {
       type: 'object',
       properties: {},

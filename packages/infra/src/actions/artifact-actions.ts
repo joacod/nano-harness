@@ -1,7 +1,7 @@
 import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 
-import { benchmarkCaseRegistry, benchmarkCaseResultSchema, benchmarkComparisonSchema, benchmarkResultIndexSchema, benchmarkRunArtifactSchema, benchmarkRunPlanArtifactSchema, benchmarkRunSummarySchema, draftPrArtifactSchema, harnessChangeManifestSchema, harnessComponentRegistry, harnessPromotionArtifactSchema, implementationSpecSchema, skillImprovementArtifactSchema, specArtifactKindSchema, specEvidencePacketSchema, specTaskStatusSchema, type BenchmarkCase, type BenchmarkRunArtifact, type BenchmarkRunPlanCase, type SpecArtifactKind } from '@nano-harness/shared'
+import { benchmarkCaseRegistry, benchmarkCaseResultSchema, benchmarkComparisonSchema, benchmarkResultIndexSchema, benchmarkRunArtifactSchema, benchmarkRunPlanArtifactSchema, benchmarkRunSummarySchema, draftPrArtifactSchema, harnessChangeManifestSchema, harnessComponentRegistry, harnessPromotionArtifactSchema, implementationSpecSchema, skillImprovementArtifactSchema, specArtifactKindSchema, specEvidencePacketSchema, specTaskStatusSchema, type BenchmarkCase, type BenchmarkRunArtifact, type BenchmarkRunPlanCase, type SkillImprovementArtifact, type SpecArtifactKind } from '@nano-harness/shared'
 
 import { SpecWorkspaceService } from '../spec-workspace'
 
@@ -61,6 +61,20 @@ function parseWriteBenchmarkRunInput(value: Record<string, unknown>): { artifact
   }
 
   return { artifact, path: normalizedPath }
+}
+
+function parseWriteSkillImprovementInput(value: Record<string, unknown>): { artifact: SkillImprovementArtifact } {
+  const artifact = skillImprovementArtifactSchema.parse(value.artifact)
+
+  for (const proposedFile of artifact.proposedFiles) {
+    const normalizedPath = proposedFile.relativePath.replace(/\\/g, '/')
+
+    if (!/^\.nano\/skills\/[a-z0-9][a-z0-9-]*\/SKILL\.md$/.test(normalizedPath)) {
+      throw new Error('write_skill_improvement_artifact paths must match .nano/skills/<skill-id>/SKILL.md')
+    }
+  }
+
+  return { artifact }
 }
 
 function parseCreateSpecInput(value: Record<string, unknown>): {
@@ -841,6 +855,48 @@ export const artifactActionCommands: BuiltInActionCommand[] = [
           artifact,
           liveMutationApplied: false,
           approvalRequiredForWrite: true,
+        },
+      })
+    },
+  },
+  {
+    definition: {
+      id: 'write_skill_improvement_artifact',
+      title: 'Write Skill Improvement Artifact',
+      description: 'Validate and write proposed local skill files under .nano/skills after approval',
+      requiresApproval: true,
+      inputSchema: {
+        type: 'object',
+        properties: {
+          artifact: { type: 'object' },
+        },
+        required: ['artifact'],
+        additionalProperties: false,
+      },
+    },
+    async execute(input) {
+      const parsedInput = parseWriteSkillImprovementInput(input.call.input)
+      const writtenFiles = []
+
+      for (const proposedFile of parsedInput.artifact.proposedFiles) {
+        const relativePath = proposedFile.relativePath.replace(/\\/g, '/')
+        const resolvedPath = resolveWorkspacePath(input.settings.workspace.rootPath, relativePath)
+
+        await mkdir(path.dirname(resolvedPath), { recursive: true })
+        await writeFile(resolvedPath, proposedFile.content, 'utf8')
+        writtenFiles.push({
+          path: relativePath,
+          bytesWritten: Buffer.byteLength(proposedFile.content, 'utf8'),
+        })
+      }
+
+      return createActionResult({
+        actionCallId: input.call.id,
+        status: 'completed',
+        output: {
+          artifactId: parsedInput.artifact.id,
+          writtenFiles,
+          liveMutationApplied: true,
         },
       })
     },
