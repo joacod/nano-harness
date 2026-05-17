@@ -533,6 +533,23 @@ describe('BuiltInActionExecutor', () => {
         },
       }),
     )
+    await writeFile(path.join(rootPath, '.nano/harness/promotions/broken.json'), '{not-json', 'utf8')
+    const promotionArtifactsResult = await executor.execute(
+      createExecutionInput({
+        actionId: 'list_harness_promotion_artifacts',
+        settings: { ...workspaceSettings, workspace: { ...workspaceSettings.workspace, rootPath } },
+        input: {},
+      }),
+    )
+    const readPromotionResult = await executor.execute(
+      createExecutionInput({
+        actionId: 'read_harness_promotion_artifact',
+        settings: { ...workspaceSettings, workspace: { ...workspaceSettings.workspace, rootPath } },
+        input: {
+          path: '.nano/harness/promotions/change-1.json',
+        },
+      }),
+    )
 
     expect(componentsResult).toMatchObject({ status: 'completed' })
     expect(componentsResult.output).toMatchObject({
@@ -604,6 +621,25 @@ describe('BuiltInActionExecutor', () => {
       },
     })
     await expect(readFile(path.join(rootPath, '.nano/harness/promotions/change-1.json'), 'utf8')).resolves.toContain('"promotionReady": true')
+    expect(promotionArtifactsResult).toMatchObject({
+      status: 'completed',
+      output: {
+        promotions: [expect.objectContaining({
+          id: 'change-1',
+          path: '.nano/harness/promotions/change-1.json',
+          promotionReady: true,
+          benchmarkSuite: 'local',
+        })],
+        invalidFiles: [expect.objectContaining({ path: '.nano/harness/promotions/broken.json' })],
+      },
+    })
+    expect(readPromotionResult).toMatchObject({
+      status: 'completed',
+      output: {
+        path: '.nano/harness/promotions/change-1.json',
+        artifact: { manifest: { id: 'change-1' }, promotionReady: true },
+      },
+    })
   })
 
   it('blocks harness promotion artifacts when benchmark comparison regresses', async () => {
@@ -740,6 +776,24 @@ describe('BuiltInActionExecutor', () => {
     )).resolves.toMatchObject({
       status: 'failed',
       errorMessage: 'write_harness_promotion_artifact path must match .nano/harness/promotions/<promotion-id>.json',
+    })
+  })
+
+  it('rejects harness promotion artifact reads outside promotion paths', async () => {
+    const rootPath = await createWorkspace()
+    const executor = createExecutor()
+
+    await expect(executor.execute(
+      createExecutionInput({
+        actionId: 'read_harness_promotion_artifact',
+        settings: { ...workspaceSettings, workspace: { ...workspaceSettings.workspace, rootPath } },
+        input: {
+          path: 'benchmarks/results/change-1.json',
+        },
+      }),
+    )).resolves.toMatchObject({
+      status: 'failed',
+      errorMessage: 'read_harness_promotion_artifact path must match .nano/harness/promotions/<promotion-id>.json',
     })
   })
 

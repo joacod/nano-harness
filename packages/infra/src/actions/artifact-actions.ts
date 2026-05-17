@@ -39,6 +39,16 @@ function parseWriteHarnessPromotionInput(value: Record<string, unknown>): { arti
   return { artifact, path: normalizedPath }
 }
 
+function parseHarnessPromotionPath(value: unknown): string {
+  const normalizedPath = parseString(value, 'path').replace(/\\/g, '/')
+
+  if (!/^\.nano\/harness\/promotions\/[a-z0-9][a-z0-9-]*\.json$/.test(normalizedPath)) {
+    throw new Error('read_harness_promotion_artifact path must match .nano/harness/promotions/<promotion-id>.json')
+  }
+
+  return normalizedPath
+}
+
 function parseBenchmarkComparisonInput(value: Record<string, unknown>) {
   return {
     before: benchmarkRunSummarySchema.parse(value.before),
@@ -340,6 +350,57 @@ async function listBenchmarkResults(workspaceRoot: string) {
   })
 }
 
+async function listHarnessPromotionArtifacts(workspaceRoot: string) {
+  const promotionsRoot = resolveWorkspacePath(workspaceRoot, '.nano/harness/promotions')
+  let entries: string[]
+
+  try {
+    entries = await readdir(promotionsRoot)
+  } catch (error) {
+    if (error instanceof Error && 'code' in error && error.code === 'ENOENT') {
+      return { promotions: [], invalidFiles: [] }
+    }
+
+    throw error
+  }
+
+  const parsedEntries = await Promise.all(entries
+    .filter((entry) => entry.endsWith('.json'))
+    .sort((left, right) => left.localeCompare(right))
+    .map(async (entry) => {
+      const relativePath = `.nano/harness/promotions/${entry}`
+
+      try {
+        const artifact = harnessPromotionArtifactSchema.parse(JSON.parse(await readFile(resolveWorkspacePath(workspaceRoot, relativePath), 'utf8')))
+        return {
+          promotion: {
+            id: artifact.manifest.id,
+            title: artifact.manifest.title,
+            path: relativePath,
+            promotionReady: artifact.promotionReady,
+            benchmarkSuite: artifact.benchmarkComparison.after.suite,
+            scoreDelta: artifact.benchmarkComparison.scoreDelta,
+            createdAt: artifact.createdAt,
+          },
+          invalidFile: null,
+        }
+      } catch (error) {
+        return {
+          promotion: null,
+          invalidFile: {
+            path: relativePath,
+            reason: error instanceof Error ? error.message : 'Invalid harness promotion artifact file',
+          },
+        }
+      }
+    }))
+
+  return {
+    promotions: parsedEntries.flatMap((entry) => entry.promotion ? [entry.promotion] : []),
+    invalidFiles: parsedEntries.flatMap((entry) => entry.invalidFile ? [entry.invalidFile] : []),
+  }
+}
+
 export const artifactActionCommands: BuiltInActionCommand[] = [
   {
     definition: {
@@ -550,6 +611,52 @@ export const artifactActionCommands: BuiltInActionCommand[] = [
         actionCallId: input.call.id,
         status: 'completed',
         output: harnessComponentRegistry,
+      })
+    },
+  },
+  {
+    definition: {
+      id: 'list_harness_promotion_artifacts',
+      title: 'List Harness Promotion Artifacts',
+      description: 'List persisted harness promotion artifacts under .nano/harness/promotions without mutating files',
+      requiresApproval: false,
+      inputSchema: {
+        type: 'object',
+        properties: {},
+        additionalProperties: false,
+      },
+    },
+    async execute(input) {
+      return createActionResult({
+        actionCallId: input.call.id,
+        status: 'completed',
+        output: await listHarnessPromotionArtifacts(input.settings.workspace.rootPath),
+      })
+    },
+  },
+  {
+    definition: {
+      id: 'read_harness_promotion_artifact',
+      title: 'Read Harness Promotion Artifact',
+      description: 'Read a persisted harness promotion artifact from .nano/harness/promotions without mutating files',
+      requiresApproval: false,
+      inputSchema: {
+        type: 'object',
+        properties: {
+          path: { type: 'string' },
+        },
+        required: ['path'],
+        additionalProperties: false,
+      },
+    },
+    async execute(input) {
+      const relativePath = parseHarnessPromotionPath(input.call.input.path)
+      const artifact = harnessPromotionArtifactSchema.parse(JSON.parse(await readFile(resolveWorkspacePath(input.settings.workspace.rootPath, relativePath), 'utf8')))
+
+      return createActionResult({
+        actionCallId: input.call.id,
+        status: 'completed',
+        output: { path: relativePath, artifact },
       })
     },
   },
