@@ -1,7 +1,7 @@
 import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 
-import { benchmarkCaseRegistry, benchmarkCaseResultSchema, benchmarkComparisonSchema, benchmarkResultIndexSchema, benchmarkRunArtifactSchema, benchmarkRunPlanArtifactSchema, benchmarkRunSummarySchema, draftPrArtifactSchema, harnessChangeManifestSchema, harnessComponentRegistry, harnessPromotionArtifactSchema, implementationSpecSchema, skillImprovementArtifactSchema, specArtifactKindSchema, specEvidencePacketSchema, specTaskStatusSchema, type BenchmarkCase, type BenchmarkRunArtifact, type BenchmarkRunPlanCase, type HarnessPromotionArtifact, type SkillImprovementArtifact, type SpecArtifactKind } from '@nano-harness/shared'
+import { benchmarkCaseRegistry, benchmarkCaseResultSchema, benchmarkComparisonSchema, benchmarkResultIndexSchema, benchmarkRunArtifactSchema, benchmarkRunPlanArtifactSchema, benchmarkRunSummarySchema, draftPrArtifactSchema, harnessChangeManifestSchema, harnessComponentRegistry, harnessPatchPreviewArtifactSchema, harnessPromotionArtifactSchema, implementationSpecSchema, skillImprovementArtifactSchema, specArtifactKindSchema, specEvidencePacketSchema, specTaskStatusSchema, type BenchmarkCase, type BenchmarkRunArtifact, type BenchmarkRunPlanCase, type HarnessChangeManifest, type HarnessPromotionArtifact, type SkillImprovementArtifact, type SpecArtifactKind } from '@nano-harness/shared'
 
 import { SpecWorkspaceService } from '../spec-workspace'
 
@@ -11,6 +11,10 @@ import { resolveWorkspacePath } from './workspace'
 const specWorkspaceService = new SpecWorkspaceService()
 
 function parseHarnessChangeManifestInput(value: Record<string, unknown>) {
+  return harnessChangeManifestSchema.parse(value.manifest)
+}
+
+function parseHarnessPatchPreviewInput(value: Record<string, unknown>): HarnessChangeManifest {
   return harnessChangeManifestSchema.parse(value.manifest)
 }
 
@@ -235,6 +239,21 @@ function slugifySkillId(value: string): string {
 
 function slugifyArtifactId(value: string): string {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'artifact'
+}
+
+function extractUnifiedDiffPaths(patchPreview: string): string[] {
+  const paths = new Set<string>()
+
+  for (const line of patchPreview.split('\n')) {
+    const match = /^diff --git a\/(?<left>\S+) b\/(?<right>\S+)/.exec(line)
+    const patchPath = match?.groups?.right ?? match?.groups?.left
+
+    if (patchPath) {
+      paths.add(patchPath.replace(/\\/g, '/'))
+    }
+  }
+
+  return [...paths]
 }
 
 function renderSkillMarkdown(input: {
@@ -692,6 +711,61 @@ export const artifactActionCommands: BuiltInActionCommand[] = [
           liveMutationApplied: false,
           approvalRequiredForPromotion: true,
         },
+      })
+    },
+  },
+  {
+    definition: {
+      id: 'create_harness_patch_preview_artifact',
+      title: 'Create Harness Patch Preview Artifact',
+      description: 'Create a non-mutating, structured harness patch preview from a manifest and validate touched component paths',
+      requiresApproval: false,
+      inputSchema: {
+        type: 'object',
+        properties: {
+          manifest: { type: 'object' },
+        },
+        required: ['manifest'],
+        additionalProperties: false,
+      },
+    },
+    async execute(input) {
+      const manifest = parseHarnessPatchPreviewInput(input.call.input)
+      const registeredComponents = new Map(harnessComponentRegistry.components.map((component) => [component.id, component]))
+      const affectedFiles = manifest.affectedComponents.flatMap((componentId) => {
+        const component = registeredComponents.get(componentId)
+
+        return component ? [{ componentId: component.id, path: component.path, mutable: component.mutable }] : []
+      })
+      const knownAffectedPaths = new Set(affectedFiles.map((file) => file.path))
+      const patchPaths = extractUnifiedDiffPaths(manifest.patchPreview)
+      const unknownComponents = manifest.affectedComponents.filter((componentId) => !registeredComponents.has(componentId))
+      const immutableComponents = affectedFiles.filter((file) => !file.mutable)
+      const unknownPatchPaths = patchPaths.filter((patchPath) => !knownAffectedPaths.has(patchPath))
+      const blockerCandidates = [
+        ...unknownComponents.map((componentId) => `Unknown harness component: ${componentId}`),
+        ...immutableComponents.map((file) => `Harness component is not mutable: ${file.componentId}`),
+        patchPaths.length === 0 ? 'Patch preview did not include unified diff file paths.' : null,
+        ...unknownPatchPaths.map((patchPath) => `Patch preview path is not a declared affected component: ${patchPath}`),
+      ]
+      const blockers = blockerCandidates.filter((blocker): blocker is string => blocker !== null)
+      const artifact = harnessPatchPreviewArtifactSchema.parse({
+        id: `harness-patch-preview-${slugifyArtifactId(manifest.id)}`,
+        manifest,
+        affectedFiles,
+        patchPaths,
+        unknownPatchPaths,
+        applyReady: blockers.length === 0,
+        blockers,
+        approvalRequiredForApply: true,
+        liveMutationApplied: false,
+        createdAt: new Date().toISOString(),
+      })
+
+      return createActionResult({
+        actionCallId: input.call.id,
+        status: 'completed',
+        output: artifact,
       })
     },
   },

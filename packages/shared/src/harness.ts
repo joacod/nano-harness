@@ -32,6 +32,25 @@ export const harnessChangeManifestSchema = z.object({
 
 export type HarnessChangeManifest = z.infer<typeof harnessChangeManifestSchema>
 
+export const harnessPatchPreviewArtifactSchema = z.object({
+  id: z.string().min(1),
+  manifest: harnessChangeManifestSchema,
+  affectedFiles: z.array(z.object({
+    componentId: z.string().min(1),
+    path: z.string().min(1),
+    mutable: z.boolean(),
+  })).min(1),
+  patchPaths: z.array(z.string().min(1)),
+  unknownPatchPaths: z.array(z.string().min(1)),
+  applyReady: z.boolean(),
+  blockers: z.array(z.string().min(1)),
+  approvalRequiredForApply: z.literal(true),
+  liveMutationApplied: z.literal(false),
+  createdAt: z.iso.datetime(),
+})
+
+export type HarnessPatchPreviewArtifact = z.infer<typeof harnessPatchPreviewArtifactSchema>
+
 export const benchmarkRunSummarySchema = z.object({
   suite: z.string().min(1),
   passed: z.number().int().min(0),

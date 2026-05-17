@@ -443,6 +443,28 @@ describe('BuiltInActionExecutor', () => {
         },
       }),
     )
+    const patchPreviewResult = await executor.execute(
+      createExecutionInput({
+        actionId: 'create_harness_patch_preview_artifact',
+        settings: { ...workspaceSettings, workspace: { ...workspaceSettings.workspace, rootPath } },
+        input: {
+          manifest: {
+            id: 'change-1',
+            title: 'Tighten provider instructions',
+            rootCause: 'Benchmark evidence shows missing validation reminders.',
+            proposedFix: 'Add a concise validation reminder to build mode.',
+            predictedEffect: 'More runs will validate edits before completion.',
+            affectedComponents: ['core.instructions'],
+            evidence: ['benchmark local-edit failed validation'],
+            benchmarkSuites: ['local'],
+            tests: ['pnpm test'],
+            rollbackPlan: 'Revert the instruction text change in packages/core/src/instructions.ts.',
+            patchPreview: 'diff --git a/packages/core/src/instructions.ts b/packages/core/src/instructions.ts',
+            createdAt: '2026-04-29T10:00:00.000Z',
+          },
+        },
+      }),
+    )
     const comparisonResult = await executor.execute(
       createExecutionInput({
         actionId: 'compare_benchmark_results',
@@ -558,6 +580,17 @@ describe('BuiltInActionExecutor', () => {
     expect(proposalResult).toMatchObject({
       status: 'completed',
       output: { liveMutationApplied: false, approvalRequiredForPromotion: true },
+    })
+    expect(patchPreviewResult).toMatchObject({
+      status: 'completed',
+      output: {
+        applyReady: true,
+        blockers: [],
+        patchPaths: ['packages/core/src/instructions.ts'],
+        unknownPatchPaths: [],
+        approvalRequiredForApply: true,
+        liveMutationApplied: false,
+      },
     })
     expect(comparisonResult).toMatchObject({
       status: 'completed',
@@ -681,6 +714,42 @@ describe('BuiltInActionExecutor', () => {
         promotionReady: false,
         blockers: ['Benchmark comparison did not improve.', 'Benchmark comparison increased failures.'],
         approvalRequiredForPromotion: true,
+        liveMutationApplied: false,
+      },
+    })
+  })
+
+  it('blocks harness patch previews when diff paths are not declared affected components', async () => {
+    const rootPath = await createWorkspace()
+    const result = await createExecutor().execute(
+      createExecutionInput({
+        actionId: 'create_harness_patch_preview_artifact',
+        settings: { ...workspaceSettings, workspace: { ...workspaceSettings.workspace, rootPath } },
+        input: {
+          manifest: {
+            id: 'change-1',
+            title: 'Tighten provider instructions',
+            rootCause: 'Benchmark evidence shows missing validation reminders.',
+            proposedFix: 'Add a concise validation reminder to build mode.',
+            predictedEffect: 'More runs will validate edits before completion.',
+            affectedComponents: ['core.instructions'],
+            evidence: ['benchmark local-edit failed validation'],
+            benchmarkSuites: ['local'],
+            tests: ['pnpm test'],
+            rollbackPlan: 'Revert the instruction text change in packages/core/src/instructions.ts.',
+            patchPreview: 'diff --git a/packages/infra/src/built-in-actions.ts b/packages/infra/src/built-in-actions.ts',
+            createdAt: '2026-04-29T10:00:00.000Z',
+          },
+        },
+      }),
+    )
+
+    expect(result).toMatchObject({
+      status: 'completed',
+      output: {
+        applyReady: false,
+        unknownPatchPaths: ['packages/infra/src/built-in-actions.ts'],
+        blockers: ['Patch preview path is not a declared affected component: packages/infra/src/built-in-actions.ts'],
         liveMutationApplied: false,
       },
     })

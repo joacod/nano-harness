@@ -5,9 +5,10 @@ import {
   benchmarkRunArtifactSchema,
   clearProviderAuthInputSchema,
   getProviderDefinition,
-  harnessPromotionArtifactSchema,
   harnessChangeManifestSchema,
   harnessComponentRegistrySchema,
+  harnessPatchPreviewArtifactSchema,
+  harnessPromotionArtifactSchema,
   implementationSpecSchema,
   createSpecWorkflowPrompt,
   messageSchema,
@@ -179,6 +180,34 @@ describe('shared contracts', () => {
       liveMutationApplied: false,
       createdAt: '2026-04-29T10:00:00.000Z',
     })).toMatchObject({ promotionReady: true, liveMutationApplied: false })
+  })
+
+  it('validates harness patch preview artifacts as non-mutating apply gates', () => {
+    expect(harnessPatchPreviewArtifactSchema.parse({
+      id: 'harness-patch-preview-change-1',
+      manifest: {
+        id: 'change-1',
+        title: 'Improve validation reminder',
+        rootCause: 'Benchmark runs completed edits without validation.',
+        proposedFix: 'Update build instructions to require targeted validation after edits.',
+        predictedEffect: 'Higher benchmark validation pass rate.',
+        affectedComponents: ['core.instructions'],
+        evidence: ['run evidence export: validation missing'],
+        benchmarkSuites: ['local'],
+        tests: ['pnpm test'],
+        rollbackPlan: 'Revert the instruction text change.',
+        patchPreview: 'diff --git a/packages/core/src/instructions.ts b/packages/core/src/instructions.ts',
+        createdAt: '2026-04-29T10:00:00.000Z',
+      },
+      affectedFiles: [{ componentId: 'core.instructions', path: 'packages/core/src/instructions.ts', mutable: true }],
+      patchPaths: ['packages/core/src/instructions.ts'],
+      unknownPatchPaths: [],
+      applyReady: true,
+      blockers: [],
+      approvalRequiredForApply: true,
+      liveMutationApplied: false,
+      createdAt: '2026-04-29T10:00:00.000Z',
+    })).toMatchObject({ applyReady: true, liveMutationApplied: false })
   })
 
   it('validates benchmark run artifacts as draft-only results', () => {
