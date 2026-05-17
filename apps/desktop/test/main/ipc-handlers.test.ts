@@ -481,6 +481,7 @@ function createRuntime(settingsOverride?: Partial<AppSettings>) {
           safetyNotes: [],
           source: 'bundled' as const,
           enabled: true,
+          validationWarnings: [],
           content: 'Read first.',
         },
       ]),

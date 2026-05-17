@@ -19,6 +19,7 @@ export const skillSummarySchema = skillMetadataSchema.extend({
   source: skillSourceSchema,
   path: z.string().min(1).optional(),
   enabled: z.boolean(),
+  validationWarnings: z.array(z.string().min(1)).default([]),
 })
 
 export type SkillSummary = z.infer<typeof skillSummarySchema>

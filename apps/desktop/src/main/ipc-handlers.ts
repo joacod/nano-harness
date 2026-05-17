@@ -146,6 +146,7 @@ export function setupIpcHandlers(runtime: IpcRuntime): void {
       source: skill.source,
       path: skill.path,
       enabled: skill.enabled,
+      validationWarnings: skill.validationWarnings,
     })) }
   })
 

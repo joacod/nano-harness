@@ -42,6 +42,11 @@ export function SkillsHubCard({
                 </div>
                 <p className="timeline-type">{skill.source}{skill.path ? ` · ${skill.path}` : ''}</p>
                 <FeedbackText>{skill.description}</FeedbackText>
+                {skill.validationWarnings.length ? (
+                  <FeedbackText variant="warning" live>
+                    Validation warnings: {skill.validationWarnings.join(' ')}
+                  </FeedbackText>
+                ) : null}
                 {skill.triggers.length ? <small className="muted-copy">Focus terms: {skill.triggers.join(', ')}</small> : null}
                 {skill.tools.length ? <small className="muted-copy">Tools: {skill.tools.join(', ')}</small> : null}
               </div>
