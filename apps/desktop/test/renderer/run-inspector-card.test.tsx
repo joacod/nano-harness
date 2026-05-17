@@ -133,6 +133,83 @@ describe('RunInspectorCard', () => {
     expect(screen.getByRole('link', { name: 'Open in Specs' }).getAttribute('href')).toBe('/specs/add-spec-workbench')
   })
 
+  it('summarizes validation obligation state', () => {
+    window.desktop = createDesktopMock()
+
+    renderWithQueryClient(
+      <RunInspectorCard
+        run={createRun({ status: 'completed', startedAt: '2026-04-29T10:01:00.000Z' })}
+        events={[
+          event('obligation.created', {
+            obligation: {
+              id: 'obligation-1',
+              reason: 'Validate edits to src/app.ts.',
+              sourceActionCallIds: ['call-1'],
+              changedFiles: ['src/app.ts'],
+              validationCommands: [],
+              createdAt: '2026-04-29T10:02:00.000Z',
+            },
+          }),
+          event('obligation.unmet', {
+            obligationId: 'obligation-1',
+            reason: 'Run completed before validation evidence satisfied this obligation.',
+            checkedAt: '2026-04-29T10:03:00.000Z',
+          }),
+        ]}
+        pendingApproval={null}
+        streamingState={null}
+        onEvidenceExported={() => undefined}
+        onEvidenceExportError={() => undefined}
+      />,
+    )
+
+    expect(screen.getByText('Validation Obligations')).toBeTruthy()
+    expect(screen.getByText('0 open')).toBeTruthy()
+    expect(screen.getByText('0 satisfied')).toBeTruthy()
+    expect(screen.getByText('1 unmet')).toBeTruthy()
+  })
+
+  it('shows dry-run selected memory with provenance', () => {
+    window.desktop = createDesktopMock()
+
+    renderWithQueryClient(
+      <RunInspectorCard
+        run={createRun({ status: 'completed', startedAt: '2026-04-29T10:01:00.000Z' })}
+        events={[
+          event('run.dry_run_preview', {
+            provider: { provider: 'openrouter', model: providerDefaultModels.openrouter },
+            workspace: { rootPath: '/tmp/workspace', approvalPolicy: 'on-request' },
+            actions: [],
+            permissions: { denied: [], risky: [], activeRules: [], activeHooks: [] },
+            skills: { available: [], selected: [] },
+            mcp: { servers: [], tools: [], resources: [] },
+            memory: {
+              selected: [{
+                id: 'memory-1',
+                category: 'workflow',
+                content: 'Use Spec Workbench for durable planned changes.',
+                source: 'proposal:proposal-1',
+                runId: 'run-source-1',
+                confidence: 0.75,
+                createdAt: '2026-04-29T10:00:00.000Z',
+                updatedAt: '2026-04-29T10:05:00.000Z',
+              }],
+              excludedCategories: [],
+            },
+          }),
+        ]}
+        pendingApproval={null}
+        streamingState={null}
+        onEvidenceExported={() => undefined}
+        onEvidenceExportError={() => undefined}
+      />,
+    )
+
+    expect(screen.getByText('Dry-Run Memory')).toBeTruthy()
+    expect(screen.getByText('Use Spec Workbench for durable planned changes.')).toBeTruthy()
+    expect(screen.getByText('Source: proposal:proposal-1 · Run run-source-1 · Confidence 75%')).toBeTruthy()
+  })
+
   it('shows recalled memory and pending suggestions in the inspector', () => {
     window.desktop = createDesktopMock()
 
@@ -155,16 +232,28 @@ describe('RunInspectorCard', () => {
           }],
         }}
         memoryProposals={{
-          proposals: [{
-            id: 'proposal-2',
-            runId: 'run-1',
-            category: 'workflow',
-            content: 'Validate spec tasks before marking them done.',
-            rationale: 'Spec evidence was appended during this run.',
-            evidence: ['validation:pnpm typecheck passed'],
-            status: 'pending',
-            createdAt: '2026-04-29T10:06:00.000Z',
-          }],
+          proposals: [
+            {
+              id: 'proposal-2',
+              runId: 'run-1',
+              category: 'workflow',
+              content: 'Validate spec tasks before marking them done.',
+              rationale: 'Spec evidence was appended during this run.',
+              evidence: ['validation:pnpm typecheck passed'],
+              status: 'pending',
+              createdAt: '2026-04-29T10:06:00.000Z',
+            },
+            {
+              id: 'proposal-other-run',
+              runId: 'run-other',
+              category: 'workflow',
+              content: 'This suggestion belongs to another run.',
+              rationale: 'Different run evidence.',
+              evidence: ['event:other'],
+              status: 'pending',
+              createdAt: '2026-04-29T10:07:00.000Z',
+            },
+          ],
         }}
         onEvidenceExported={() => undefined}
         onEvidenceExportError={() => undefined}
@@ -175,6 +264,7 @@ describe('RunInspectorCard', () => {
     expect(screen.getByText('Run typecheck after renderer edits.')).toBeTruthy()
     expect(screen.getByText('Validate spec tasks before marking them done.')).toBeTruthy()
     expect(screen.getByText('Evidence: validation:pnpm typecheck passed')).toBeTruthy()
+    expect(screen.queryByText('This suggestion belongs to another run.')).toBeNull()
   })
 
   it('surfaces mutation errors from run controls', async () => {

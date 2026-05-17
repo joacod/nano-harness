@@ -178,6 +178,35 @@ describe('ComposerCard', () => {
     })
   })
 
+  it('routes /new-skill commands through a non-mutating skill draft plan prompt', async () => {
+    const user = userEvent.setup()
+    const startRun = vi.fn(async (input: RunCreateInput) => {
+      void input
+      return { runId: 'run-1' }
+    })
+    vi.stubGlobal('crypto', { randomUUID: () => 'uuid-123' })
+    window.desktop = createDesktopMock({
+      getProviderStatus: async () => createProviderStatus(),
+      startRun,
+    })
+
+    const { container } = renderWithQueryClient(<ComposerCard conversationId={null} />)
+    const promptInput = getRequiredElement<HTMLTextAreaElement>(container, 'textarea[name="prompt"]')
+
+    await user.type(promptInput, '/new-skill release note writing')
+    await user.click(screen.getByRole('button', { name: 'Send prompt' }))
+
+    await waitFor(() => {
+      expect(startRun).toHaveBeenCalledWith({
+        conversationId: 'conversation-uuid-123',
+        prompt: expect.stringContaining('release note writing'),
+        role: 'plan',
+      })
+      expect(startRun.mock.calls[0]?.[0].prompt).toContain('create_skill_improvement_artifact')
+      expect(startRun.mock.calls[0]?.[0].prompt).toContain('Do not write skill files directly')
+    })
+  })
+
   it('surfaces start-run failures', async () => {
     const user = userEvent.setup()
     const startRun = vi.fn(async () => {

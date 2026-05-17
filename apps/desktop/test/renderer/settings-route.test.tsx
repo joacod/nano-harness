@@ -84,6 +84,7 @@ describe('SettingsRoute', () => {
           safetyNotes: [],
           source: 'bundled',
           enabled: true,
+          validationWarnings: ['SKILL.md frontmatter is missing required description.'],
         }],
       }),
       listMcpInventory: async () => ({ servers: [], tools: [], resources: [] }),
@@ -99,6 +100,7 @@ describe('SettingsRoute', () => {
     expect(await screen.findByText('/tmp/nano-harness.db')).toBeTruthy()
     expect(screen.getAllByText('OpenRouter').length).toBeGreaterThan(0)
     expect(await screen.findByText('Repo Onboarding')).toBeTruthy()
+    expect(await screen.findByText('Validation warnings: SKILL.md frontmatter is missing required description.')).toBeTruthy()
     expect(screen.getByText('No MCP servers configured.')).toBeTruthy()
     expect(latestSettingsFormCardProps?.providersPanel).toBeTruthy()
 

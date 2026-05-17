@@ -77,6 +77,36 @@ describe('MarkdownSkillResolver', () => {
     expect(context.selected.map((skill) => skill.id)).toContain('release-notes')
   })
 
+  it('keeps invalid local skills visible with validation warnings', async () => {
+    const workspace = await createTempDir()
+    const skillPath = path.join(workspace, '.nano', 'skills', 'broken', 'SKILL.md')
+    await mkdir(path.dirname(skillPath), { recursive: true })
+    await writeFile(skillPath, '---\nname: Broken Skill\n---\n', 'utf8')
+
+    const resolver = new MarkdownSkillResolver({ userSkillsDir: '/missing/user/skills' })
+    const skills = await resolver.listSkills({ ...settings, workspace: { ...settings.workspace, rootPath: workspace } })
+    const brokenSkill = skills.find((skill) => skill.id === 'broken-skill')
+
+    expect(brokenSkill).toMatchObject({
+      name: 'Broken Skill',
+      enabled: false,
+      validationWarnings: [
+        'SKILL.md frontmatter is missing required description.',
+        'SKILL.md instructions are empty.',
+      ],
+    })
+
+    const context = await resolver.resolveForRun({
+      settings: { ...settings, workspace: { ...settings.workspace, rootPath: workspace } },
+      run,
+      messages: [userMessage('Use broken skill')],
+    })
+    expect(context.available.find((skill) => skill.id === 'broken-skill')).toMatchObject({
+      validationWarnings: expect.arrayContaining(['SKILL.md instructions are empty.']),
+    })
+    expect(context.selected.map((skill) => skill.id)).not.toContain('broken-skill')
+  })
+
   it('honors disabled skill ids from settings', async () => {
     const resolver = new MarkdownSkillResolver({ userSkillsDir: '/missing/user/skills' })
     const context = await resolver.resolveForRun({

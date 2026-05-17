@@ -2,6 +2,7 @@ import { contextBridge, ipcRenderer } from 'electron'
 
 import {
   appSettingsSchema,
+  benchmarkSuiteRunResultSchema,
   clearProviderAuthInputSchema,
   conversationListSchema,
   conversationSnapshotSchema,
@@ -38,6 +39,7 @@ import {
   specChangeDetailResultSchema,
   specChangeInputSchema,
   specChangeListSchema,
+  startBenchmarkSuiteInputSchema,
   startSpecRunInputSchema,
   startProviderOauthInputSchema,
   startProviderOauthResultSchema,
@@ -88,6 +90,10 @@ const desktopApi: DesktopApi = {
   async startSpecRun(input) {
     const payload = startSpecRunInputSchema.parse(input)
     return startRunResultSchema.parse(await ipcRenderer.invoke(desktopBridgeChannels.startSpecRun, payload))
+  },
+  async startBenchmarkSuite(input) {
+    const payload = startBenchmarkSuiteInputSchema.parse(input)
+    return benchmarkSuiteRunResultSchema.parse(await ipcRenderer.invoke(desktopBridgeChannels.startBenchmarkSuite, payload))
   },
   async getProviderCredentialStatus(input) {
     const payload = providerCredentialInputSchema.parse(input)

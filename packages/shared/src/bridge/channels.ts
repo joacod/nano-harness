@@ -12,6 +12,7 @@ export const desktopBridgeChannels = {
   getSpecChange: 'desktop:get-spec-change',
   readSpecArtifact: 'desktop:read-spec-artifact',
   startSpecRun: 'desktop:start-spec-run',
+  startBenchmarkSuite: 'desktop:start-benchmark-suite',
   getProviderCredentialStatus: 'desktop:get-provider-credential-status',
   saveProviderAuth: 'desktop:save-provider-auth',
   startProviderOauth: 'desktop:start-provider-oauth',

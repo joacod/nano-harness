@@ -155,6 +155,7 @@ export class ActionInvocationPipeline {
 
     if (result.status === 'completed') {
       await this.emitSpecAndObligationEvents(run, actionDefinition, actionCall, result)
+      await this.satisfyValidationObligations(run, actionDefinition, actionCall, result)
     }
 
     const postHookStopped = await this.runToolHooks('post_tool_use', run, actionDefinition, actionCall, settings, result)
@@ -366,6 +367,48 @@ export class ActionInvocationPipeline {
       },
     })
   }
+
+  private async satisfyValidationObligations(
+    run: Run,
+    action: ActionDefinition,
+    actionCall: ActionCall,
+    result: ActionResult,
+  ): Promise<void> {
+    const output = asRecord(result.output)
+    let evidence: string[] = []
+
+    if (action.id === 'run_command') {
+      evidence = compactStrings([
+        `action:run_command:${actionCall.id}`,
+        renderCommandEvidence(output),
+      ])
+    }
+
+    if (action.id === 'append_spec_evidence') {
+      evidence = parseSpecEvidenceLink(output).validationOutputs.map((value) => `validation:${value}`)
+    }
+
+    if (evidence.length === 0) {
+      return
+    }
+
+    const openObligationIds = getOpenValidationObligationIds(await this.dependencies.store.listRunEvents(run.id))
+    const timestamp = this.dependencies.now()
+
+    for (const obligationId of openObligationIds) {
+      await this.dependencies.emitEvent({
+        id: this.dependencies.createId(),
+        runId: run.id,
+        timestamp,
+        type: 'obligation.satisfied',
+        payload: {
+          obligationId,
+          evidence,
+          satisfiedAt: timestamp,
+        },
+      })
+    }
+  }
 }
 
 function stringifyToolOutput(value: JsonValue | undefined): string {
@@ -401,6 +444,33 @@ function getStringField(value: Record<string, JsonValue>, key: string): string |
 
 function compactStrings(values: Array<string | null | undefined>): string[] {
   return values.filter((value): value is string => typeof value === 'string' && value.trim().length > 0)
+}
+
+function renderCommandEvidence(output: Record<string, JsonValue>): string | null {
+  const command = getStringField(output, 'command')
+
+  if (!command) {
+    return null
+  }
+
+  const args = getStringArrayField(output, 'args')
+  return `command:${[command, ...args].join(' ')}`
+}
+
+export function getOpenValidationObligationIds(events: RunEvent[]): string[] {
+  const openObligationIds = new Set<string>()
+
+  for (const event of events) {
+    if (event.type === 'obligation.created') {
+      openObligationIds.add(event.payload.obligation.id)
+    }
+
+    if (event.type === 'obligation.satisfied' || event.type === 'obligation.unmet') {
+      openObligationIds.delete(event.payload.obligationId)
+    }
+  }
+
+  return [...openObligationIds]
 }
 
 function extractSpecChangeId(path: string | null): string | null {

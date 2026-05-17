@@ -4,10 +4,11 @@ import { runEventSchema } from '../events'
 import { runCreateInputSchema } from '../runs'
 import { appSettingsSchema } from '../settings'
 import type { SkillInventory } from '../skills'
+import type { BenchmarkSuiteRunResult } from '../harness'
 import type { McpInventory } from '../mcp'
 import type { MemoryProposalList, MemoryRecordList, ResolveMemoryProposalInput } from '../memory'
 import type { SessionCompactionList, SessionCompactionResult, SessionExportResult, SessionInput, SessionList, SessionMutationResult } from '../sessions'
-import type { ClearProviderAuthInput, ExportRunEvidenceInput, GetConversationInput, OpenExternalUrlInput, ProviderCredentialInput, ReadSpecArtifactInput, ResolveApprovalInput, RunIdInput, SaveProviderAuthInput, ShowItemInFolderInput, SpecChangeInput, StartProviderOauthInput, StartSpecRunInput } from './inputs'
+import type { ClearProviderAuthInput, ExportRunEvidenceInput, GetConversationInput, OpenExternalUrlInput, ProviderCredentialInput, ReadSpecArtifactInput, ResolveApprovalInput, RunIdInput, SaveProviderAuthInput, ShowItemInFolderInput, SpecChangeInput, StartBenchmarkSuiteInput, StartProviderOauthInput, StartSpecRunInput } from './inputs'
 import type {
   ConversationList,
   ConversationSnapshot,
@@ -38,6 +39,7 @@ export type DesktopApi = {
   getSpecChange(input: SpecChangeInput): Promise<SpecChangeDetailResult>
   readSpecArtifact(input: ReadSpecArtifactInput): Promise<SpecArtifactReadResult>
   startSpecRun(input: StartSpecRunInput): Promise<StartRunResult>
+  startBenchmarkSuite(input: StartBenchmarkSuiteInput): Promise<BenchmarkSuiteRunResult>
   getProviderCredentialStatus(input: ProviderCredentialInput): Promise<ProviderCredentialStatus>
   saveProviderAuth(input: SaveProviderAuthInput): Promise<void>
   startProviderOauth(input: StartProviderOauthInput): Promise<StartProviderOauthResult>

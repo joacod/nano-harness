@@ -57,6 +57,7 @@ function createDevDesktopMock(): DesktopApi {
     getSpecChange: async () => ({ change: null }),
     readSpecArtifact: async (input) => ({ kind: input.artifactKind, path: '.nano/specs/mock.md', content: '' }),
     startSpecRun: async () => ({ runId: 'run-1' }),
+    startBenchmarkSuite: async (input) => ({ suite: input.suite, runs: [], unknownCaseIds: [] }),
     getProviderCredentialStatus: async () => ({ apiKeyPresent: true }),
     saveProviderAuth: async () => undefined,
     startProviderOauth: async (input) => ({ provider: input.provider }),

@@ -1,7 +1,7 @@
-import { mkdir, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 
-import { benchmarkCaseRegistry, benchmarkCaseResultSchema, benchmarkComparisonSchema, benchmarkRunArtifactSchema, benchmarkRunSummarySchema, draftPrArtifactSchema, harnessChangeManifestSchema, harnessComponentRegistry, harnessPromotionArtifactSchema, implementationSpecSchema, skillImprovementArtifactSchema, specArtifactKindSchema, specEvidencePacketSchema, specTaskStatusSchema, type BenchmarkRunArtifact, type SpecArtifactKind } from '@nano-harness/shared'
+import { benchmarkCaseRegistry, benchmarkCaseResultSchema, benchmarkComparisonSchema, benchmarkResultIndexSchema, benchmarkRunArtifactSchema, benchmarkRunPlanArtifactSchema, benchmarkRunSummarySchema, draftPrArtifactSchema, harnessChangeManifestSchema, harnessComponentRegistry, harnessPatchPreviewArtifactSchema, harnessPromotionArtifactSchema, implementationSpecSchema, skillImprovementArtifactSchema, specArtifactKindSchema, specEvidencePacketSchema, specTaskStatusSchema, type BenchmarkCase, type BenchmarkRunArtifact, type BenchmarkRunPlanCase, type HarnessChangeManifest, type HarnessPromotionArtifact, type SkillImprovementArtifact, type SpecArtifactKind } from '@nano-harness/shared'
 
 import { SpecWorkspaceService } from '../spec-workspace'
 
@@ -14,11 +14,43 @@ function parseHarnessChangeManifestInput(value: Record<string, unknown>) {
   return harnessChangeManifestSchema.parse(value.manifest)
 }
 
+function parseHarnessPatchPreviewInput(value: Record<string, unknown>): HarnessChangeManifest {
+  return harnessChangeManifestSchema.parse(value.manifest)
+}
+
 function parseHarnessPromotionInput(value: Record<string, unknown>) {
   return {
     manifest: harnessChangeManifestSchema.parse(value.manifest),
     benchmarkComparison: benchmarkComparisonSchema.parse(value.benchmarkComparison),
   }
+}
+
+function parseWriteHarnessPromotionInput(value: Record<string, unknown>): { artifact: HarnessPromotionArtifact; path: string } {
+  const artifact = harnessPromotionArtifactSchema.parse(value.artifact)
+  const outputPath = typeof value.path === 'string' && value.path.trim()
+    ? value.path.trim()
+    : `.nano/harness/promotions/${slugifyArtifactId(artifact.manifest.id)}.json`
+  const normalizedPath = outputPath.replace(/\\/g, '/')
+
+  if (!artifact.promotionReady) {
+    throw new Error('write_harness_promotion_artifact requires a promotion-ready artifact')
+  }
+
+  if (!/^\.nano\/harness\/promotions\/[a-z0-9][a-z0-9-]*\.json$/.test(normalizedPath)) {
+    throw new Error('write_harness_promotion_artifact path must match .nano/harness/promotions/<promotion-id>.json')
+  }
+
+  return { artifact, path: normalizedPath }
+}
+
+function parseHarnessPromotionPath(value: unknown): string {
+  const normalizedPath = parseString(value, 'path').replace(/\\/g, '/')
+
+  if (!/^\.nano\/harness\/promotions\/[a-z0-9][a-z0-9-]*\.json$/.test(normalizedPath)) {
+    throw new Error('read_harness_promotion_artifact path must match .nano/harness/promotions/<promotion-id>.json')
+  }
+
+  return normalizedPath
 }
 
 function parseBenchmarkComparisonInput(value: Record<string, unknown>) {
@@ -40,6 +72,17 @@ function parseBenchmarkRunInput(value: Record<string, unknown>) {
   }
 }
 
+function parseBenchmarkRunPlanInput(value: Record<string, unknown>) {
+  if (typeof value.suite !== 'string' || !value.suite.trim()) {
+    throw new Error('create_benchmark_run_plan requires a non-empty suite')
+  }
+
+  return {
+    suite: value.suite.trim(),
+    caseIds: parseStringArray(value.caseIds, 'caseIds'),
+  }
+}
+
 function parseWriteBenchmarkRunInput(value: Record<string, unknown>): { artifact: BenchmarkRunArtifact; path: string } {
   const artifact = benchmarkRunArtifactSchema.parse(value.artifact)
   const outputPath = typeof value.path === 'string' && value.path.trim() ? value.path.trim() : artifact.outputPath
@@ -50,6 +93,20 @@ function parseWriteBenchmarkRunInput(value: Record<string, unknown>): { artifact
   }
 
   return { artifact, path: normalizedPath }
+}
+
+function parseWriteSkillImprovementInput(value: Record<string, unknown>): { artifact: SkillImprovementArtifact } {
+  const artifact = skillImprovementArtifactSchema.parse(value.artifact)
+
+  for (const proposedFile of artifact.proposedFiles) {
+    const normalizedPath = proposedFile.relativePath.replace(/\\/g, '/')
+
+    if (!/^\.nano\/skills\/[a-z0-9][a-z0-9-]*\/SKILL\.md$/.test(normalizedPath)) {
+      throw new Error('write_skill_improvement_artifact paths must match .nano/skills/<skill-id>/SKILL.md')
+    }
+  }
+
+  return { artifact }
 }
 
 function parseCreateSpecInput(value: Record<string, unknown>): {
@@ -180,6 +237,25 @@ function slugifySkillId(value: string): string {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'skill'
 }
 
+function slugifyArtifactId(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'artifact'
+}
+
+function extractUnifiedDiffPaths(patchPreview: string): string[] {
+  const paths = new Set<string>()
+
+  for (const line of patchPreview.split('\n')) {
+    const match = /^diff --git a\/(?<left>\S+) b\/(?<right>\S+)/.exec(line)
+    const patchPath = match?.groups?.right ?? match?.groups?.left
+
+    if (patchPath) {
+      paths.add(patchPath.replace(/\\/g, '/'))
+    }
+  }
+
+  return [...paths]
+}
+
 function renderSkillMarkdown(input: {
   skillName: string
   description: string
@@ -200,6 +276,148 @@ function renderSkillMarkdown(input: {
     input.body.trim(),
     '',
   ].join('\n')
+}
+
+async function readBenchmarkPlanCase(workspaceRoot: string, benchmarkCase: BenchmarkCase): Promise<BenchmarkRunPlanCase> {
+  const content = await readFile(resolveWorkspacePath(workspaceRoot, benchmarkCase.path), 'utf8')
+  const sections = parseMarkdownSections(content)
+
+  return {
+    ...benchmarkCase,
+    goal: sections.get('Goal')?.[0],
+    setup: sections.get('Setup') ?? [],
+    prompt: sections.get('Prompt')?.join('\n'),
+    expectedCapabilities: sections.get('Expected Capabilities') ?? [],
+    successCriteria: sections.get('Success Criteria') ?? [],
+    scoringNotes: sections.get('Scoring Notes') ?? [],
+  }
+}
+
+function parseMarkdownSections(content: string): Map<string, string[]> {
+  const sections = new Map<string, string[]>()
+  let currentSection: string | null = null
+
+  for (const line of content.split('\n')) {
+    const heading = /^##\s+(?<title>.+?)\s*$/.exec(line)?.groups?.title
+
+    if (heading) {
+      currentSection = heading
+      sections.set(currentSection, [])
+      continue
+    }
+
+    if (!currentSection) {
+      continue
+    }
+
+    const value = line.replace(/^\s*-\s*/, '').trim()
+
+    if (value) {
+      sections.get(currentSection)?.push(value)
+    }
+  }
+
+  return sections
+}
+
+async function listBenchmarkResults(workspaceRoot: string) {
+  const resultsRoot = resolveWorkspacePath(workspaceRoot, 'benchmarks/results')
+  let entries: string[]
+
+  try {
+    entries = await readdir(resultsRoot)
+  } catch (error) {
+    if (error instanceof Error && 'code' in error && error.code === 'ENOENT') {
+      return benchmarkResultIndexSchema.parse({ results: [], invalidFiles: [] })
+    }
+
+    throw error
+  }
+
+  const parsedEntries = await Promise.all(entries
+    .filter((entry) => entry.endsWith('.json'))
+    .sort((left, right) => left.localeCompare(right))
+    .map(async (entry) => {
+      const relativePath = `benchmarks/results/${entry}`
+
+      try {
+        const artifact = benchmarkRunArtifactSchema.parse(JSON.parse(await readFile(resolveWorkspacePath(workspaceRoot, relativePath), 'utf8')))
+        return {
+          result: {
+            id: artifact.id,
+            suite: artifact.suite,
+            path: relativePath,
+            summary: artifact.summary,
+            createdAt: artifact.createdAt,
+          },
+          invalidFile: null,
+        }
+      } catch (error) {
+        return {
+          result: null,
+          invalidFile: {
+            path: relativePath,
+            reason: error instanceof Error ? error.message : 'Invalid benchmark result file',
+          },
+        }
+      }
+    }))
+
+  return benchmarkResultIndexSchema.parse({
+    results: parsedEntries.flatMap((entry) => entry.result ? [entry.result] : []),
+    invalidFiles: parsedEntries.flatMap((entry) => entry.invalidFile ? [entry.invalidFile] : []),
+  })
+}
+
+async function listHarnessPromotionArtifacts(workspaceRoot: string) {
+  const promotionsRoot = resolveWorkspacePath(workspaceRoot, '.nano/harness/promotions')
+  let entries: string[]
+
+  try {
+    entries = await readdir(promotionsRoot)
+  } catch (error) {
+    if (error instanceof Error && 'code' in error && error.code === 'ENOENT') {
+      return { promotions: [], invalidFiles: [] }
+    }
+
+    throw error
+  }
+
+  const parsedEntries = await Promise.all(entries
+    .filter((entry) => entry.endsWith('.json'))
+    .sort((left, right) => left.localeCompare(right))
+    .map(async (entry) => {
+      const relativePath = `.nano/harness/promotions/${entry}`
+
+      try {
+        const artifact = harnessPromotionArtifactSchema.parse(JSON.parse(await readFile(resolveWorkspacePath(workspaceRoot, relativePath), 'utf8')))
+        return {
+          promotion: {
+            id: artifact.manifest.id,
+            title: artifact.manifest.title,
+            path: relativePath,
+            promotionReady: artifact.promotionReady,
+            benchmarkSuite: artifact.benchmarkComparison.after.suite,
+            scoreDelta: artifact.benchmarkComparison.scoreDelta,
+            createdAt: artifact.createdAt,
+          },
+          invalidFile: null,
+        }
+      } catch (error) {
+        return {
+          promotion: null,
+          invalidFile: {
+            path: relativePath,
+            reason: error instanceof Error ? error.message : 'Invalid harness promotion artifact file',
+          },
+        }
+      }
+    }))
+
+  return {
+    promotions: parsedEntries.flatMap((entry) => entry.promotion ? [entry.promotion] : []),
+    invalidFiles: parsedEntries.flatMap((entry) => entry.invalidFile ? [entry.invalidFile] : []),
+  }
 }
 
 export const artifactActionCommands: BuiltInActionCommand[] = [
@@ -417,6 +635,52 @@ export const artifactActionCommands: BuiltInActionCommand[] = [
   },
   {
     definition: {
+      id: 'list_harness_promotion_artifacts',
+      title: 'List Harness Promotion Artifacts',
+      description: 'List persisted harness promotion artifacts under .nano/harness/promotions without mutating files',
+      requiresApproval: false,
+      inputSchema: {
+        type: 'object',
+        properties: {},
+        additionalProperties: false,
+      },
+    },
+    async execute(input) {
+      return createActionResult({
+        actionCallId: input.call.id,
+        status: 'completed',
+        output: await listHarnessPromotionArtifacts(input.settings.workspace.rootPath),
+      })
+    },
+  },
+  {
+    definition: {
+      id: 'read_harness_promotion_artifact',
+      title: 'Read Harness Promotion Artifact',
+      description: 'Read a persisted harness promotion artifact from .nano/harness/promotions without mutating files',
+      requiresApproval: false,
+      inputSchema: {
+        type: 'object',
+        properties: {
+          path: { type: 'string' },
+        },
+        required: ['path'],
+        additionalProperties: false,
+      },
+    },
+    async execute(input) {
+      const relativePath = parseHarnessPromotionPath(input.call.input.path)
+      const artifact = harnessPromotionArtifactSchema.parse(JSON.parse(await readFile(resolveWorkspacePath(input.settings.workspace.rootPath, relativePath), 'utf8')))
+
+      return createActionResult({
+        actionCallId: input.call.id,
+        status: 'completed',
+        output: { path: relativePath, artifact },
+      })
+    },
+  },
+  {
+    definition: {
       id: 'propose_harness_change',
       title: 'Propose Harness Change',
       description: 'Validate and return a reversible, evidence-backed harness change manifest without mutating live files',
@@ -447,6 +711,130 @@ export const artifactActionCommands: BuiltInActionCommand[] = [
           liveMutationApplied: false,
           approvalRequiredForPromotion: true,
         },
+      })
+    },
+  },
+  {
+    definition: {
+      id: 'create_harness_patch_preview_artifact',
+      title: 'Create Harness Patch Preview Artifact',
+      description: 'Create a non-mutating, structured harness patch preview from a manifest and validate touched component paths',
+      requiresApproval: false,
+      inputSchema: {
+        type: 'object',
+        properties: {
+          manifest: { type: 'object' },
+        },
+        required: ['manifest'],
+        additionalProperties: false,
+      },
+    },
+    async execute(input) {
+      const manifest = parseHarnessPatchPreviewInput(input.call.input)
+      const registeredComponents = new Map(harnessComponentRegistry.components.map((component) => [component.id, component]))
+      const affectedFiles = manifest.affectedComponents.flatMap((componentId) => {
+        const component = registeredComponents.get(componentId)
+
+        return component ? [{ componentId: component.id, path: component.path, mutable: component.mutable }] : []
+      })
+      const knownAffectedPaths = new Set(affectedFiles.map((file) => file.path))
+      const patchPaths = extractUnifiedDiffPaths(manifest.patchPreview)
+      const unknownComponents = manifest.affectedComponents.filter((componentId) => !registeredComponents.has(componentId))
+      const immutableComponents = affectedFiles.filter((file) => !file.mutable)
+      const unknownPatchPaths = patchPaths.filter((patchPath) => !knownAffectedPaths.has(patchPath))
+      const blockerCandidates = [
+        ...unknownComponents.map((componentId) => `Unknown harness component: ${componentId}`),
+        ...immutableComponents.map((file) => `Harness component is not mutable: ${file.componentId}`),
+        patchPaths.length === 0 ? 'Patch preview did not include unified diff file paths.' : null,
+        ...unknownPatchPaths.map((patchPath) => `Patch preview path is not a declared affected component: ${patchPath}`),
+      ]
+      const blockers = blockerCandidates.filter((blocker): blocker is string => blocker !== null)
+      const artifact = harnessPatchPreviewArtifactSchema.parse({
+        id: `harness-patch-preview-${slugifyArtifactId(manifest.id)}`,
+        manifest,
+        affectedFiles,
+        patchPaths,
+        unknownPatchPaths,
+        applyReady: blockers.length === 0,
+        blockers,
+        approvalRequiredForApply: true,
+        liveMutationApplied: false,
+        createdAt: new Date().toISOString(),
+      })
+
+      return createActionResult({
+        actionCallId: input.call.id,
+        status: 'completed',
+        output: artifact,
+      })
+    },
+  },
+  {
+    definition: {
+      id: 'list_benchmark_results',
+      title: 'List Benchmark Results',
+      description: 'List persisted benchmark result artifacts under benchmarks/results without mutating files',
+      requiresApproval: false,
+      inputSchema: {
+        type: 'object',
+        properties: {},
+        additionalProperties: false,
+      },
+    },
+    async execute(input) {
+      return createActionResult({
+        actionCallId: input.call.id,
+        status: 'completed',
+        output: await listBenchmarkResults(input.settings.workspace.rootPath),
+      })
+    },
+  },
+  {
+    definition: {
+      id: 'create_benchmark_run_plan',
+      title: 'Create Benchmark Run Plan',
+      description: 'Create a repeatable benchmark suite plan from tracked benchmark case markdown without executing runs',
+      requiresApproval: false,
+      inputSchema: {
+        type: 'object',
+        properties: {
+          suite: { type: 'string' },
+          caseIds: { type: 'array', items: { type: 'string' } },
+        },
+        required: ['suite'],
+        additionalProperties: false,
+      },
+    },
+    async execute(input) {
+      const parsedInput = parseBenchmarkRunPlanInput(input.call.input)
+      const requestedCaseIds = parsedInput.caseIds ?? benchmarkCaseRegistry.cases.map((benchmarkCase) => benchmarkCase.id)
+      const knownCases = new Map(benchmarkCaseRegistry.cases.map((benchmarkCase) => [benchmarkCase.id, benchmarkCase]))
+      const selectedCases = requestedCaseIds.flatMap((caseId) => {
+        const benchmarkCase = knownCases.get(caseId)
+        return benchmarkCase ? [benchmarkCase] : []
+      })
+      const unknownCaseIds = requestedCaseIds.filter((caseId) => !knownCases.has(caseId))
+      const planCases = await Promise.all(selectedCases.map((benchmarkCase) => readBenchmarkPlanCase(input.settings.workspace.rootPath, benchmarkCase)))
+      const artifact = benchmarkRunPlanArtifactSchema.parse({
+        id: `benchmark-plan-${parsedInput.suite}-${Date.now().toString(36)}`,
+        suite: parsedInput.suite,
+        cases: planCases,
+        unknownCaseIds,
+        resultTemplate: planCases.map((benchmarkCase) => ({
+          caseId: benchmarkCase.id,
+          status: null,
+          evidence: [],
+        })),
+        outputPath: `benchmarks/results/${parsedInput.suite}.json`,
+        approvalRequiredForWrite: false,
+        liveMutationApplied: false,
+        createdAt: new Date().toISOString(),
+      })
+
+      return createActionResult({
+        actionCallId: input.call.id,
+        status: 'completed',
+        output: artifact,
       })
     },
   },
@@ -616,6 +1004,41 @@ export const artifactActionCommands: BuiltInActionCommand[] = [
   },
   {
     definition: {
+      id: 'write_harness_promotion_artifact',
+      title: 'Write Harness Promotion Artifact',
+      description: 'Persist a promotion-ready harness artifact under .nano/harness/promotions after approval',
+      requiresApproval: true,
+      inputSchema: {
+        type: 'object',
+        properties: {
+          artifact: { type: 'object' },
+          path: { type: 'string' },
+        },
+        required: ['artifact'],
+        additionalProperties: false,
+      },
+    },
+    async execute(input) {
+      const parsedInput = parseWriteHarnessPromotionInput(input.call.input)
+      const resolvedPath = resolveWorkspacePath(input.settings.workspace.rootPath, parsedInput.path)
+      const content = `${JSON.stringify({ ...parsedInput.artifact, liveMutationApplied: false }, null, 2)}\n`
+
+      await mkdir(path.dirname(resolvedPath), { recursive: true })
+      await writeFile(resolvedPath, content, 'utf8')
+
+      return createActionResult({
+        actionCallId: input.call.id,
+        status: 'completed',
+        output: {
+          path: parsedInput.path,
+          bytesWritten: Buffer.byteLength(content, 'utf8'),
+          liveMutationApplied: false,
+        },
+      })
+    },
+  },
+  {
+    definition: {
       id: 'create_skill_improvement_artifact',
       title: 'Create Skill Improvement Artifact',
       description: 'Create a draft skill patch or new skill folder proposal without mutating live skill files',
@@ -670,6 +1093,48 @@ export const artifactActionCommands: BuiltInActionCommand[] = [
           artifact,
           liveMutationApplied: false,
           approvalRequiredForWrite: true,
+        },
+      })
+    },
+  },
+  {
+    definition: {
+      id: 'write_skill_improvement_artifact',
+      title: 'Write Skill Improvement Artifact',
+      description: 'Validate and write proposed local skill files under .nano/skills after approval',
+      requiresApproval: true,
+      inputSchema: {
+        type: 'object',
+        properties: {
+          artifact: { type: 'object' },
+        },
+        required: ['artifact'],
+        additionalProperties: false,
+      },
+    },
+    async execute(input) {
+      const parsedInput = parseWriteSkillImprovementInput(input.call.input)
+      const writtenFiles = []
+
+      for (const proposedFile of parsedInput.artifact.proposedFiles) {
+        const relativePath = proposedFile.relativePath.replace(/\\/g, '/')
+        const resolvedPath = resolveWorkspacePath(input.settings.workspace.rootPath, relativePath)
+
+        await mkdir(path.dirname(resolvedPath), { recursive: true })
+        await writeFile(resolvedPath, proposedFile.content, 'utf8')
+        writtenFiles.push({
+          path: relativePath,
+          bytesWritten: Buffer.byteLength(proposedFile.content, 'utf8'),
+        })
+      }
+
+      return createActionResult({
+        actionCallId: input.call.id,
+        status: 'completed',
+        output: {
+          artifactId: parsedInput.artifact.id,
+          writtenFiles,
+          liveMutationApplied: true,
         },
       })
     },

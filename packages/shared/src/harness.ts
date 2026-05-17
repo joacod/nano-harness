@@ -32,6 +32,25 @@ export const harnessChangeManifestSchema = z.object({
 
 export type HarnessChangeManifest = z.infer<typeof harnessChangeManifestSchema>
 
+export const harnessPatchPreviewArtifactSchema = z.object({
+  id: z.string().min(1),
+  manifest: harnessChangeManifestSchema,
+  affectedFiles: z.array(z.object({
+    componentId: z.string().min(1),
+    path: z.string().min(1),
+    mutable: z.boolean(),
+  })).min(1),
+  patchPaths: z.array(z.string().min(1)),
+  unknownPatchPaths: z.array(z.string().min(1)),
+  applyReady: z.boolean(),
+  blockers: z.array(z.string().min(1)),
+  approvalRequiredForApply: z.literal(true),
+  liveMutationApplied: z.literal(false),
+  createdAt: z.iso.datetime(),
+})
+
+export type HarnessPatchPreviewArtifact = z.infer<typeof harnessPatchPreviewArtifactSchema>
+
 export const benchmarkRunSummarySchema = z.object({
   suite: z.string().min(1),
   passed: z.number().int().min(0),
@@ -48,6 +67,36 @@ export const benchmarkCaseSchema = z.object({
 })
 
 export type BenchmarkCase = z.infer<typeof benchmarkCaseSchema>
+
+export const benchmarkRunPlanCaseSchema = benchmarkCaseSchema.extend({
+  goal: z.string().min(1).optional(),
+  setup: z.array(z.string().min(1)).default([]),
+  prompt: z.string().min(1).optional(),
+  expectedCapabilities: z.array(z.string().min(1)).default([]),
+  successCriteria: z.array(z.string().min(1)).default([]),
+  scoringNotes: z.array(z.string().min(1)).default([]),
+})
+
+export type BenchmarkRunPlanCase = z.infer<typeof benchmarkRunPlanCaseSchema>
+
+export const benchmarkRunPlanArtifactSchema = z.object({
+  id: z.string().min(1),
+  suite: z.string().min(1),
+  cases: z.array(benchmarkRunPlanCaseSchema).min(1),
+  unknownCaseIds: z.array(z.string().min(1)),
+  resultTemplate: z.array(z.object({
+    caseId: z.string().min(1),
+    status: z.enum(['passed', 'failed']).nullable(),
+    notes: z.string().min(1).optional(),
+    evidence: z.array(z.string().min(1)).default([]),
+  })),
+  outputPath: z.string().min(1),
+  approvalRequiredForWrite: z.literal(false),
+  liveMutationApplied: z.literal(false),
+  createdAt: z.iso.datetime(),
+})
+
+export type BenchmarkRunPlanArtifact = z.infer<typeof benchmarkRunPlanArtifactSchema>
 
 export const benchmarkCaseResultSchema = z.object({
   caseId: z.string().min(1),
@@ -74,6 +123,42 @@ export const benchmarkRunArtifactSchema = z.object({
 })
 
 export type BenchmarkRunArtifact = z.infer<typeof benchmarkRunArtifactSchema>
+
+export const benchmarkResultIndexEntrySchema = z.object({
+  id: z.string().min(1),
+  suite: z.string().min(1),
+  path: z.string().min(1),
+  summary: benchmarkRunSummarySchema,
+  createdAt: z.iso.datetime(),
+})
+
+export type BenchmarkResultIndexEntry = z.infer<typeof benchmarkResultIndexEntrySchema>
+
+export const benchmarkResultIndexSchema = z.object({
+  results: z.array(benchmarkResultIndexEntrySchema),
+  invalidFiles: z.array(z.object({
+    path: z.string().min(1),
+    reason: z.string().min(1),
+  })),
+})
+
+export type BenchmarkResultIndex = z.infer<typeof benchmarkResultIndexSchema>
+
+export const benchmarkSuiteRunSchema = z.object({
+  caseId: z.string().min(1),
+  conversationId: z.string().min(1),
+  runId: z.string().min(1),
+})
+
+export type BenchmarkSuiteRun = z.infer<typeof benchmarkSuiteRunSchema>
+
+export const benchmarkSuiteRunResultSchema = z.object({
+  suite: z.string().min(1),
+  runs: z.array(benchmarkSuiteRunSchema),
+  unknownCaseIds: z.array(z.string().min(1)),
+})
+
+export type BenchmarkSuiteRunResult = z.infer<typeof benchmarkSuiteRunResultSchema>
 
 export const benchmarkComparisonSchema = z.object({
   before: benchmarkRunSummarySchema,

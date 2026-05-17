@@ -51,6 +51,11 @@ export async function exportRunEvidence(runtime: RunEvidenceRuntime, runId: stri
     return outputPath && (actionCall?.actionId === 'write_file' || actionCall?.actionId === 'apply_patch') ? [outputPath] : []
   }))].sort((left, right) => left.localeCompare(right))
   const validationOutputs = actionResults.filter((result) => actionByCallId.get(result.actionCallId)?.actionId === 'run_command')
+  const obligations = {
+    created: runEvents.filter((event) => event.type === 'obligation.created').map((event) => event.payload.obligation),
+    satisfied: runEvents.filter((event) => event.type === 'obligation.satisfied').map((event) => event.payload),
+    unmet: runEvents.filter((event) => event.type === 'obligation.unmet').map((event) => event.payload),
+  }
   const approvals = {
     requests: snapshot.approvalRequests.filter((request) => request.runId === runId),
     resolutions: snapshot.approvalResolutions.filter((resolution) =>
@@ -67,6 +72,7 @@ export async function exportRunEvidence(runtime: RunEvidenceRuntime, runId: stri
     toolResults: actionResults,
     changedFiles,
     validationOutput: validationOutputs,
+    validationObligations: obligations,
   } satisfies Record<string, unknown>
   const exportDir = path.join(runtime.store.paths.dataDir, 'run-exports')
   const exportedFilePath = path.join(exportDir, `${sanitizeFileName(runId)}-evidence.json`)

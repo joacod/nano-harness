@@ -81,6 +81,7 @@ export class DryRunPreviewBuilder {
           source: skill.source,
           path: skill.path,
           enabled: skill.enabled,
+          validationWarnings: skill.validationWarnings,
         })),
       },
       mcp,

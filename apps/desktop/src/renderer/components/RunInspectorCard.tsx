@@ -27,8 +27,12 @@ export function RunInspectorCard({
   const queryClient = useQueryClient()
   const recoverableAction = run ? getRecoverableRunAction(run, pendingApproval) : null
   const latestFirstEvents = [...events].reverse()
+  const dryRunMemory = getLatestDryRunMemory(events)
   const recalledMemory = memoryRecords?.records.slice(0, 3) ?? []
-  const pendingMemoryProposals = memoryProposals?.proposals.filter((proposal) => proposal.status === 'pending').slice(0, 3) ?? []
+  const pendingMemoryProposals = memoryProposals?.proposals
+    .filter((proposal) => proposal.status === 'pending' && proposal.runId === run?.id)
+    .slice(0, 3) ?? []
+  const validationObligations = getValidationObligationSummary(events)
   const runControlMutation = useMutation({
     mutationFn: async (action: 'resume' | 'cancel') => {
       if (!run) {
@@ -133,10 +137,30 @@ export function RunInspectorCard({
             </FeedbackText>
           ) : null}
 
+          {dryRunMemory.length > 0 ? (
+            <section className="inspector-dry-run-memory" aria-labelledby="inspector-dry-run-memory-heading">
+              <div className="inspector-section-heading">
+                <p className="eyebrow" id="inspector-dry-run-memory-heading">Dry-Run Memory</p>
+                <p>Memory selected for this run before the provider call, with provenance.</p>
+              </div>
+              <div className="inspector-memory-group">
+                {dryRunMemory.map((record) => (
+                  <article className="memory-item" key={record.id}>
+                    <span className="field-label">{record.category}</span>
+                    <p>{record.content}</p>
+                    <small className="muted-copy">
+                      Source: {record.source}{record.runId ? ` · Run ${record.runId}` : ''} · Confidence {formatConfidence(record.confidence)}
+                    </small>
+                  </article>
+                ))}
+              </div>
+            </section>
+          ) : null}
+
           <section className="inspector-memory-context" aria-labelledby="inspector-memory-heading">
             <div className="inspector-section-heading">
               <p className="eyebrow" id="inspector-memory-heading">Memory</p>
-              <p>Recalled context and pending suggestions for this workspace.</p>
+              <p>Recalled context and pending suggestions produced by this run.</p>
             </div>
             {recalledMemory.length === 0 && pendingMemoryProposals.length === 0 ? (
               <FeedbackText>No recalled memory or pending suggestions.</FeedbackText>
@@ -166,6 +190,24 @@ export function RunInspectorCard({
               </div>
             ) : null}
           </section>
+
+          {validationObligations.total > 0 ? (
+            <section className="inspector-validation-context" aria-labelledby="inspector-validation-heading">
+              <div className="inspector-section-heading">
+                <p className="eyebrow" id="inspector-validation-heading">Validation Obligations</p>
+                <p>Tracked validation state for edits and spec mutations in this run.</p>
+              </div>
+              <div className="validation-obligation-row">
+                <StatusBadge status={validationObligations.open > 0 ? 'waiting_approval' : 'completed'}>
+                  {validationObligations.open} open
+                </StatusBadge>
+                <StatusBadge status="completed">{validationObligations.satisfied} satisfied</StatusBadge>
+                <StatusBadge status={validationObligations.unmet > 0 ? 'failed' : 'completed'}>
+                  {validationObligations.unmet} unmet
+                </StatusBadge>
+              </div>
+            </section>
+          ) : null}
 
           {events.length === 0 ? <FeedbackText>No events captured for this run yet.</FeedbackText> : null}
 
@@ -200,6 +242,17 @@ export function RunInspectorCard({
   )
 }
 
+function getLatestDryRunMemory(events: RunEvent[]) {
+  return [...events]
+    .reverse()
+    .find((event): event is Extract<RunEvent, { type: 'run.dry_run_preview' }> => event.type === 'run.dry_run_preview')
+    ?.payload.memory.selected.slice(0, 5) ?? []
+}
+
+function formatConfidence(value: number): string {
+  return new Intl.NumberFormat(undefined, { maximumFractionDigits: 0, style: 'percent' }).format(value)
+}
+
 function getSpecEventChangeId(event: RunEvent): string | null {
   switch (event.type) {
     case 'spec.change_created':
@@ -212,4 +265,30 @@ function getSpecEventChangeId(event: RunEvent): string | null {
     default:
       return null
   }
+}
+
+function getValidationObligationSummary(events: RunEvent[]): { total: number; open: number; satisfied: number; unmet: number } {
+  const open = new Set<string>()
+  let total = 0
+  let satisfied = 0
+  let unmet = 0
+
+  for (const event of events) {
+    if (event.type === 'obligation.created') {
+      total += 1
+      open.add(event.payload.obligation.id)
+    }
+
+    if (event.type === 'obligation.satisfied') {
+      satisfied += 1
+      open.delete(event.payload.obligationId)
+    }
+
+    if (event.type === 'obligation.unmet') {
+      unmet += 1
+      open.delete(event.payload.obligationId)
+    }
+  }
+
+  return { total, open: open.size, satisfied, unmet }
 }

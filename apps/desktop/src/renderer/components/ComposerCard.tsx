@@ -6,7 +6,7 @@ import { useNavigate } from '@tanstack/react-router'
 
 import { createConversationId, providerStatusQueryOptions } from '../queries'
 import { Button, Card, FeedbackText, RuntimePill, TextArea } from './ui'
-import { createSpecWorkflowPrompt, type AgentRole } from '../../../../../packages/shared/src'
+import { createSkillDraftPrompt, createSpecWorkflowPrompt, type AgentRole } from '../../../../../packages/shared/src'
 
 type ComposerMode = AgentRole | 'spec'
 
@@ -166,9 +166,22 @@ export function ComposerCard({ conversationId }: { conversationId: string | null
 }
 
 function buildRunInput(prompt: string, mode: ComposerMode): { prompt: string; role: AgentRole } {
+  const skillDraftTask = parseNewSkillCommand(prompt)
+
+  if (skillDraftTask) {
+    return { prompt: createSkillDraftPrompt(skillDraftTask), role: 'plan' }
+  }
+
   if (mode === 'spec') {
     return { prompt: createSpecWorkflowPrompt(prompt), role: 'plan' }
   }
 
   return { prompt, role: mode }
+}
+
+function parseNewSkillCommand(prompt: string): string | null {
+  const match = /^\/new-skill(?:\s+(?<task>[\s\S]+))?$/u.exec(prompt.trim())
+  const task = match?.groups?.task?.trim()
+
+  return task ? task : null
 }

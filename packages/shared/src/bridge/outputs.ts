@@ -4,6 +4,7 @@ import { approvalRequestSchema, approvalResolutionSchema } from '../approvals'
 import { runEventSchema } from '../events'
 import { conversationSchema, messageSchema } from '../messages'
 import { runSchema } from '../runs'
+import { benchmarkSuiteRunResultSchema } from '../harness'
 import { providerAuthMethodSchema } from '../settings'
 import { sessionCompactionListSchema, sessionCompactionResultSchema, sessionExportResultSchema, sessionListSchema, sessionMutationResultSchema } from '../sessions'
 import { specArtifactKindSchema, specChangeDetailSchema } from '../spec'
@@ -85,6 +86,8 @@ export const startRunResultSchema = z.object({
 })
 
 export type StartRunResult = z.infer<typeof startRunResultSchema>
+
+export { benchmarkSuiteRunResultSchema }
 
 export const exportDataResultSchema = z.object({
   exportedFilePath: z.string().min(1).nullable(),

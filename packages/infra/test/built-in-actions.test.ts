@@ -392,6 +392,27 @@ describe('BuiltInActionExecutor', () => {
 
   it('validates harness manifests and compares benchmark results without live mutation', async () => {
     const rootPath = await createWorkspace()
+    await writeBenchmarkCase(rootPath, 'spec-workbench', [
+      '# Spec Workbench',
+      '',
+      '## Goal',
+      'Create and drive one local spec change through the visible Spec Workbench flow.',
+      '',
+      '## Prompt',
+      'Create a spec for adding a small renderer affordance, plan it, build one selected task, review the result, and export run evidence.',
+      '',
+      '## Success Criteria',
+      '- The Spec Workbench shows exactly one active change for the benchmark task.',
+    ].join('\n'))
+    await writeBenchmarkCase(rootPath, 'validation-obligations', [
+      '# Validation Obligations',
+      '',
+      '## Goal',
+      'Verify that local edits create explicit validation obligations and that subsequent validation evidence is inspectable.',
+      '',
+      '## Success Criteria',
+      '- The run timeline shows obligation.created after the edit action completes.',
+    ].join('\n'))
     const executor = createExecutor()
     const componentsResult = await executor.execute(
       createExecutionInput({
@@ -422,6 +443,28 @@ describe('BuiltInActionExecutor', () => {
         },
       }),
     )
+    const patchPreviewResult = await executor.execute(
+      createExecutionInput({
+        actionId: 'create_harness_patch_preview_artifact',
+        settings: { ...workspaceSettings, workspace: { ...workspaceSettings.workspace, rootPath } },
+        input: {
+          manifest: {
+            id: 'change-1',
+            title: 'Tighten provider instructions',
+            rootCause: 'Benchmark evidence shows missing validation reminders.',
+            proposedFix: 'Add a concise validation reminder to build mode.',
+            predictedEffect: 'More runs will validate edits before completion.',
+            affectedComponents: ['core.instructions'],
+            evidence: ['benchmark local-edit failed validation'],
+            benchmarkSuites: ['local'],
+            tests: ['pnpm test'],
+            rollbackPlan: 'Revert the instruction text change in packages/core/src/instructions.ts.',
+            patchPreview: 'diff --git a/packages/core/src/instructions.ts b/packages/core/src/instructions.ts',
+            createdAt: '2026-04-29T10:00:00.000Z',
+          },
+        },
+      }),
+    )
     const comparisonResult = await executor.execute(
       createExecutionInput({
         actionId: 'compare_benchmark_results',
@@ -429,6 +472,16 @@ describe('BuiltInActionExecutor', () => {
         input: {
           before: { suite: 'local', passed: 2, failed: 1, score: 0.66 },
           after: { suite: 'local', passed: 3, failed: 0, score: 1 },
+        },
+      }),
+    )
+    const benchmarkPlanResult = await executor.execute(
+      createExecutionInput({
+        actionId: 'create_benchmark_run_plan',
+        settings: { ...workspaceSettings, workspace: { ...workspaceSettings.workspace, rootPath } },
+        input: {
+          suite: 'local',
+          caseIds: ['spec-workbench', 'validation-obligations', 'missing-case'],
         },
       }),
     )
@@ -453,6 +506,14 @@ describe('BuiltInActionExecutor', () => {
         input: {
           artifact: expectActionOutput(benchmarkArtifactResult.output),
         },
+      }),
+    )
+    await writeFile(path.join(rootPath, 'benchmarks/results/broken.json'), '{not-json', 'utf8')
+    const benchmarkResultsResult = await executor.execute(
+      createExecutionInput({
+        actionId: 'list_benchmark_results',
+        settings: { ...workspaceSettings, workspace: { ...workspaceSettings.workspace, rootPath } },
+        input: {},
       }),
     )
     const promotionResult = await executor.execute(
@@ -485,6 +546,32 @@ describe('BuiltInActionExecutor', () => {
         },
       }),
     )
+    const writePromotionResult = await executor.execute(
+      createExecutionInput({
+        actionId: 'write_harness_promotion_artifact',
+        settings: { ...workspaceSettings, workspace: { ...workspaceSettings.workspace, rootPath } },
+        input: {
+          artifact: expectActionOutput(promotionResult.output),
+        },
+      }),
+    )
+    await writeFile(path.join(rootPath, '.nano/harness/promotions/broken.json'), '{not-json', 'utf8')
+    const promotionArtifactsResult = await executor.execute(
+      createExecutionInput({
+        actionId: 'list_harness_promotion_artifacts',
+        settings: { ...workspaceSettings, workspace: { ...workspaceSettings.workspace, rootPath } },
+        input: {},
+      }),
+    )
+    const readPromotionResult = await executor.execute(
+      createExecutionInput({
+        actionId: 'read_harness_promotion_artifact',
+        settings: { ...workspaceSettings, workspace: { ...workspaceSettings.workspace, rootPath } },
+        input: {
+          path: '.nano/harness/promotions/change-1.json',
+        },
+      }),
+    )
 
     expect(componentsResult).toMatchObject({ status: 'completed' })
     expect(componentsResult.output).toMatchObject({
@@ -494,9 +581,36 @@ describe('BuiltInActionExecutor', () => {
       status: 'completed',
       output: { liveMutationApplied: false, approvalRequiredForPromotion: true },
     })
+    expect(patchPreviewResult).toMatchObject({
+      status: 'completed',
+      output: {
+        applyReady: true,
+        blockers: [],
+        patchPaths: ['packages/core/src/instructions.ts'],
+        unknownPatchPaths: [],
+        approvalRequiredForApply: true,
+        liveMutationApplied: false,
+      },
+    })
     expect(comparisonResult).toMatchObject({
       status: 'completed',
       output: { passedDelta: 1, failedDelta: -1, scoreDelta: 0.33999999999999997, improved: true },
+    })
+    expect(benchmarkPlanResult).toMatchObject({
+      status: 'completed',
+      output: {
+        suite: 'local',
+        outputPath: 'benchmarks/results/local.json',
+        unknownCaseIds: ['missing-case'],
+        cases: expect.arrayContaining([
+          expect.objectContaining({
+            id: 'spec-workbench',
+            prompt: expect.stringContaining('Create a spec'),
+            successCriteria: expect.arrayContaining(['The Spec Workbench shows exactly one active change for the benchmark task.']),
+          }),
+        ]),
+        resultTemplate: expect.arrayContaining([expect.objectContaining({ caseId: 'spec-workbench', status: null })]),
+      },
     })
     expect(benchmarkArtifactResult).toMatchObject({
       status: 'completed',
@@ -516,6 +630,13 @@ describe('BuiltInActionExecutor', () => {
       output: { path: 'benchmarks/results/local.json' },
     })
     await expect(readFile(path.join(rootPath, 'benchmarks/results/local.json'), 'utf8')).resolves.toContain('"suite": "local"')
+    expect(benchmarkResultsResult).toMatchObject({
+      status: 'completed',
+      output: {
+        results: [expect.objectContaining({ suite: 'local', path: 'benchmarks/results/local.json', summary: { suite: 'local', passed: 1, failed: 1, score: 0.5 } })],
+        invalidFiles: [expect.objectContaining({ path: 'benchmarks/results/broken.json' })],
+      },
+    })
     expect(promotionResult).toMatchObject({
       status: 'completed',
       output: {
@@ -523,6 +644,33 @@ describe('BuiltInActionExecutor', () => {
         blockers: [],
         approvalRequiredForPromotion: true,
         liveMutationApplied: false,
+      },
+    })
+    expect(writePromotionResult).toMatchObject({
+      status: 'completed',
+      output: {
+        path: '.nano/harness/promotions/change-1.json',
+        liveMutationApplied: false,
+      },
+    })
+    await expect(readFile(path.join(rootPath, '.nano/harness/promotions/change-1.json'), 'utf8')).resolves.toContain('"promotionReady": true')
+    expect(promotionArtifactsResult).toMatchObject({
+      status: 'completed',
+      output: {
+        promotions: [expect.objectContaining({
+          id: 'change-1',
+          path: '.nano/harness/promotions/change-1.json',
+          promotionReady: true,
+          benchmarkSuite: 'local',
+        })],
+        invalidFiles: [expect.objectContaining({ path: '.nano/harness/promotions/broken.json' })],
+      },
+    })
+    expect(readPromotionResult).toMatchObject({
+      status: 'completed',
+      output: {
+        path: '.nano/harness/promotions/change-1.json',
+        artifact: { manifest: { id: 'change-1' }, promotionReady: true },
       },
     })
   })
@@ -571,6 +719,153 @@ describe('BuiltInActionExecutor', () => {
     })
   })
 
+  it('blocks harness patch previews when diff paths are not declared affected components', async () => {
+    const rootPath = await createWorkspace()
+    const result = await createExecutor().execute(
+      createExecutionInput({
+        actionId: 'create_harness_patch_preview_artifact',
+        settings: { ...workspaceSettings, workspace: { ...workspaceSettings.workspace, rootPath } },
+        input: {
+          manifest: {
+            id: 'change-1',
+            title: 'Tighten provider instructions',
+            rootCause: 'Benchmark evidence shows missing validation reminders.',
+            proposedFix: 'Add a concise validation reminder to build mode.',
+            predictedEffect: 'More runs will validate edits before completion.',
+            affectedComponents: ['core.instructions'],
+            evidence: ['benchmark local-edit failed validation'],
+            benchmarkSuites: ['local'],
+            tests: ['pnpm test'],
+            rollbackPlan: 'Revert the instruction text change in packages/core/src/instructions.ts.',
+            patchPreview: 'diff --git a/packages/infra/src/built-in-actions.ts b/packages/infra/src/built-in-actions.ts',
+            createdAt: '2026-04-29T10:00:00.000Z',
+          },
+        },
+      }),
+    )
+
+    expect(result).toMatchObject({
+      status: 'completed',
+      output: {
+        applyReady: false,
+        unknownPatchPaths: ['packages/infra/src/built-in-actions.ts'],
+        blockers: ['Patch preview path is not a declared affected component: packages/infra/src/built-in-actions.ts'],
+        liveMutationApplied: false,
+      },
+    })
+  })
+
+  it('rejects harness promotion artifact writes when not promotion-ready', async () => {
+    const rootPath = await createWorkspace()
+    const executor = createExecutor()
+
+    await expect(executor.execute(
+      createExecutionInput({
+        actionId: 'write_harness_promotion_artifact',
+        settings: { ...workspaceSettings, workspace: { ...workspaceSettings.workspace, rootPath } },
+        input: {
+          artifact: {
+            manifest: {
+              id: 'change-1',
+              title: 'Tighten provider instructions',
+              rootCause: 'Benchmark evidence shows missing validation reminders.',
+              proposedFix: 'Add a concise validation reminder to build mode.',
+              predictedEffect: 'More runs will validate edits before completion.',
+              affectedComponents: ['core.instructions'],
+              evidence: ['benchmark local-edit failed validation'],
+              benchmarkSuites: ['local'],
+              tests: ['pnpm test'],
+              rollbackPlan: 'Revert the instruction text change in packages/core/src/instructions.ts.',
+              patchPreview: 'diff --git a/packages/core/src/instructions.ts b/packages/core/src/instructions.ts',
+              createdAt: '2026-04-29T10:00:00.000Z',
+            },
+            benchmarkComparison: {
+              before: { suite: 'local', passed: 3, failed: 0, score: 1 },
+              after: { suite: 'local', passed: 2, failed: 1, score: 0.66 },
+              passedDelta: -1,
+              failedDelta: 1,
+              scoreDelta: -0.33999999999999997,
+              improved: false,
+            },
+            promotionReady: false,
+            blockers: ['Benchmark comparison did not improve.'],
+            approvalRequiredForPromotion: true,
+            liveMutationApplied: false,
+            createdAt: '2026-04-29T10:00:00.000Z',
+          },
+        },
+      }),
+    )).resolves.toMatchObject({
+      status: 'failed',
+      errorMessage: 'write_harness_promotion_artifact requires a promotion-ready artifact',
+    })
+  })
+
+  it('rejects harness promotion artifact writes outside promotion paths', async () => {
+    const rootPath = await createWorkspace()
+    const executor = createExecutor()
+
+    await expect(executor.execute(
+      createExecutionInput({
+        actionId: 'write_harness_promotion_artifact',
+        settings: { ...workspaceSettings, workspace: { ...workspaceSettings.workspace, rootPath } },
+        input: {
+          path: 'benchmarks/results/change-1.json',
+          artifact: {
+            manifest: {
+              id: 'change-1',
+              title: 'Tighten provider instructions',
+              rootCause: 'Benchmark evidence shows missing validation reminders.',
+              proposedFix: 'Add a concise validation reminder to build mode.',
+              predictedEffect: 'More runs will validate edits before completion.',
+              affectedComponents: ['core.instructions'],
+              evidence: ['benchmark local-edit failed validation'],
+              benchmarkSuites: ['local'],
+              tests: ['pnpm test'],
+              rollbackPlan: 'Revert the instruction text change in packages/core/src/instructions.ts.',
+              patchPreview: 'diff --git a/packages/core/src/instructions.ts b/packages/core/src/instructions.ts',
+              createdAt: '2026-04-29T10:00:00.000Z',
+            },
+            benchmarkComparison: {
+              before: { suite: 'local', passed: 2, failed: 1, score: 0.66 },
+              after: { suite: 'local', passed: 3, failed: 0, score: 1 },
+              passedDelta: 1,
+              failedDelta: -1,
+              scoreDelta: 0.33999999999999997,
+              improved: true,
+            },
+            promotionReady: true,
+            blockers: [],
+            approvalRequiredForPromotion: true,
+            liveMutationApplied: false,
+            createdAt: '2026-04-29T10:00:00.000Z',
+          },
+        },
+      }),
+    )).resolves.toMatchObject({
+      status: 'failed',
+      errorMessage: 'write_harness_promotion_artifact path must match .nano/harness/promotions/<promotion-id>.json',
+    })
+  })
+
+  it('rejects harness promotion artifact reads outside promotion paths', async () => {
+    const rootPath = await createWorkspace()
+    const executor = createExecutor()
+
+    await expect(executor.execute(
+      createExecutionInput({
+        actionId: 'read_harness_promotion_artifact',
+        settings: { ...workspaceSettings, workspace: { ...workspaceSettings.workspace, rootPath } },
+        input: {
+          path: 'benchmarks/results/change-1.json',
+        },
+      }),
+    )).resolves.toMatchObject({
+      status: 'failed',
+      errorMessage: 'read_harness_promotion_artifact path must match .nano/harness/promotions/<promotion-id>.json',
+    })
+  })
+
   it('creates draft skill improvement artifacts without mutating skill files', async () => {
     const rootPath = await createWorkspace()
     const executor = createExecutor()
@@ -607,6 +902,77 @@ describe('BuiltInActionExecutor', () => {
           }],
         },
       },
+    })
+  })
+
+  it('writes approved skill improvement artifacts under .nano/skills', async () => {
+    const rootPath = await createWorkspace()
+    const executor = createExecutor()
+    const createResult = await executor.execute(
+      createExecutionInput({
+        actionId: 'create_skill_improvement_artifact',
+        settings: { ...workspaceSettings, workspace: { ...workspaceSettings.workspace, rootPath } },
+        input: {
+          title: 'Add release notes workflow skill',
+          mode: 'create',
+          rationale: 'Repeated release note tasks need a focused evidence workflow.',
+          evidence: ['run:run-1'],
+          skillName: 'Release Notes',
+          description: 'Draft release notes from local git evidence.',
+          body: '# Release Notes\nUse git diff and changed files as evidence.',
+        },
+      }),
+    )
+
+    if (!createResult.output || Array.isArray(createResult.output) || typeof createResult.output !== 'object' || !('artifact' in createResult.output)) {
+      throw new Error('Expected create_skill_improvement_artifact to return an artifact')
+    }
+
+    const writeResult = await executor.execute(
+      createExecutionInput({
+        actionId: 'write_skill_improvement_artifact',
+        settings: { ...workspaceSettings, workspace: { ...workspaceSettings.workspace, rootPath } },
+        input: {
+          artifact: createResult.output.artifact,
+        },
+      }),
+    )
+
+    await expect(readFile(path.join(rootPath, '.nano/skills/release-notes/SKILL.md'), 'utf8')).resolves.toContain('name: Release Notes')
+    expect(writeResult).toMatchObject({
+      status: 'completed',
+      output: {
+        liveMutationApplied: true,
+        writtenFiles: [{ path: '.nano/skills/release-notes/SKILL.md' }],
+      },
+    })
+  })
+
+  it('rejects skill improvement writes outside skill SKILL.md paths', async () => {
+    const rootPath = await createWorkspace()
+    const executor = createExecutor()
+
+    await expect(executor.execute(
+      createExecutionInput({
+        actionId: 'write_skill_improvement_artifact',
+        settings: { ...workspaceSettings, workspace: { ...workspaceSettings.workspace, rootPath } },
+        input: {
+          artifact: {
+            id: 'skill-improvement-1',
+            mode: 'create',
+            title: 'Bad path',
+            rationale: 'Validate path constraints.',
+            evidence: ['run:run-1'],
+            proposedFiles: [{ relativePath: '.nano/skills/release-notes/README.md', content: 'nope' }],
+            patchPreview: 'diff --git a/.nano/skills/release-notes/README.md b/.nano/skills/release-notes/README.md',
+            approvalRequiredForWrite: true,
+            createdAt: '2026-04-29T10:00:00.000Z',
+          },
+        },
+      }),
+    )).resolves.toMatchObject({
+      status: 'failed',
+      errorMessage: 'write_skill_improvement_artifact paths must match .nano/skills/<skill-id>/SKILL.md',
     })
   })
 
@@ -763,6 +1129,8 @@ describe('BuiltInActionExecutor', () => {
     await expect(executor.getDefinition('update_spec_task')).resolves.toMatchObject({ requiresApproval: true })
     await expect(executor.getDefinition('append_spec_evidence')).resolves.toMatchObject({ requiresApproval: true })
     await expect(executor.getDefinition('archive_spec_change')).resolves.toMatchObject({ requiresApproval: true })
+    await expect(executor.getDefinition('write_harness_promotion_artifact')).resolves.toMatchObject({ requiresApproval: true })
+    await expect(executor.getDefinition('write_skill_improvement_artifact')).resolves.toMatchObject({ requiresApproval: true })
   })
 })
 
@@ -778,7 +1146,7 @@ function createExecutionInput(input: {
   const action: ActionDefinition = {
     id: input.actionId,
     title: input.actionId,
-    requiresApproval: ['write_file', 'apply_patch', 'run_command', 'propose_harness_change', 'write_benchmark_run_artifact', 'write_spec_artifact', 'update_spec_task', 'append_spec_evidence', 'archive_spec_change'].includes(input.actionId),
+    requiresApproval: ['write_file', 'apply_patch', 'run_command', 'propose_harness_change', 'write_benchmark_run_artifact', 'write_harness_promotion_artifact', 'write_skill_improvement_artifact', 'write_spec_artifact', 'update_spec_task', 'append_spec_evidence', 'archive_spec_change'].includes(input.actionId),
     inputSchema: {
       type: 'object',
       properties: {},
@@ -810,4 +1178,10 @@ async function createWorkspace(): Promise<string> {
   const rootPath = await mkdtemp(path.join(tmpdir(), 'nano-harness-actions-'))
   cleanupPaths.push(rootPath)
   return rootPath
+}
+
+async function writeBenchmarkCase(rootPath: string, caseId: string, content: string): Promise<void> {
+  const casePath = path.join(rootPath, 'benchmarks/cases', `${caseId}.md`)
+  await mkdir(path.dirname(casePath), { recursive: true })
+  await writeFile(casePath, `${content}\n`, 'utf8')
 }

@@ -15,6 +15,7 @@ const bundledSkills: SkillPackage[] = [
     safetyNotes: ['Do not edit files during onboarding unless the user explicitly asks for changes.'],
     source: 'bundled',
     enabled: true,
+    validationWarnings: [],
     content: [
       'Start by identifying package roots, entry points, and test commands.',
       'Use search and bounded reads before making claims about structure.',
@@ -30,6 +31,7 @@ const bundledSkills: SkillPackage[] = [
     safetyNotes: ['Prefer minimal patches and run typecheck or targeted tests after edits.'],
     source: 'bundled',
     enabled: true,
+    validationWarnings: [],
     content: [
       'Find all relevant call sites before editing shared contracts.',
       'Use exact patch edits when possible instead of rewriting whole files.',
@@ -72,7 +74,7 @@ export class MarkdownSkillResolver implements SkillResolver {
     for (const skill of discovered) {
       deduped.set(skill.id, {
         ...skill,
-        enabled: !disabledIds.has(skill.id),
+        enabled: skill.validationWarnings.length === 0 && !disabledIds.has(skill.id),
       })
     }
 
@@ -87,10 +89,11 @@ function toSummary(skill: SkillPackage): SkillSummary {
     description: skill.description,
     triggers: skill.triggers,
     tools: skill.tools,
-    safetyNotes: skill.safetyNotes,
-    source: skill.source,
-    path: skill.path,
-    enabled: skill.enabled,
+      safetyNotes: skill.safetyNotes,
+      source: skill.source,
+      path: skill.path,
+      enabled: skill.enabled,
+      validationWarnings: skill.validationWarnings,
   }
 }
 
@@ -112,21 +115,39 @@ async function readSkillsDirectory(directoryPath: string, source: 'user' | 'proj
 
     const skillPath = path.join(directoryPath, entry.name, 'SKILL.md')
 
-    try {
-      skills.push(parseSkillMarkdown(await readFile(skillPath, 'utf8'), source, skillPath, entry.name))
-    } catch {
-      // Invalid local skills are ignored so one broken file cannot block a run.
-    }
+    skills.push(await readSkillPackage(skillPath, source, entry.name))
   }
 
   return skills
+}
+
+async function readSkillPackage(skillPath: string, source: 'user' | 'project', fallbackId: string): Promise<SkillPackage> {
+  try {
+    return parseSkillMarkdown(await readFile(skillPath, 'utf8'), source, skillPath, fallbackId)
+  } catch (error) {
+    return skillPackageSchema.parse({
+      id: slugify(fallbackId),
+      name: fallbackId,
+      description: 'Invalid local skill. Fix SKILL.md metadata before Nano can use it.',
+      triggers: [],
+      tools: [],
+      safetyNotes: [],
+      source,
+      path: skillPath,
+      enabled: false,
+      validationWarnings: [error instanceof Error ? error.message : 'Invalid SKILL.md'],
+      content: 'Invalid local skill.',
+    })
+  }
 }
 
 function parseSkillMarkdown(markdown: string, source: 'user' | 'project', skillPath: string, fallbackId: string): SkillPackage {
   const trimmed = markdown.trim()
   const frontmatterMatch = /^---\n([\s\S]*?)\n---\n?([\s\S]*)$/u.exec(trimmed)
   const metadata = frontmatterMatch ? parseFrontmatter(frontmatterMatch[1]) : {}
-  const content = (frontmatterMatch ? frontmatterMatch[2] : trimmed).trim()
+  const rawContent = (frontmatterMatch ? frontmatterMatch[2] : trimmed).trim()
+  const warnings = validateSkillMarkdown({ metadata, content: rawContent, hasFrontmatter: Boolean(frontmatterMatch) })
+  const content = rawContent || 'No skill instructions provided.'
   const name = metadata.name ?? firstHeading(content) ?? fallbackId
   const id = metadata.id ?? slugify(name)
 
@@ -140,8 +161,31 @@ function parseSkillMarkdown(markdown: string, source: 'user' | 'project', skillP
     source,
     path: skillPath,
     enabled: true,
+    validationWarnings: warnings,
     content,
   })
+}
+
+function validateSkillMarkdown(input: { metadata: Record<string, string>; content: string; hasFrontmatter: boolean }): string[] {
+  const warnings: string[] = []
+
+  if (!input.hasFrontmatter) {
+    warnings.push('SKILL.md is missing frontmatter.')
+  }
+
+  if (!input.metadata.name?.trim()) {
+    warnings.push('SKILL.md frontmatter is missing required name.')
+  }
+
+  if (!input.metadata.description?.trim()) {
+    warnings.push('SKILL.md frontmatter is missing required description.')
+  }
+
+  if (!input.content.trim()) {
+    warnings.push('SKILL.md instructions are empty.')
+  }
+
+  return warnings
 }
 
 function parseFrontmatter(value: string): Record<string, string> {

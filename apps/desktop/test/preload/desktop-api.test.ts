@@ -149,6 +149,23 @@ describe('desktop preload bridge', () => {
     await expect(desktop.readSpecArtifact({ changeId: 'change-1', artifactKind: 'unknown' as 'proposal' })).rejects.toThrow()
   })
 
+  it('validates benchmark suite bridge payloads and parses started runs', async () => {
+    invoke.mockResolvedValueOnce({
+      suite: 'local',
+      runs: [{ caseId: 'spec-workbench', conversationId: 'benchmark-local-spec-workbench', runId: 'run-1' }],
+      unknownCaseIds: [],
+    })
+    const desktop = await loadDesktopApi()
+
+    await expect(desktop.startBenchmarkSuite({ suite: 'local', caseIds: ['spec-workbench'] })).resolves.toEqual({
+      suite: 'local',
+      runs: [{ caseId: 'spec-workbench', conversationId: 'benchmark-local-spec-workbench', runId: 'run-1' }],
+      unknownCaseIds: [],
+    })
+    expect(invoke).toHaveBeenCalledWith(desktopBridgeChannels.startBenchmarkSuite, { suite: 'local', caseIds: ['spec-workbench'] })
+    await expect(desktop.startBenchmarkSuite({ suite: '' })).rejects.toThrow()
+  })
+
   it('subscribes to parsed run events and unsubscribes correctly', async () => {
     const desktop = await loadDesktopApi()
     const listener = vi.fn()

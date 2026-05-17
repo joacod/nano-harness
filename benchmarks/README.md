@@ -7,7 +7,9 @@ Generated outputs belong in ignored folders:
 - `benchmarks/results/` for run results.
 - `benchmarks/exports/` for exported evidence packets.
 
-Use `create_benchmark_run_artifact` to turn tracked case outcomes into a benchmark result artifact. The action is non-mutating and returns a draft `benchmarks/results/<suite>.json` path. Use approval-gated `write_benchmark_run_artifact` to validate and persist that artifact under `benchmarks/results/`.
+Use `create_benchmark_run_plan` to turn tracked case markdown into a repeatable suite plan. After running the cases, use `create_benchmark_run_artifact` to turn case outcomes into a benchmark result artifact. The artifact action is non-mutating and returns a draft `benchmarks/results/<suite>.json` path. Use approval-gated `write_benchmark_run_artifact` to validate and persist that artifact under `benchmarks/results/`. Use `list_benchmark_results` to inspect persisted result summaries before comparing or promoting harness changes.
+
+The desktop bridge can start a benchmark suite with `startBenchmarkSuite({ suite, caseIds })`. It starts one Build run per selected tracked case using the case markdown as the run prompt. It does not score or write results automatically; review the run evidence, then create and write a benchmark result artifact through the approval-gated artifact flow above.
 
 ## Tracked Cases
 

@@ -1,7 +1,11 @@
+import { readFile } from 'node:fs/promises'
+
 import { app, ipcMain, shell } from 'electron'
 
 import {
   appSettingsSchema,
+  benchmarkCaseRegistry,
+  benchmarkSuiteRunResultSchema,
   desktopBridgeChannels,
   desktopContextSchema,
   exportRunEvidenceInputSchema,
@@ -23,17 +27,20 @@ import {
   specChangeDetailResultSchema,
   specChangeInputSchema,
   specChangeListSchema,
+  startBenchmarkSuiteInputSchema,
   startSpecRunInputSchema,
   startProviderOauthInputSchema,
   startProviderOauthResultSchema,
   startRunResultSchema,
   type AgentRole,
   type AppSettings,
+  type BenchmarkCase,
   type SpecArtifactKind,
   type SpecChangeDetail,
   type ProviderAuthMethod,
 } from '../../../../packages/shared/src'
 import { SpecWorkspaceService } from '../../../../packages/infra/src'
+import { resolveWorkspacePath } from '../../../../packages/infra/src/actions/workspace'
 import { exportData, importData } from './data-transfer'
 import { startOpenAIChatGptOAuth } from './openai-chatgpt-auth'
 import type { DesktopRuntime } from './runtime'
@@ -139,6 +146,7 @@ export function setupIpcHandlers(runtime: IpcRuntime): void {
       source: skill.source,
       path: skill.path,
       enabled: skill.enabled,
+      validationWarnings: skill.validationWarnings,
     })) }
   })
 
@@ -211,6 +219,36 @@ export function setupIpcHandlers(runtime: IpcRuntime): void {
     })
 
     return startRunResultSchema.parse({ runId: handle.runId })
+  })
+
+  ipcMain.handle(desktopBridgeChannels.startBenchmarkSuite, async (_event, payload) => {
+    const input = startBenchmarkSuiteInputSchema.parse(payload)
+    const settings = await requireSettings(runtime)
+    const knownCases = new Map(benchmarkCaseRegistry.cases.map((benchmarkCase) => [benchmarkCase.id, benchmarkCase]))
+    const requestedCaseIds = input.caseIds ?? benchmarkCaseRegistry.cases.map((benchmarkCase) => benchmarkCase.id)
+    const unknownCaseIds = requestedCaseIds.filter((caseId) => !knownCases.has(caseId))
+    const selectedCases = requestedCaseIds.flatMap((caseId) => {
+      const benchmarkCase = knownCases.get(caseId)
+      return benchmarkCase ? [benchmarkCase] : []
+    })
+    const runs = []
+
+    for (const benchmarkCase of selectedCases) {
+      const conversationId = `benchmark-${sanitizeId(input.suite)}-${sanitizeId(benchmarkCase.id)}-${Date.now().toString(36)}`
+      const handle = await runtime.runEngine.startRun({
+        conversationId,
+        role: 'build',
+        prompt: await buildBenchmarkRunPrompt(settings, input.suite, benchmarkCase),
+      })
+
+      runs.push({
+        caseId: benchmarkCase.id,
+        conversationId,
+        runId: handle.runId,
+      })
+    }
+
+    return benchmarkSuiteRunResultSchema.parse({ suite: input.suite, runs, unknownCaseIds })
   })
 
   ipcMain.handle(desktopBridgeChannels.getProviderCredentialStatus, async (_event, payload) => {
@@ -381,6 +419,23 @@ async function buildSpecRunPrompt(settings: AppSettings, change: SpecChangeDetai
     ].join('\n\n')),
     getSpecRunInstruction(role, workflowIntent),
   ].join('\n\n---\n\n')
+}
+
+async function buildBenchmarkRunPrompt(settings: AppSettings, suite: string, benchmarkCase: BenchmarkCase): Promise<string> {
+  const content = await readFile(resolveWorkspacePath(settings.workspace.rootPath, benchmarkCase.path), 'utf8')
+
+  return [
+    `Run Nano benchmark case ${benchmarkCase.id} from suite ${suite}.`,
+    `Case title: ${benchmarkCase.title}`,
+    'Follow the tracked case markdown exactly. Preserve approval gates, do not push branches or publish PRs, and keep evidence inspectable.',
+    'When the case is complete, summarize pass/fail status, evidence links, validation output, changed files, approvals, and any missing criteria. Do not write benchmark result files directly unless explicitly asked through approval-gated benchmark artifact actions.',
+    'Tracked case markdown:',
+    content,
+  ].join('\n\n---\n\n')
+}
+
+function sanitizeId(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9_.-]+/g, '-').replace(/^-|-$/g, '') || 'benchmark'
 }
 
 type SpecWorkflowIntent = 'propose' | 'plan' | 'build' | 'verify' | 'archive'

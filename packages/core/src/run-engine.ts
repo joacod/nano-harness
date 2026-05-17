@@ -11,7 +11,7 @@ import type {
 } from '@nano-harness/shared'
 import { getProviderDefinition } from '@nano-harness/shared'
 
-import { ActionInvocationPipeline, type ExecuteActionRequestsOutput } from './action-invocation-pipeline'
+import { ActionInvocationPipeline, getOpenValidationObligationIds, type ExecuteActionRequestsOutput } from './action-invocation-pipeline'
 import type { ActionExecutor } from './actions'
 import { ApprovalGate } from './approval-gate'
 import type { ApprovalCoordinator, PendingApprovalContext } from './approvals'
@@ -618,8 +618,27 @@ export class CoreRunEngine implements RunEngine {
 
   private async completeRun(run: Run): Promise<void> {
     const finishedAt = this.now()
+    await this.emitUnmetValidationObligations(run, finishedAt)
     await this.transitionRun(run, 'completed', { finishedAt }, 'run.completed', { finishedAt })
     await this.createPostRunMemoryProposal(run)
+  }
+
+  private async emitUnmetValidationObligations(run: Run, checkedAt: string): Promise<void> {
+    const openObligationIds = getOpenValidationObligationIds(await this.store.listRunEvents(run.id))
+
+    for (const obligationId of openObligationIds) {
+      await this.emitEvent({
+        id: this.createId(),
+        runId: run.id,
+        timestamp: checkedAt,
+        type: 'obligation.unmet',
+        payload: {
+          obligationId,
+          reason: 'Run completed before validation evidence satisfied this obligation.',
+          checkedAt,
+        },
+      })
+    }
   }
 
   private async createPostRunMemoryProposal(run: Run): Promise<void> {
@@ -650,14 +669,26 @@ export class CoreRunEngine implements RunEngine {
     }
 
     const normalizedContent = normalizeMemoryProposalContent(evidence.content)
-    const duplicateProposal = existingProposals.some((proposal) =>
-      proposal.category === evidence.category && normalizeMemoryProposalContent(proposal.content) === normalizedContent,
-    )
+    const evidenceLinks = uniqueStrings([...evidence.evidenceLinks, `run:${run.id}`])
     const duplicateRecord = (await this.store.listMemoryRecords()).some((record) =>
       record.category === evidence.category && normalizeMemoryProposalContent(record.content) === normalizedContent,
     )
 
-    if (duplicateProposal || duplicateRecord) {
+    if (duplicateRecord) {
+      return
+    }
+
+    const duplicatePendingProposal = existingProposals.find((proposal) =>
+      proposal.status === 'pending'
+      && proposal.category === evidence.category
+      && normalizeMemoryProposalContent(proposal.content) === normalizedContent,
+    )
+
+    if (duplicatePendingProposal) {
+      await this.store.saveMemoryProposal({
+        ...duplicatePendingProposal,
+        evidence: uniqueStrings([...duplicatePendingProposal.evidence, ...evidenceLinks]),
+      })
       return
     }
 
@@ -667,7 +698,7 @@ export class CoreRunEngine implements RunEngine {
       category: evidence.category,
       content: evidence.content,
       rationale: evidence.rationale,
-      evidence: evidence.evidenceLinks,
+      evidence: evidenceLinks,
       status: 'pending',
       createdAt: this.now(),
     }
