@@ -486,6 +486,14 @@ describe('BuiltInActionExecutor', () => {
         },
       }),
     )
+    await writeFile(path.join(rootPath, 'benchmarks/results/broken.json'), '{not-json', 'utf8')
+    const benchmarkResultsResult = await executor.execute(
+      createExecutionInput({
+        actionId: 'list_benchmark_results',
+        settings: { ...workspaceSettings, workspace: { ...workspaceSettings.workspace, rootPath } },
+        input: {},
+      }),
+    )
     const promotionResult = await executor.execute(
       createExecutionInput({
         actionId: 'create_harness_promotion_artifact',
@@ -563,6 +571,13 @@ describe('BuiltInActionExecutor', () => {
       output: { path: 'benchmarks/results/local.json' },
     })
     await expect(readFile(path.join(rootPath, 'benchmarks/results/local.json'), 'utf8')).resolves.toContain('"suite": "local"')
+    expect(benchmarkResultsResult).toMatchObject({
+      status: 'completed',
+      output: {
+        results: [expect.objectContaining({ suite: 'local', path: 'benchmarks/results/local.json', summary: { suite: 'local', passed: 1, failed: 1, score: 0.5 } })],
+        invalidFiles: [expect.objectContaining({ path: 'benchmarks/results/broken.json' })],
+      },
+    })
     expect(promotionResult).toMatchObject({
       status: 'completed',
       output: {

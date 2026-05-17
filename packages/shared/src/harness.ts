@@ -105,6 +105,26 @@ export const benchmarkRunArtifactSchema = z.object({
 
 export type BenchmarkRunArtifact = z.infer<typeof benchmarkRunArtifactSchema>
 
+export const benchmarkResultIndexEntrySchema = z.object({
+  id: z.string().min(1),
+  suite: z.string().min(1),
+  path: z.string().min(1),
+  summary: benchmarkRunSummarySchema,
+  createdAt: z.iso.datetime(),
+})
+
+export type BenchmarkResultIndexEntry = z.infer<typeof benchmarkResultIndexEntrySchema>
+
+export const benchmarkResultIndexSchema = z.object({
+  results: z.array(benchmarkResultIndexEntrySchema),
+  invalidFiles: z.array(z.object({
+    path: z.string().min(1),
+    reason: z.string().min(1),
+  })),
+})
+
+export type BenchmarkResultIndex = z.infer<typeof benchmarkResultIndexSchema>
+
 export const benchmarkComparisonSchema = z.object({
   before: benchmarkRunSummarySchema,
   after: benchmarkRunSummarySchema,

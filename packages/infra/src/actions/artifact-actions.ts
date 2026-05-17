@@ -1,7 +1,7 @@
-import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 
-import { benchmarkCaseRegistry, benchmarkCaseResultSchema, benchmarkComparisonSchema, benchmarkRunArtifactSchema, benchmarkRunPlanArtifactSchema, benchmarkRunSummarySchema, draftPrArtifactSchema, harnessChangeManifestSchema, harnessComponentRegistry, harnessPromotionArtifactSchema, implementationSpecSchema, skillImprovementArtifactSchema, specArtifactKindSchema, specEvidencePacketSchema, specTaskStatusSchema, type BenchmarkCase, type BenchmarkRunArtifact, type BenchmarkRunPlanCase, type SpecArtifactKind } from '@nano-harness/shared'
+import { benchmarkCaseRegistry, benchmarkCaseResultSchema, benchmarkComparisonSchema, benchmarkResultIndexSchema, benchmarkRunArtifactSchema, benchmarkRunPlanArtifactSchema, benchmarkRunSummarySchema, draftPrArtifactSchema, harnessChangeManifestSchema, harnessComponentRegistry, harnessPromotionArtifactSchema, implementationSpecSchema, skillImprovementArtifactSchema, specArtifactKindSchema, specEvidencePacketSchema, specTaskStatusSchema, type BenchmarkCase, type BenchmarkRunArtifact, type BenchmarkRunPlanCase, type SpecArtifactKind } from '@nano-harness/shared'
 
 import { SpecWorkspaceService } from '../spec-workspace'
 
@@ -255,6 +255,55 @@ function parseMarkdownSections(content: string): Map<string, string[]> {
   return sections
 }
 
+async function listBenchmarkResults(workspaceRoot: string) {
+  const resultsRoot = resolveWorkspacePath(workspaceRoot, 'benchmarks/results')
+  let entries: string[]
+
+  try {
+    entries = await readdir(resultsRoot)
+  } catch (error) {
+    if (error instanceof Error && 'code' in error && error.code === 'ENOENT') {
+      return benchmarkResultIndexSchema.parse({ results: [], invalidFiles: [] })
+    }
+
+    throw error
+  }
+
+  const parsedEntries = await Promise.all(entries
+    .filter((entry) => entry.endsWith('.json'))
+    .sort((left, right) => left.localeCompare(right))
+    .map(async (entry) => {
+      const relativePath = `benchmarks/results/${entry}`
+
+      try {
+        const artifact = benchmarkRunArtifactSchema.parse(JSON.parse(await readFile(resolveWorkspacePath(workspaceRoot, relativePath), 'utf8')))
+        return {
+          result: {
+            id: artifact.id,
+            suite: artifact.suite,
+            path: relativePath,
+            summary: artifact.summary,
+            createdAt: artifact.createdAt,
+          },
+          invalidFile: null,
+        }
+      } catch (error) {
+        return {
+          result: null,
+          invalidFile: {
+            path: relativePath,
+            reason: error instanceof Error ? error.message : 'Invalid benchmark result file',
+          },
+        }
+      }
+    }))
+
+  return benchmarkResultIndexSchema.parse({
+    results: parsedEntries.flatMap((entry) => entry.result ? [entry.result] : []),
+    invalidFiles: parsedEntries.flatMap((entry) => entry.invalidFile ? [entry.invalidFile] : []),
+  })
+}
+
 export const artifactActionCommands: BuiltInActionCommand[] = [
   {
     definition: {
@@ -500,6 +549,26 @@ export const artifactActionCommands: BuiltInActionCommand[] = [
           liveMutationApplied: false,
           approvalRequiredForPromotion: true,
         },
+      })
+    },
+  },
+  {
+    definition: {
+      id: 'list_benchmark_results',
+      title: 'List Benchmark Results',
+      description: 'List persisted benchmark result artifacts under benchmarks/results without mutating files',
+      requiresApproval: false,
+      inputSchema: {
+        type: 'object',
+        properties: {},
+        additionalProperties: false,
+      },
+    },
+    async execute(input) {
+      return createActionResult({
+        actionCallId: input.call.id,
+        status: 'completed',
+        output: await listBenchmarkResults(input.settings.workspace.rootPath),
       })
     },
   },
