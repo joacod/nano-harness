@@ -149,7 +149,7 @@ describe('ComposerCard', () => {
     })
   })
 
-  it('routes selected Spec mode through a bounded plan prompt', async () => {
+  it('routes selected Spec mode through a durable workbench plan prompt', async () => {
     const user = userEvent.setup()
     const startRun = vi.fn(async (input: RunCreateInput) => {
       void input
@@ -174,7 +174,10 @@ describe('ComposerCard', () => {
         prompt: expect.stringContaining('define session export'),
         role: 'plan',
       })
-      expect(startRun.mock.calls[0]?.[0].prompt).toContain('Route the workflow through Plan, Build, and Review')
+      expect(startRun.mock.calls[0]?.[0].prompt).toContain('Create a durable Spec Workbench change')
+      expect(startRun.mock.calls[0]?.[0].prompt).toContain('.nano/specs/changes/<changeId>/')
+      expect(startRun.mock.calls[0]?.[0].prompt).toContain('write_spec_artifact')
+      expect(startRun.mock.calls[0]?.[0].prompt).toContain('non-mutating and not durable')
     })
   })
 
