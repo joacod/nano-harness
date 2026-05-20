@@ -28,7 +28,7 @@ export function SpecsRoute() {
           </RuntimePill>
         </div>
         <p className="muted-copy">
-          Durable spec-driven work will live here. Start with <strong>/spec</strong> in chat, or use this route to inspect local changes from <strong>.nano/specs</strong>.
+          Durable spec-driven work lives here. Start a change with the Spec chat button, then return here to inspect local artifacts from <strong>.nano/specs</strong>.
         </p>
       </Card>
 

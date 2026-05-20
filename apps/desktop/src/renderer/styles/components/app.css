@@ -281,6 +281,13 @@
   min-width: 0;
 }
 
+.spec-empty-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
 .spec-change-list,
 .spec-workbench-artifacts .tabs-panel,
 .spec-evidence-stack {
@@ -314,7 +321,9 @@
 .spec-change-card-id,
 .spec-artifact-path,
 .spec-task-row span,
-.spec-evidence-section li {
+.spec-evidence-section li,
+.spec-evidence-link,
+.spec-evidence-draft-pr {
   min-width: 0;
   overflow-wrap: anywhere;
 }
@@ -326,6 +335,7 @@
 
 .spec-change-card-id,
 .spec-artifact-path,
+.spec-evidence-mono,
 .spec-change-card small {
   color: var(--muted-foreground);
   font-family: var(--font-mono);
@@ -428,6 +438,19 @@
   gap: var(--space-1-5);
   margin: 0;
   padding-left: var(--space-4);
+}
+
+.spec-evidence-draft-pr {
+  max-height: 14rem;
+  margin: 0;
+  padding: var(--space-3);
+  overflow: auto;
+  border: var(--border-width-default) solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-app-alpha-58);
+  color: var(--foreground);
+  font-size: var(--font-size-xs);
+  white-space: pre-wrap;
 }
 
 .conversation-nav {

@@ -1,7 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 
+import { useQuery } from '@tanstack/react-query'
+
 import type { SpecChangeDetail } from '../../../../../../packages/shared/src'
-import { Card, FeedbackText } from '../ui'
+import { settingsQueryOptions } from '../../queries'
+import { Button, Card, FeedbackText } from '../ui'
 import { SpecArtifactTabs } from './SpecArtifactTabs'
 import { SpecChangesList, type SpecFilter } from './SpecChangesList'
 import { SpecWorkflowPanel } from './SpecWorkflowPanel'
@@ -15,6 +18,7 @@ export function SpecWorkbench({
   initialChangeId: string | null
   onSelectChange: (changeId: string) => void
 }) {
+  const settingsQuery = useQuery(settingsQueryOptions)
   const [filter, setFilter] = useState<SpecFilter>('active')
   const selectedChange = useMemo(() => {
     return changes.find((change) => change.summary.id === initialChangeId) ?? getDefaultChange(changes) ?? null
@@ -27,12 +31,30 @@ export function SpecWorkbench({
   }, [initialChangeId, onSelectChange, selectedChange])
 
   if (changes.length === 0) {
+    const specsPath = settingsQuery.data ? `${settingsQuery.data.workspace.rootPath}/.nano/specs` : null
+
     return (
       <Card hero>
         <p className="eyebrow">Specs</p>
         <h2>No spec changes yet.</h2>
         <FeedbackText>
-          Start with /spec in chat, or create a local spec change for work that needs a plan, tasks, validation, and evidence.
+          Use the Spec chat button when a task needs a durable proposal, design, tasks, validation, and evidence before build work starts.
+        </FeedbackText>
+        <div className="spec-empty-actions">
+          <Button
+            type="button"
+            disabled={!specsPath}
+            onClick={() => {
+              if (specsPath) {
+                void window.desktop.showItemInFolder({ filePath: specsPath })
+              }
+            }}
+          >
+            Open .nano/specs folder
+          </Button>
+        </div>
+        <FeedbackText>
+          How Specs work: chat creates an approval-gated change folder, the Workbench shows the artifacts, and each run links back evidence as it plans, builds, verifies, or archives the change.
         </FeedbackText>
       </Card>
     )

@@ -111,6 +111,7 @@ export function SpecWorkflowPanel({ change }: { change: SpecChangeDetail | null 
         >
           Propose
         </Button>
+        <FeedbackText>Spec artifacts only; no application code edits.</FeedbackText>
         <Button
           type="button"
           fullWidth
@@ -119,6 +120,7 @@ export function SpecWorkflowPanel({ change }: { change: SpecChangeDetail | null 
         >
           Plan
         </Button>
+        <FeedbackText>Refine the approach, tasks, and validation plan.</FeedbackText>
         <Button
           type="button"
           fullWidth
@@ -127,6 +129,7 @@ export function SpecWorkflowPanel({ change }: { change: SpecChangeDetail | null 
         >
           Build selected task
         </Button>
+        <FeedbackText>Implement the selected task with focused changes.</FeedbackText>
         <Button
           type="button"
           fullWidth
@@ -135,6 +138,7 @@ export function SpecWorkflowPanel({ change }: { change: SpecChangeDetail | null 
         >
           Verify
         </Button>
+        <FeedbackText>Review the spec, diff, validation output, and obligations.</FeedbackText>
         <Button
           type="button"
           fullWidth
@@ -143,6 +147,7 @@ export function SpecWorkflowPanel({ change }: { change: SpecChangeDetail | null 
         >
           Archive
         </Button>
+        <FeedbackText>Archive only when the evidence shows the change is ready.</FeedbackText>
       </div>
       {startSpecRunMutation.isPending ? <FeedbackText live>Starting spec run...</FeedbackText> : null}
       {startSpecRunMutation.error instanceof Error ? (
