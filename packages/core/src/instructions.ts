@@ -43,9 +43,9 @@ export function createProviderInstructions(input: { workspaceRoot: string; role?
 function getRoleInstructions(role: AgentRole): string {
   switch (role) {
     case 'plan':
-      return 'Plan mode: inspect and propose a concrete implementation plan. Do not edit files, run mutating commands, or request write actions.'
+      return 'Plan mode: inspect and propose a concrete implementation plan. Do not edit files, run mutating commands, or request write actions. If repeated workflow evidence would be better as reusable guidance, use create_skill_improvement_artifact to draft a SKILL.md proposal; do not write skill files directly.'
     case 'review':
-      return 'Review mode: inspect the diff and validation evidence first. Prioritize bugs, regressions, missing tests, and concrete risks.'
+      return 'Review mode: inspect the diff and validation evidence first. Prioritize bugs, regressions, missing tests, and concrete risks. If review evidence shows a reusable workflow gap, use create_skill_improvement_artifact to draft a SKILL.md proposal; do not write skill files directly.'
     case 'build':
       return 'Build mode: implement approved changes with minimal patches, run validation where appropriate, and keep edits inspectable.'
   }

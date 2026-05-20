@@ -541,7 +541,7 @@ describe('CoreRunEngine', () => {
     expect(store.events.map((event) => event.type)).not.toContain('memory.proposal_created')
   })
 
-  it('groups duplicate pending memory suggestions by merging evidence', async () => {
+  it('groups duplicate pending memory suggestions and suggests a reusable skill', async () => {
     const store = new FakeStore()
     store.memoryProposals.push({
       id: 'proposal-existing',
@@ -590,8 +590,19 @@ describe('CoreRunEngine', () => {
           'validation:pnpm typecheck passed',
         ]),
       }),
+      expect.objectContaining({
+        category: 'skill_improvement',
+        content: 'Repeated workflow evidence may be better captured as a reusable Agent Skill. Use create_skill_improvement_artifact to draft a SKILL.md proposal before any write action.',
+        evidence: expect.arrayContaining([
+          'run:run-existing',
+          'validation:previous',
+          `run:${handle.runId}`,
+          'file:packages/core/src/run-engine.ts',
+          'validation:pnpm typecheck passed',
+        ]),
+      }),
     ])
-    expect(store.events.map((event) => event.type)).not.toContain('memory.proposal_created')
+    expect(store.events.map((event) => event.type)).toContain('memory.proposal_created')
   })
 
   it('creates evidence-backed memory proposals from actionable failed runs', async () => {

@@ -760,10 +760,16 @@ export class CoreRunEngine implements RunEngine {
     )
 
     if (duplicatePendingProposal) {
+      const mergedEvidence = uniqueStrings([...duplicatePendingProposal.evidence, ...evidenceLinks])
+
       await this.store.saveMemoryProposal({
         ...duplicatePendingProposal,
-        evidence: uniqueStrings([...duplicatePendingProposal.evidence, ...evidenceLinks]),
+        evidence: mergedEvidence,
       })
+
+      if (duplicatePendingProposal.category === 'workflow' && mergedEvidence.length >= 4 && settings.memory?.enabledCategories?.includes('skill_improvement') !== false) {
+        await this.createRepeatedWorkflowSkillProposal(run, mergedEvidence, existingProposals)
+      }
       return
     }
 
@@ -774,6 +780,43 @@ export class CoreRunEngine implements RunEngine {
       content: evidence.content,
       rationale: evidence.rationale,
       evidence: evidenceLinks,
+      status: 'pending',
+      createdAt: this.now(),
+    }
+
+    await this.store.saveMemoryProposal(proposal)
+    await this.emitEvent({
+      id: this.createId(),
+      runId: run.id,
+      timestamp: proposal.createdAt,
+      type: 'memory.proposal_created',
+      payload: { proposal },
+    })
+  }
+
+  private async createRepeatedWorkflowSkillProposal(run: Run, evidence: string[], existingProposals: MemoryProposal[]): Promise<void> {
+    const content = 'Repeated workflow evidence may be better captured as a reusable Agent Skill. Use create_skill_improvement_artifact to draft a SKILL.md proposal before any write action.'
+    const normalizedContent = normalizeMemoryProposalContent(content)
+    const duplicateRecord = (await this.store.listMemoryRecords()).some((record) =>
+      record.category === 'skill_improvement' && normalizeMemoryProposalContent(record.content) === normalizedContent,
+    )
+    const duplicatePendingProposal = existingProposals.some((proposal) =>
+      proposal.status === 'pending'
+      && proposal.category === 'skill_improvement'
+      && normalizeMemoryProposalContent(proposal.content) === normalizedContent,
+    )
+
+    if (duplicateRecord || duplicatePendingProposal) {
+      return
+    }
+
+    const proposal: MemoryProposal = {
+      id: this.createId(),
+      runId: run.id,
+      category: 'skill_improvement',
+      content,
+      rationale: 'Repeated workflow memory evidence suggests a reusable skill draft. Approval keeps this as an inspectable suggestion and does not write skill files automatically.',
+      evidence: uniqueStrings([...evidence, `run:${run.id}`]),
       status: 'pending',
       createdAt: this.now(),
     }

@@ -16,5 +16,7 @@ describe('provider instructions', () => {
   it('adds role-specific instructions', () => {
     expect(createProviderInstructions({ workspaceRoot: '/workspace', role: 'plan' })).toContain('Plan mode')
     expect(createProviderInstructions({ workspaceRoot: '/workspace', role: 'review' })).toContain('Review mode')
+    expect(createProviderInstructions({ workspaceRoot: '/workspace', role: 'plan' })).toContain('create_skill_improvement_artifact')
+    expect(createProviderInstructions({ workspaceRoot: '/workspace', role: 'review' })).toContain('do not write skill files directly')
   })
 })
