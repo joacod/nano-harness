@@ -232,6 +232,7 @@ export const benchmarkCaseRegistry = z.object({
   cases: [
     { id: 'approval-pause-resume', title: 'Approval Pause Resume', path: 'benchmarks/cases/approval-pause-resume.md' },
     { id: 'edit-and-test', title: 'Edit And Test', path: 'benchmarks/cases/edit-and-test.md' },
+    { id: 'harness-promotion', title: 'Harness Promotion', path: 'benchmarks/cases/harness-promotion.md' },
     { id: 'multi-turn-recall', title: 'Multi Turn Recall', path: 'benchmarks/cases/multi-turn-recall.md' },
     { id: 'recovery', title: 'Recovery', path: 'benchmarks/cases/recovery.md' },
     { id: 'repo-survey', title: 'Repo Survey', path: 'benchmarks/cases/repo-survey.md' },

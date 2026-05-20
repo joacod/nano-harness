@@ -11,18 +11,63 @@ import { resolveWorkspacePath } from './workspace'
 const specWorkspaceService = new SpecWorkspaceService()
 
 function parseHarnessChangeManifestInput(value: Record<string, unknown>) {
-  return harnessChangeManifestSchema.parse(value.manifest)
+  const manifest = harnessChangeManifestSchema.parse(value.manifest)
+
+  assertConcreteHarnessEvidence(manifest)
+
+  return manifest
 }
 
 function parseHarnessPatchPreviewInput(value: Record<string, unknown>): HarnessChangeManifest {
-  return harnessChangeManifestSchema.parse(value.manifest)
+  const manifest = harnessChangeManifestSchema.parse(value.manifest)
+
+  assertConcreteHarnessEvidence(manifest)
+
+  return manifest
 }
 
 function parseHarnessPromotionInput(value: Record<string, unknown>) {
+  const manifest = harnessChangeManifestSchema.parse(value.manifest)
+
+  assertConcreteHarnessEvidence(manifest)
+
   return {
-    manifest: harnessChangeManifestSchema.parse(value.manifest),
+    manifest,
     benchmarkComparison: benchmarkComparisonSchema.parse(value.benchmarkComparison),
   }
+}
+
+function assertConcreteHarnessEvidence(manifest: HarnessChangeManifest): void {
+  const hasConcreteEvidence = manifest.evidence.some((evidence) => {
+    const normalized = evidence.trim().toLowerCase()
+    return /^(run|event|action|validation|benchmark|memory|spec):/.test(normalized) || normalized.includes('benchmark') || normalized.includes('review')
+  })
+
+  if (!hasConcreteEvidence) {
+    throw new Error('Harness proposal requires concrete evidence links such as run:, event:, action:, validation:, benchmark:, memory:, or spec:')
+  }
+}
+
+function validateHarnessPatchPreview(manifest: HarnessChangeManifest): string[] {
+  const registeredComponents = new Map(harnessComponentRegistry.components.map((component) => [component.id, component]))
+  const affectedFiles = manifest.affectedComponents.flatMap((componentId) => {
+    const component = registeredComponents.get(componentId)
+
+    return component ? [{ componentId: component.id, path: component.path, mutable: component.mutable }] : []
+  })
+  const knownAffectedPaths = new Set(affectedFiles.map((file) => file.path))
+  const patchPaths = extractUnifiedDiffPaths(manifest.patchPreview)
+  const unknownComponents = manifest.affectedComponents.filter((componentId) => !registeredComponents.has(componentId))
+  const immutableComponents = affectedFiles.filter((file) => !file.mutable)
+  const unknownPatchPaths = patchPaths.filter((patchPath) => !knownAffectedPaths.has(patchPath))
+  const blockers = [
+    ...unknownComponents.map((componentId) => `Unknown harness component: ${componentId}`),
+    ...immutableComponents.map((file) => `Harness component is not mutable: ${file.componentId}`),
+    patchPaths.length === 0 ? 'Patch preview did not include unified diff file paths.' : null,
+    ...unknownPatchPaths.map((patchPath) => `Patch preview path is not a declared affected component: ${patchPath}`),
+  ]
+
+  return blockers.filter((blocker): blocker is string => blocker !== null)
 }
 
 function parseWriteHarnessPromotionInput(value: Record<string, unknown>): { artifact: HarnessPromotionArtifact; path: string } {
@@ -975,10 +1020,8 @@ export const artifactActionCommands: BuiltInActionCommand[] = [
     },
     async execute(input) {
       const parsedInput = parseHarnessPromotionInput(input.call.input)
-      const registeredComponentIds = new Set(harnessComponentRegistry.components.map((component) => component.id))
-      const unknownComponents = parsedInput.manifest.affectedComponents.filter((componentId) => !registeredComponentIds.has(componentId))
       const blockerCandidates = [
-        ...unknownComponents.map((componentId) => `Unknown harness component: ${componentId}`),
+        ...validateHarnessPatchPreview(parsedInput.manifest),
         parsedInput.benchmarkComparison.improved ? null : 'Benchmark comparison did not improve.',
         parsedInput.benchmarkComparison.failedDelta > 0 ? 'Benchmark comparison increased failures.' : null,
         parsedInput.benchmarkComparison.before.suite === parsedInput.benchmarkComparison.after.suite ? null : 'Benchmark comparison suites do not match.',
