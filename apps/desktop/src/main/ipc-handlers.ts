@@ -418,6 +418,7 @@ async function buildSpecRunPrompt(settings: AppSettings, change: SpecChangeDetai
       artifact.content,
     ].join('\n\n')),
     getSpecRunInstruction(role, workflowIntent),
+    getSpecEvidenceInstruction(change.summary.id, role),
   ].join('\n\n---\n\n')
 }
 
@@ -478,6 +479,16 @@ function getSpecRunInstruction(role: AgentRole, workflowIntent: SpecWorkflowInte
   }
 
   return 'Build the selected task(s) with the smallest focused changes. Use approval-gated actions for all mutations.'
+}
+
+function getSpecEvidenceInstruction(changeId: string, role: AgentRole): string {
+  return [
+    `Before completing this spec run, call append_spec_evidence for changeId ${changeId} through the approval-gated action path.`,
+    'Include the current run ID when available, approval request IDs or decisions observed in this run, changed files, validation command output summaries, unmet obligation IDs and reasons, and benchmark observations if present.',
+    role === 'review'
+      ? 'For review or verify runs, explicitly surface unmet validation obligations before declaring the spec ready.'
+      : 'If evidence is missing or cannot be collected, say exactly what is missing instead of silently skipping it.',
+  ].join(' ')
 }
 
 async function readOptionalSpecArtifact(settings: AppSettings, changeId: string, kind: SpecArtifactKind): Promise<{ kind: SpecArtifactKind; content: string } | null> {

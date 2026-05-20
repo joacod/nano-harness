@@ -6,8 +6,20 @@ export function SpecEvidencePanel({ change }: { change: SpecChangeDetail | null 
     return <FeedbackText>Select a change to view linked evidence.</FeedbackText>
   }
 
+  const missingEvidence = getMissingEvidence(change)
+
   return (
     <div className="spec-evidence-stack" aria-label="Spec evidence summary">
+      <div className="spec-evidence-section">
+        <strong>Evidence readiness</strong>
+        {missingEvidence.length > 0 ? (
+          <FeedbackText variant="warning">
+            Missing key evidence: {missingEvidence.join(', ')}.
+          </FeedbackText>
+        ) : (
+          <FeedbackText>Key evidence is linked for this change.</FeedbackText>
+        )}
+      </div>
       <EvidenceSection title="Linked runs" values={change.evidenceLinks.runIds} />
       <EvidenceSection title="Approvals" values={change.evidenceLinks.approvalIds} />
       <EvidenceSection title="Changed files" values={change.evidenceLinks.changedFiles} />
@@ -28,6 +40,24 @@ export function SpecEvidencePanel({ change }: { change: SpecChangeDetail | null 
       ) : null}
     </div>
   )
+}
+
+function getMissingEvidence(change: SpecChangeDetail): string[] {
+  const missing: string[] = []
+
+  if (change.evidenceLinks.runIds.length === 0 && change.summary.linkedRunIds.length === 0) {
+    missing.push('linked runs')
+  }
+
+  if (change.evidenceLinks.changedFiles.length === 0) {
+    missing.push('changed files')
+  }
+
+  if (change.evidenceLinks.validationOutputs.length === 0) {
+    missing.push('validation output')
+  }
+
+  return missing
 }
 
 function EvidenceSection({ title, values }: { title: string; values: string[] }) {

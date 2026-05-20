@@ -153,4 +153,29 @@ describe('SpecsRoute', () => {
       }))
     })
   })
+
+  it('shows missing key evidence in the evidence panel', async () => {
+    window.desktop = createDesktopMock({
+      listSpecChanges: async () => ({
+        changes: [{
+          summary: {
+            id: 'missing-evidence',
+            title: 'Missing Evidence',
+            status: 'draft',
+            path: '.nano/specs/changes/missing-evidence',
+            taskCounts: { total: 0, todo: 0, inProgress: 0, done: 0, blocked: 0 },
+            updatedAt: '2026-05-14T10:00:00.000Z',
+            linkedRunIds: [],
+          },
+          artifactPaths: [],
+          tasks: [],
+          evidenceLinks: { runIds: [], eventIds: [], approvalIds: [], changedFiles: [], validationOutputs: [], benchmarkObservations: [] },
+        }],
+      }),
+    })
+
+    renderWithQueryClient(<SpecsRoute />)
+
+    expect(await screen.findByText('Missing key evidence: linked runs, changed files, validation output.')).toBeTruthy()
+  })
 })

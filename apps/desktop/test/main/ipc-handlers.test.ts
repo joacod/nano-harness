@@ -236,6 +236,38 @@ describe('setupIpcHandlers', () => {
     expect(runtime.runEngine.startRun).toHaveBeenCalledWith(expect.objectContaining({
       prompt: expect.stringContaining('ui: Add route'),
     }))
+    expect(runtime.runEngine.startRun).toHaveBeenCalledWith(expect.objectContaining({
+      prompt: expect.stringContaining('call append_spec_evidence for changeId add-spec-workbench'),
+    }))
+    expect(runtime.runEngine.startRun).toHaveBeenCalledWith(expect.objectContaining({
+      prompt: expect.stringContaining('current run ID'),
+    }))
+    expect(runtime.runEngine.startRun).toHaveBeenCalledWith(expect.objectContaining({
+      prompt: expect.stringContaining('unmet obligation IDs and reasons'),
+    }))
+  })
+
+  it('starts verify spec runs with unmet obligation evidence instructions', async () => {
+    const workspaceRoot = await mkdtemp(path.join(tmpdir(), 'nano-harness-ipc-specs-verify-'))
+    cleanupPaths.push(workspaceRoot)
+    await writeSpecChange(workspaceRoot, 'add-spec-workbench')
+    const runtime = createRuntime({ workspace: { rootPath: workspaceRoot, approvalPolicy: 'on-request' } })
+    setupIpcHandlers(runtime)
+
+    await expect(invokeHandler(desktopBridgeChannels.startSpecRun, {
+      conversationId: 'conversation-1',
+      changeId: 'add-spec-workbench',
+      role: 'review',
+      workflowIntent: 'verify',
+    })).resolves.toEqual({ runId: 'run-123' })
+
+    expect(runtime.runEngine.startRun).toHaveBeenCalledWith(expect.objectContaining({
+      role: 'review',
+      prompt: expect.stringContaining('Surface unmet validation obligations before declaring success.'),
+    }))
+    expect(runtime.runEngine.startRun).toHaveBeenCalledWith(expect.objectContaining({
+      prompt: expect.stringContaining('For review or verify runs, explicitly surface unmet validation obligations before declaring the spec ready.'),
+    }))
   })
 
   it('starts one run per selected tracked benchmark case', async () => {
