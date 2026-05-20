@@ -3,7 +3,7 @@ import { type ReactNode, useEffect, useState } from 'react'
 import { useForm } from '@tanstack/react-form'
 
 import type { AppSettings } from '../../../../../../packages/shared/src'
-import { getProviderDefinition, providerDefaultModels, providerOptions } from '../../../../../../packages/shared/src'
+import { getProviderDefinition, getRecommendedModels, providerDefaultModels, providerOptions } from '../../../../../../packages/shared/src'
 import { applyProviderDefaults } from '../../utils/run-events'
 import { FieldHint, LabeledField, TextField } from '../form-fields'
 import { Button, FeedbackText, Select } from '../ui'
@@ -175,20 +175,20 @@ export function ProviderSettingsForm({
                     onChange: ({ value }) => (value.trim() ? undefined : 'Model is required.'),
                   }}
                   children={(field) => (
-                      <TextField
-                        field={field}
-                        name="model"
-                        placeholder={`Example: ${providerDefaultModels.openrouter}`}
-                        autoComplete="off"
-                        onValueChange={(value) => {
-                          setDraftSettings((current) => ({
-                            ...current,
-                            provider: { ...current.provider, model: value },
-                          }))
-                          setSaveMessage(null)
-                        }}
-                        spellCheck={false}
-                      />
+                    <TextField
+                      field={field}
+                      name="model"
+                      placeholder={`Example: ${providerDefaultModels.openrouter}`}
+                      autoComplete="off"
+                      onValueChange={(value) => {
+                        setDraftSettings((current) => ({
+                          ...current,
+                          provider: { ...current.provider, model: value },
+                        }))
+                        setSaveMessage(null)
+                      }}
+                      spellCheck={false}
+                    />
                   )}
                 />
               </LabeledField>
@@ -203,26 +203,49 @@ export function ProviderSettingsForm({
                     onChange: ({ value }) => (value?.trim() ? undefined : 'Base URL is required.'),
                   }}
                   children={(field) => (
-                      <TextField
-                        field={field}
-                        name="provider-base-url"
-                        placeholder="Example: http://127.0.0.1:8080/v1"
-                        autoComplete="url"
-                        onValueChange={(value) => {
-                          setDraftSettings((current) => ({
-                            ...current,
-                            provider: { ...current.provider, baseUrl: value },
-                          }))
-                          setSaveMessage(null)
-                        }}
-                        readOnly={!selectedProviderDefinition.endpoint.editable}
-                        spellCheck={false}
+                    <TextField
+                      field={field}
+                      name="provider-base-url"
+                      placeholder="Example: http://127.0.0.1:8080/v1"
+                      autoComplete="url"
+                      onValueChange={(value) => {
+                        setDraftSettings((current) => ({
+                          ...current,
+                          provider: { ...current.provider, baseUrl: value },
+                        }))
+                        setSaveMessage(null)
+                      }}
+                      readOnly={!selectedProviderDefinition.endpoint.editable}
+                      spellCheck={false}
                     />
                   )}
                 />
               </LabeledField>
             </div>
           </div>
+
+          {getRecommendedModels(selectedProvider).length > 0 && (
+            <div className="model-suggestions" aria-label="Suggested models">
+              <span className="model-suggestions-label">Suggested:</span>
+              {getRecommendedModels(selectedProvider).map((model) => (
+                <button
+                  key={model}
+                  type="button"
+                  className="model-suggestion-chip"
+                  onClick={() => {
+                    form.setFieldValue('provider.model', model)
+                    setDraftSettings((current) => ({
+                      ...current,
+                      provider: { ...current.provider, model },
+                    }))
+                    setSaveMessage(null)
+                  }}
+                >
+                  {model}
+                </button>
+              ))}
+            </div>
+          )}
         </section>
 
         <section className="settings-section" aria-labelledby="provider-generation-heading">
