@@ -1,4 +1,4 @@
-import type { ApprovalRequest, ConversationSnapshot, ExportRunEvidenceResult, MemoryProposalList, MemoryRecordList, RunEvent, SessionCompactionList } from '../../../../../packages/shared/src'
+import type { ApprovalRequest, ConversationSnapshot, ExportRunEvidenceResult, MemoryProposalList, RunEvent, SessionCompactionList } from '../../../../../packages/shared/src'
 import type { StreamingRunState } from '../utils/run-events'
 import { RunInspectorCard } from './RunInspectorCard'
 import { RunListCard } from './RunListCard'
@@ -11,7 +11,6 @@ export function SessionTelemetry({
   onRunEvidenceExportError,
   pendingApproval,
   memoryProposals = null,
-  memoryRecords = null,
   compactions = null,
   isCompacting = false,
   onCompactSession,
@@ -27,7 +26,6 @@ export function SessionTelemetry({
   onRunEvidenceExportError: (error: unknown) => void
   pendingApproval: ApprovalRequest | null
   memoryProposals?: MemoryProposalList | null
-  memoryRecords?: MemoryRecordList | null
   compactions?: SessionCompactionList | null
   isCompacting?: boolean
   onCompactSession?: () => void
@@ -46,7 +44,6 @@ export function SessionTelemetry({
         events={selectedRunEvents}
         pendingApproval={pendingApproval}
         memoryProposals={memoryProposals}
-        memoryRecords={memoryRecords}
         streamingState={streamingState}
         onEvidenceExported={onRunEvidenceExported}
         onEvidenceExportError={onRunEvidenceExportError}
