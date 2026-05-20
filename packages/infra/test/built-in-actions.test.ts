@@ -1050,6 +1050,16 @@ describe('BuiltInActionExecutor', () => {
         content: '- [ ] contracts: Add shared schemas\n- [ ] ui: Add route\n',
       },
     }))
+    await executor.execute(createExecutionInput({
+      actionId: 'write_spec_artifact',
+      settings,
+      input: {
+        changeId: 'add-spec-workbench',
+        artifactKind: 'delta_spec',
+        relativePath: 'ui/spec.md',
+        content: '# UI Delta\n',
+      },
+    }))
     const appendEvidenceResult = await executor.execute(createExecutionInput({
       actionId: 'append_spec_evidence',
       settings,
@@ -1135,7 +1145,13 @@ describe('BuiltInActionExecutor', () => {
       },
     })
     expect(readResult).toMatchObject({ status: 'completed', output: { content: '- [x] contracts: Add shared schemas\n- [ ] ui: Add route\n' } })
-    expect(archiveResult).toMatchObject({ status: 'completed', output: { archivedPath: '.nano/specs/archive/add-spec-workbench' } })
+    expect(archiveResult).toMatchObject({
+      status: 'completed',
+      output: {
+        archivedPath: '.nano/specs/archive/add-spec-workbench',
+        currentSpecPaths: ['.nano/specs/current/ui/spec.md'],
+      },
+    })
   })
 
   it('exposes spec action approval requirements in definitions', async () => {

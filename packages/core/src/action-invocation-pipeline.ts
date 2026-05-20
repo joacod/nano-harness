@@ -333,6 +333,7 @@ export class ActionInvocationPipeline {
     if (action.id === 'archive_spec_change') {
       const changeId = getStringField(output, 'changeId')
       const archivedPath = getStringField(output, 'archivedPath')
+      const currentSpecPaths = getStringArrayField(output, 'currentSpecPaths')
 
       if (changeId && archivedPath) {
         await this.dependencies.emitEvent({
@@ -340,7 +341,7 @@ export class ActionInvocationPipeline {
           runId: run.id,
           timestamp,
           type: 'spec.change_archived',
-          payload: { changeId, archivedPath },
+          payload: { changeId, archivedPath, currentSpecPaths },
         })
       }
       return

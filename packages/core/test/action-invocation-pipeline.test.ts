@@ -311,6 +311,57 @@ describe('ActionInvocationPipeline', () => {
     })
   })
 
+  it('emits current spec paths when spec changes are archived', async () => {
+    const events: RunEvent[] = []
+    const actionExecutor = new FakeActionExecutor([
+      createActionDefinition({ id: 'archive_spec_change', title: 'Archive Spec Change', requiresApproval: true }),
+    ], async (input) => createActionResult({
+      actionCallId: input.call.id,
+      output: {
+        changeId: 'add-workbench',
+        archivedPath: '.nano/specs/archive/add-workbench',
+        currentSpecPaths: ['.nano/specs/current/ui/spec.md'],
+      },
+    }))
+    const pipeline = new ActionInvocationPipeline({
+      store: new FakeStore(),
+      actionExecutor,
+      policy: new FakePolicy(() => ({ effect: 'allow' })),
+      hookRunner: {
+        async listHooks() {
+          return []
+        },
+        async runHooks() {
+          return []
+        },
+      },
+      now: () => '2026-04-29T10:00:00.000Z',
+      createId: createSequentialId(),
+      emitEvent: async (event) => {
+        events.push(event)
+      },
+      requireApproval: async () => ({ approvalRequestId: 'unused', decision: 'granted', decidedAt: '2026-04-29T10:00:00.000Z' }),
+      cancelRun: async () => {},
+    })
+
+    await pipeline.executeRequests({
+      run,
+      actionRequests: [createToolRequest('archive_spec_change')],
+      messages: [...messages],
+      settings: testSettings,
+      signal: new AbortController().signal,
+    })
+
+    expect(events.find((event) => event.type === 'spec.change_archived')).toMatchObject({
+      type: 'spec.change_archived',
+      payload: {
+        changeId: 'add-workbench',
+        archivedPath: '.nano/specs/archive/add-workbench',
+        currentSpecPaths: ['.nano/specs/current/ui/spec.md'],
+      },
+    })
+  })
+
   it('denies actions before execution when policy rejects them', async () => {
     const actionExecutor = new FakeActionExecutor([
       createActionDefinition({ id: 'read_file', title: 'Read File' }),

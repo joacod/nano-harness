@@ -589,7 +589,7 @@ export const artifactActionCommands: BuiltInActionCommand[] = [
     definition: {
       id: 'archive_spec_change',
       title: 'Archive Spec Change',
-      description: 'Move a local spec change from .nano/specs/changes to .nano/specs/archive after approval',
+      description: 'Copy accepted delta specs into .nano/specs/current, then move a local spec change from .nano/specs/changes to .nano/specs/archive after approval. Current spec files with matching paths are overwritten.',
       requiresApproval: true,
       inputSchema: {
         type: 'object',
@@ -601,14 +601,14 @@ export const artifactActionCommands: BuiltInActionCommand[] = [
       },
     },
     async execute(input) {
-      const archivedPath = await specWorkspaceService.archiveChange(input.settings.workspace.rootPath, parseString(input.call.input.changeId, 'changeId'))
+      const archiveResult = await specWorkspaceService.archiveChange(input.settings.workspace.rootPath, parseString(input.call.input.changeId, 'changeId'))
 
       return createActionResult({
         actionCallId: input.call.id,
         status: 'completed',
         output: {
           changeId: parseString(input.call.input.changeId, 'changeId'),
-          archivedPath,
+          ...archiveResult,
         },
       })
     },

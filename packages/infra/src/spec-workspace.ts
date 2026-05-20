@@ -1,4 +1,4 @@
-import { mkdir, readdir, readFile, rename, stat, writeFile } from 'node:fs/promises'
+import { copyFile, mkdir, readdir, readFile, rename, stat, utimes, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 
 import {
@@ -201,16 +201,56 @@ export class SpecWorkspaceService {
     return parsedEvidence
   }
 
-  async archiveChange(workspaceRoot: string, changeId: string): Promise<string> {
+  async archiveChange(workspaceRoot: string, changeId: string): Promise<{ archivedPath: string; currentSpecPaths: string[] }> {
     const normalizedChangeId = normalizeChangeId(changeId)
     const sourcePath = this.resolveChangePath(workspaceRoot, 'changes', normalizedChangeId)
     const archiveRoot = this.resolveSpecPath(workspaceRoot, 'archive')
     const targetPath = this.resolveChangePath(workspaceRoot, 'archive', normalizedChangeId)
+    const sourceExists = await exists(sourcePath)
+
+    if (!sourceExists && await exists(targetPath)) {
+      throw new Error(`Spec change ${normalizedChangeId} is already archived`)
+    }
+
+    if (!sourceExists) {
+      throw new Error(`Spec change ${normalizedChangeId} not found`)
+    }
+
+    const currentSpecPaths = await this.copyDeltaSpecsToCurrent(workspaceRoot, sourcePath)
 
     await mkdir(archiveRoot, { recursive: true })
     await rename(sourcePath, targetPath)
 
-    return path.posix.join('.nano/specs/archive', normalizedChangeId)
+    return {
+      archivedPath: path.posix.join('.nano/specs/archive', normalizedChangeId),
+      currentSpecPaths,
+    }
+  }
+
+  private async copyDeltaSpecsToCurrent(workspaceRoot: string, changePath: string): Promise<string[]> {
+    const deltaSpecsPath = path.join(changePath, 'specs')
+
+    if (!(await exists(deltaSpecsPath))) {
+      return []
+    }
+
+    const currentSpecPaths: string[] = []
+    const specPaths = (await listMarkdownFiles(deltaSpecsPath))
+      .filter((specPath) => path.posix.basename(specPath) === 'spec.md')
+
+    for (const specPath of specPaths) {
+      const sourcePath = path.join(deltaSpecsPath, specPath)
+      const targetDisplayPath = path.posix.join('.nano/specs/current', specPath)
+      const targetPath = resolveWorkspacePath(workspaceRoot, targetDisplayPath)
+      const sourceStat = await stat(sourcePath)
+
+      await mkdir(path.dirname(targetPath), { recursive: true })
+      await copyFile(sourcePath, targetPath)
+      await utimes(targetPath, sourceStat.atime, sourceStat.mtime)
+      currentSpecPaths.push(targetDisplayPath)
+    }
+
+    return currentSpecPaths
   }
 
   private async listChangeDirectory(workspaceRoot: string, bucket: 'changes' | 'archive'): Promise<SpecChangeDetail[]> {
