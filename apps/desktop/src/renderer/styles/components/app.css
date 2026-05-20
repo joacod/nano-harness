@@ -1618,28 +1618,55 @@
 .model-suggestions {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: var(--space-2);
-  margin-top: var(--space-2);
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: var(--border-width-default) solid var(--color-alpha-white-08);
+}
+
+.model-suggestions-label {
+  color: var(--muted-foreground);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--letter-spacing-subtle);
 }
 
 .model-suggestion-chip {
   display: inline-flex;
   align-items: center;
+  gap: var(--space-1-5);
   min-height: 1.75rem;
   padding: var(--space-1) var(--space-2-5);
   border: var(--border-width-default) solid var(--color-alpha-white-16);
   border-radius: var(--radius-pill);
   background: var(--color-surface-alpha-36);
-  color: var(--muted-foreground);
+  color: var(--text-soft);
   font-family: var(--font-mono);
   font-size: var(--font-size-sm);
   cursor: pointer;
+  transition: border-color 0.12s ease, color 0.12s ease, background 0.12s ease;
+}
+
+.model-suggestion-chip::after {
+  content: '';
+  width: 0.375rem;
+  height: 0.375rem;
+  flex: 0 0 auto;
+  border-right: var(--border-width-default) solid currentColor;
+  border-bottom: var(--border-width-default) solid currentColor;
+  transform: rotate(-45deg) translateY(-1px);
+  opacity: 0.5;
 }
 
 .model-suggestion-chip:hover {
-  border-color: var(--color-primary-alpha-46);
+  border-color: var(--color-primary-alpha-56);
   color: var(--text-strong);
-  background: var(--color-primary-alpha-12);
+  background: var(--color-primary-alpha-16);
+}
+
+.model-suggestion-chip:hover::after {
+  opacity: 1;
 }
 
 .model-suggestion-chip:focus-visible {
