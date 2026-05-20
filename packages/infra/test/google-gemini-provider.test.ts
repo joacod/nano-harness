@@ -98,7 +98,7 @@ describe('GoogleGeminiProvider', () => {
       signal: new AbortController().signal,
     })
 
-    expect(capturedUrl).toBe('https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:streamGenerateContent?alt=sse')
+    expect(capturedUrl).toBe('https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:streamGenerateContent?alt=sse')
     expect(capturedInit).toEqual(
       expect.objectContaining({
         method: 'POST',

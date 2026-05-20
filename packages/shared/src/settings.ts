@@ -40,7 +40,7 @@ export const providerDefaultModels = {
   openrouter: 'deepseek/deepseek-v4-pro',
   'llama-cpp': 'ggml-org/gemma-3-1b-it-GGUF',
   openai: 'gpt-5.4-mini',
-  google: 'gemini-3.1-flash-lite',
+  google: 'gemini-3.5-flash',
 } as const satisfies Record<ProviderKey, string>
 
 type ProviderEndpointDefinition = {
