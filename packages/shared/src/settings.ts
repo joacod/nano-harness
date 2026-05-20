@@ -9,7 +9,7 @@ export const approvalPolicySchema = z.enum(['always', 'on-request', 'never'])
 
 export type ApprovalPolicy = z.infer<typeof approvalPolicySchema>
 
-export const providerKeySchema = z.enum(['openrouter', 'llama-cpp', 'openai', 'google'])
+export const providerKeySchema = z.enum(['openrouter', 'llama-cpp', 'mlx', 'openai', 'google'])
 
 export type ProviderKey = z.infer<typeof providerKeySchema>
 
@@ -39,6 +39,7 @@ export type ReasoningSettings = z.infer<typeof reasoningSettingsSchema>
 export const providerDefaultModels = {
   openrouter: 'deepseek/deepseek-v4-pro',
   'llama-cpp': 'ggml-org/gemma-3-1b-it-GGUF',
+  mlx: 'mlx-community/Qwen3.6-35B-A3B-4bit-DWQ',
   openai: 'gpt-5.4-mini',
   google: 'gemini-3.5-flash',
 } as const satisfies Record<ProviderKey, string>
@@ -143,6 +144,25 @@ export const providerCatalog = {
     authLabels: { none: 'none' },
     apiKeyLabel: 'Optional for this local provider',
     statusHints: ['Start llama-server before running a local model. The API endpoint should expose /v1/chat/completions.'],
+    endpoint: {
+      editable: true,
+      description: 'Model and API endpoint.',
+      hint: 'OpenAI-compatible API root.',
+    },
+  },
+  mlx: {
+    key: 'mlx',
+    label: 'MLX',
+    adapterId: 'openai-compatible',
+    baseUrl: 'http://127.0.0.1:8080/v1',
+    defaultModel: providerDefaultModels['mlx'],
+    recommendedModels: [providerDefaultModels['mlx']],
+    requiresApiKey: false,
+    authMethods: ['none'],
+    defaultAuthMethod: 'none',
+    authLabels: { none: 'none' },
+    apiKeyLabel: 'Not used for MLX',
+    statusHints: ['Start the MLX server before running. Use run-mlx-server from your developer-tools repo to launch mlx_lm.server on port 8080.'],
     endpoint: {
       editable: true,
       description: 'Model and API endpoint.',
