@@ -541,7 +541,7 @@ describe('CoreRunEngine', () => {
     expect(store.events.map((event) => event.type)).not.toContain('memory.proposal_created')
   })
 
-  it('groups duplicate pending memory suggestions by merging evidence', async () => {
+  it('groups duplicate pending memory suggestions and suggests a reusable skill', async () => {
     const store = new FakeStore()
     store.memoryProposals.push({
       id: 'proposal-existing',
@@ -590,8 +590,164 @@ describe('CoreRunEngine', () => {
           'validation:pnpm typecheck passed',
         ]),
       }),
+      expect.objectContaining({
+        category: 'skill_improvement',
+        content: 'Repeated workflow evidence may be better captured as a reusable Agent Skill. Use create_skill_improvement_artifact to draft a SKILL.md proposal before any write action.',
+        evidence: expect.arrayContaining([
+          'run:run-existing',
+          'validation:previous',
+          `run:${handle.runId}`,
+          'file:packages/core/src/run-engine.ts',
+          'validation:pnpm typecheck passed',
+        ]),
+      }),
     ])
-    expect(store.events.map((event) => event.type)).not.toContain('memory.proposal_created')
+    expect(store.events.map((event) => event.type)).toContain('memory.proposal_created')
+  })
+
+  it('creates evidence-backed memory proposals from actionable failed runs', async () => {
+    const store = new FakeStore()
+    const engine = new CoreRunEngine({
+      store,
+      provider: new FakeProvider([async () => {
+        throw new Error('Provider timed out while streaming response')
+      }]),
+      providerCredentialResolver: defaultCredentialResolver,
+      actionExecutor: new FakeActionExecutor([], async (input) => createActionResult({ actionCallId: input.call.id })),
+      policy: new FakePolicy(() => ({ effect: 'allow' })),
+      now: () => '2026-04-29T10:00:00.000Z',
+      createId: createSequentialId(),
+    })
+
+    const handle = await engine.startRun(createRunInput({ prompt: 'Trigger a provider failure.' }))
+
+    await waitForCondition(() => store.runs.get(handle.runId)?.status === 'failed')
+
+    expect(store.memoryProposals).toEqual([
+      expect.objectContaining({
+        category: 'workflow',
+        content: 'Failure pattern to account for: Provider timed out while streaming response.',
+        evidence: expect.arrayContaining([
+          expect.stringMatching(/^event:run\.failed:/),
+          expect.stringMatching(/^event:provider\.error:/),
+          `run:${handle.runId}`,
+        ]),
+        status: 'pending',
+      }),
+    ])
+  })
+
+  it('creates project fact proposals from review findings', async () => {
+    const store = new FakeStore()
+    const engine = new CoreRunEngine({
+      store,
+      provider: new FakeProvider([async (input) => {
+        await input.onDelta?.('Finding: renderer tests are missing coverage for archive links.')
+        return { content: 'Review complete.' }
+      }]),
+      providerCredentialResolver: defaultCredentialResolver,
+      actionExecutor: new FakeActionExecutor([], async (input) => createActionResult({ actionCallId: input.call.id })),
+      policy: new FakePolicy(() => ({ effect: 'allow' })),
+      now: () => '2026-04-29T10:00:00.000Z',
+      createId: createSequentialId(),
+    })
+
+    const handle = await engine.startRun(createRunInput({ prompt: 'Review the change.', role: 'review' }))
+
+    await waitForCondition(() => store.runs.get(handle.runId)?.status === 'completed')
+
+    expect(store.memoryProposals).toEqual([
+      expect.objectContaining({
+        category: 'project_fact',
+        content: 'Review finding to preserve: Finding: renderer tests are missing coverage for archive links..',
+        evidence: expect.arrayContaining([expect.stringMatching(/^event:provider\.delta:/), `run:${handle.runId}`]),
+        status: 'pending',
+      }),
+    ])
+  })
+
+  it('creates preference proposals from repeated user corrections', async () => {
+    const store = new FakeStore()
+    store.messages.push({
+      id: 'message-correction-1',
+      conversationId: 'conversation-1',
+      role: 'user',
+      content: 'Actually, keep summaries concise.',
+      createdAt: '2026-04-29T09:59:00.000Z',
+    })
+    const engine = new CoreRunEngine({
+      store,
+      provider: new FakeProvider([{ content: 'Understood.' }]),
+      providerCredentialResolver: defaultCredentialResolver,
+      actionExecutor: new FakeActionExecutor([], async (input) => createActionResult({ actionCallId: input.call.id })),
+      policy: new FakePolicy(() => ({ effect: 'allow' })),
+      now: () => '2026-04-29T10:00:00.000Z',
+      createId: createSequentialId(),
+    })
+
+    const handle = await engine.startRun(createRunInput({ prompt: 'Correction: keep future summaries concise.' }))
+
+    await waitForCondition(() => store.runs.get(handle.runId)?.status === 'completed')
+
+    expect(store.memoryProposals).toEqual([
+      expect.objectContaining({
+        category: 'preference',
+        content: 'Repeated user correction to remember: Correction: keep future summaries concise..',
+        evidence: expect.arrayContaining(['message:message-correction-1', expect.stringMatching(/^message:/), `run:${handle.runId}`]),
+      }),
+    ])
+  })
+
+  it('creates skill improvement signal proposals from improvement actions', async () => {
+    const store = new FakeStore()
+    const createSkillAction = createActionDefinition({ id: 'create_skill_improvement_artifact', title: 'Create Skill Improvement Artifact' })
+    const engine = new CoreRunEngine({
+      store,
+      provider: new FakeProvider([{ actionCalls: [{ toolCallId: 'tool-call-1', actionId: 'create_skill_improvement_artifact', input: {} }] }, { content: 'Skill proposal drafted.' }]),
+      providerCredentialResolver: defaultCredentialResolver,
+      actionExecutor: new FakeActionExecutor([createSkillAction], async (input) => createActionResult({ actionCallId: input.call.id, output: { artifact: { id: 'skill-1' } } })),
+      policy: new FakePolicy(() => ({ effect: 'allow' })),
+      now: () => '2026-04-29T10:00:00.000Z',
+      createId: createSequentialId(),
+    })
+
+    const handle = await engine.startRun(createRunInput({ prompt: 'Draft a skill improvement.' }))
+
+    await waitForCondition(() => store.runs.get(handle.runId)?.status === 'completed')
+
+    expect(store.memoryProposals).toEqual([
+      expect.objectContaining({
+        category: 'skill_improvement',
+        content: 'Skill improvement signal from create_skill_improvement_artifact.',
+        evidence: expect.arrayContaining([expect.stringMatching(/^action:create_skill_improvement_artifact:/), `run:${handle.runId}`]),
+      }),
+    ])
+  })
+
+  it('creates harness improvement signal proposals from improvement actions', async () => {
+    const store = new FakeStore()
+    const proposeHarnessAction = createActionDefinition({ id: 'propose_harness_change', title: 'Propose Harness Change' })
+    const engine = new CoreRunEngine({
+      store,
+      provider: new FakeProvider([{ actionCalls: [{ toolCallId: 'tool-call-1', actionId: 'propose_harness_change', input: {} }] }, { content: 'Harness proposal drafted.' }]),
+      providerCredentialResolver: defaultCredentialResolver,
+      actionExecutor: new FakeActionExecutor([proposeHarnessAction], async (input) => createActionResult({ actionCallId: input.call.id, output: { manifest: { id: 'harness-1' } } })),
+      policy: new FakePolicy(() => ({ effect: 'allow' })),
+      now: () => '2026-04-29T10:00:00.000Z',
+      createId: createSequentialId(),
+    })
+
+    const handle = await engine.startRun(createRunInput({ prompt: 'Draft a harness improvement.' }))
+
+    await waitForCondition(() => store.runs.get(handle.runId)?.status === 'completed')
+
+    expect(store.memoryProposals).toEqual([
+      expect.objectContaining({
+        category: 'harness_improvement_signal',
+        content: 'Harness improvement signal from propose_harness_change.',
+        evidence: expect.arrayContaining([expect.stringMatching(/^action:propose_harness_change:/), `run:${handle.runId}`]),
+      }),
+    ])
   })
 
   it('marks unsatisfied validation obligations as unmet when a run completes', async () => {

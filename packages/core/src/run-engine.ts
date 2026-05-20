@@ -102,14 +102,18 @@ function isAbortError(error: unknown): boolean {
   return error instanceof Error && error.name === 'AbortError'
 }
 
-function collectMemoryEvidence(events: RunEvent[], editedActions: Array<Extract<RunEvent, { type: 'action.requested' }>['payload']['actionCall']>): {
+function collectMemoryEvidence(run: Run, events: RunEvent[], messages: Message[], editedActions: Array<Extract<RunEvent, { type: 'action.requested' }>['payload']['actionCall']>): {
   category: MemoryCategory
   content: string
   rationale: string
   evidenceLinks: string[]
 } {
   const obligations = events.filter((event): event is Extract<RunEvent, { type: 'obligation.created' }> => event.type === 'obligation.created')
+  const unmetObligations = events.filter((event): event is Extract<RunEvent, { type: 'obligation.unmet' }> => event.type === 'obligation.unmet')
+  const failedRun = events.find((event): event is Extract<RunEvent, { type: 'run.failed' }> => event.type === 'run.failed')
+  const providerError = events.find((event): event is Extract<RunEvent, { type: 'provider.error' }> => event.type === 'provider.error')
   const specEvidenceEvents = events.filter((event): event is Extract<RunEvent, { type: 'spec.evidence_appended' }> => event.type === 'spec.evidence_appended')
+  const providerDeltas = uniqueStrings(events.flatMap((event) => event.type === 'provider.delta' ? [event.payload.delta] : []))
   const validationOutputs = uniqueStrings(specEvidenceEvents.flatMap((event) => event.payload.evidence.validationOutputs))
   const benchmarkObservations = uniqueStrings(specEvidenceEvents.flatMap((event) => event.payload.evidence.benchmarkObservations))
   const changedFiles = uniqueStrings([
@@ -120,11 +124,68 @@ function collectMemoryEvidence(events: RunEvent[], editedActions: Array<Extract<
   const evidenceLinks = uniqueStrings([
     ...obligations.map((event) => `event:${event.type}:${event.id}`),
     ...specEvidenceEvents.map((event) => `event:${event.type}:${event.id}`),
+    ...unmetObligations.map((event) => `event:${event.type}:${event.id}`),
+    ...(failedRun ? [`event:${failedRun.type}:${failedRun.id}`] : []),
+    ...(providerError ? [`event:${providerError.type}:${providerError.id}`] : []),
     ...editedActions.map((actionCall) => `action:${actionCall.actionId}:${actionCall.id}`),
     ...changedFiles.map((filePath) => `file:${filePath}`),
     ...validationOutputs.map((output) => `validation:${output}`),
     ...benchmarkObservations.map((observation) => `benchmark:${observation}`),
   ])
+  const skillImprovementAction = requestedMemorySignalAction(events, ['create_skill_improvement_artifact', 'write_skill_improvement_artifact'])
+  const harnessImprovementAction = requestedMemorySignalAction(events, ['propose_harness_change', 'create_harness_patch_preview_artifact', 'write_harness_promotion_artifact'])
+  const correctionMessages = messages.filter((message) => message.role === 'user' && /\b(actually|correction|i meant|not that|instead)\b/iu.test(message.content))
+  const latestCorrection = correctionMessages.at(-1)
+  const reviewFinding = run.role === 'review'
+    ? providerDeltas.find((delta) => /\b(finding|bug|risk|regression|missing test|validation gap)\b/iu.test(delta))
+    : null
+
+  if (correctionMessages.length >= 2 && latestCorrection) {
+    return {
+      category: 'preference',
+      content: `Repeated user correction to remember: ${summarizeForMemory(latestCorrection.content)}.`,
+      rationale: 'The conversation contains repeated user corrections; approval can preserve the preference without writing memory automatically.',
+      evidenceLinks: uniqueStrings([...evidenceLinks, ...correctionMessages.map((message) => `message:${message.id}`)]),
+    }
+  }
+
+  if (harnessImprovementAction) {
+    return {
+      category: 'harness_improvement_signal',
+      content: `Harness improvement signal from ${harnessImprovementAction.actionId}.`,
+      rationale: 'This run produced harness-improvement evidence; approval keeps the signal durable without mutating harness behavior automatically.',
+      evidenceLinks: uniqueStrings([...evidenceLinks, `action:${harnessImprovementAction.actionId}:${harnessImprovementAction.id}`]),
+    }
+  }
+
+  if (skillImprovementAction) {
+    return {
+      category: 'skill_improvement',
+      content: `Skill improvement signal from ${skillImprovementAction.actionId}.`,
+      rationale: 'This run produced skill-improvement evidence; approval keeps the signal durable without writing skill files automatically.',
+      evidenceLinks: uniqueStrings([...evidenceLinks, `action:${skillImprovementAction.actionId}:${skillImprovementAction.id}`]),
+    }
+  }
+
+  if (failedRun || providerError) {
+    const message = failedRun?.payload.message ?? providerError?.payload.message ?? 'Unknown failure'
+
+    return {
+      category: 'workflow',
+      content: `Failure pattern to account for: ${summarizeForMemory(message)}.`,
+      rationale: 'This run failed with an actionable error signal; approval can preserve the failure pattern for future planning.',
+      evidenceLinks,
+    }
+  }
+
+  if (reviewFinding) {
+    return {
+      category: 'project_fact',
+      content: `Review finding to preserve: ${summarizeForMemory(reviewFinding)}.`,
+      rationale: 'Review mode surfaced a concrete finding; approval can preserve it as project context for future runs.',
+      evidenceLinks: uniqueStrings([...evidenceLinks, ...events.filter((event) => event.type === 'provider.delta').map((event) => `event:${event.type}:${event.id}`)]),
+    }
+  }
 
   if (benchmarkObservations.length > 0) {
     return {
@@ -161,6 +222,19 @@ function collectMemoryEvidence(events: RunEvent[], editedActions: Array<Extract<
     rationale: '',
     evidenceLinks: [],
   }
+}
+
+function requestedMemorySignalAction(events: RunEvent[], actionIds: string[]): Extract<RunEvent, { type: 'action.requested' }>['payload']['actionCall'] | null {
+  const actionIdSet = new Set(actionIds)
+
+  return events
+    .flatMap((event) => event.type === 'action.requested' ? [event.payload.actionCall] : [])
+    .find((actionCall) => actionIdSet.has(actionCall.actionId)) ?? null
+}
+
+function summarizeForMemory(value: string): string {
+  const normalized = value.trim().replace(/\s+/g, ' ')
+  return normalized.length > 180 ? `${normalized.slice(0, 177)}...` : normalized
 }
 
 function uniqueStrings(values: string[]): string[] {
@@ -649,9 +723,10 @@ export class CoreRunEngine implements RunEngine {
     }
 
     const events = await this.store.listRunEvents(run.id)
+    const snapshot = await this.store.getConversation(run.conversationId)
     const requestedActions = events.flatMap((event) => event.type === 'action.requested' ? [event.payload.actionCall] : [])
     const editedActions = requestedActions.filter((actionCall) => actionCall.actionId === 'write_file' || actionCall.actionId === 'apply_patch')
-    const evidence = collectMemoryEvidence(events, editedActions)
+    const evidence = collectMemoryEvidence(run, events, snapshot.messages, editedActions)
 
     if (evidence.evidenceLinks.length === 0) {
       return
@@ -685,10 +760,16 @@ export class CoreRunEngine implements RunEngine {
     )
 
     if (duplicatePendingProposal) {
+      const mergedEvidence = uniqueStrings([...duplicatePendingProposal.evidence, ...evidenceLinks])
+
       await this.store.saveMemoryProposal({
         ...duplicatePendingProposal,
-        evidence: uniqueStrings([...duplicatePendingProposal.evidence, ...evidenceLinks]),
+        evidence: mergedEvidence,
       })
+
+      if (duplicatePendingProposal.category === 'workflow' && mergedEvidence.length >= 4 && settings.memory?.enabledCategories?.includes('skill_improvement') !== false) {
+        await this.createRepeatedWorkflowSkillProposal(run, mergedEvidence, existingProposals)
+      }
       return
     }
 
@@ -713,6 +794,43 @@ export class CoreRunEngine implements RunEngine {
     })
   }
 
+  private async createRepeatedWorkflowSkillProposal(run: Run, evidence: string[], existingProposals: MemoryProposal[]): Promise<void> {
+    const content = 'Repeated workflow evidence may be better captured as a reusable Agent Skill. Use create_skill_improvement_artifact to draft a SKILL.md proposal before any write action.'
+    const normalizedContent = normalizeMemoryProposalContent(content)
+    const duplicateRecord = (await this.store.listMemoryRecords()).some((record) =>
+      record.category === 'skill_improvement' && normalizeMemoryProposalContent(record.content) === normalizedContent,
+    )
+    const duplicatePendingProposal = existingProposals.some((proposal) =>
+      proposal.status === 'pending'
+      && proposal.category === 'skill_improvement'
+      && normalizeMemoryProposalContent(proposal.content) === normalizedContent,
+    )
+
+    if (duplicateRecord || duplicatePendingProposal) {
+      return
+    }
+
+    const proposal: MemoryProposal = {
+      id: this.createId(),
+      runId: run.id,
+      category: 'skill_improvement',
+      content,
+      rationale: 'Repeated workflow memory evidence suggests a reusable skill draft. Approval keeps this as an inspectable suggestion and does not write skill files automatically.',
+      evidence: uniqueStrings([...evidence, `run:${run.id}`]),
+      status: 'pending',
+      createdAt: this.now(),
+    }
+
+    await this.store.saveMemoryProposal(proposal)
+    await this.emitEvent({
+      id: this.createId(),
+      runId: run.id,
+      timestamp: proposal.createdAt,
+      type: 'memory.proposal_created',
+      payload: { proposal },
+    })
+  }
+
   private async failRun(run: Run, message: string): Promise<void> {
     const finishedAt = this.now()
     await this.transitionRun(run, 'failed', { finishedAt, failureMessage: message }, 'run.failed', { message })
@@ -723,6 +841,7 @@ export class CoreRunEngine implements RunEngine {
       type: 'provider.error',
       payload: { message },
     })
+    await this.createPostRunMemoryProposal(run)
   }
 
   private async cancelActiveRun(run: Run, reason: string): Promise<void> {

@@ -14,6 +14,7 @@ import type {
   SpecEvidenceLink,
   SpecTask,
 } from '@nano-harness/shared'
+import { specChangeSummarySchema } from '@nano-harness/shared'
 
 import type { ActionExecutor } from './actions'
 import type { HookRunner } from './hooks'
@@ -259,8 +260,21 @@ export class ActionInvocationPipeline {
       const path = getStringField(output, 'path')
       const artifactKind = getStringField(output, 'artifactKind')
       const changeId = getStringField(output, 'changeId') ?? extractSpecChangeId(path)
+      const change = output.change && typeof output.change === 'object' && !Array.isArray(output.change)
+        ? specChangeSummarySchema.safeParse(output.change).data
+        : null
 
       if (path && artifactKind && changeId && isSpecArtifactKind(artifactKind)) {
+        if (output.changeCreated === true && change) {
+          await this.dependencies.emitEvent({
+            id: this.dependencies.createId(),
+            runId: run.id,
+            timestamp,
+            type: 'spec.change_created',
+            payload: { change },
+          })
+        }
+
         await this.dependencies.emitEvent({
           id: this.dependencies.createId(),
           runId: run.id,
@@ -319,6 +333,7 @@ export class ActionInvocationPipeline {
     if (action.id === 'archive_spec_change') {
       const changeId = getStringField(output, 'changeId')
       const archivedPath = getStringField(output, 'archivedPath')
+      const currentSpecPaths = getStringArrayField(output, 'currentSpecPaths')
 
       if (changeId && archivedPath) {
         await this.dependencies.emitEvent({
@@ -326,7 +341,7 @@ export class ActionInvocationPipeline {
           runId: run.id,
           timestamp,
           type: 'spec.change_archived',
-          payload: { changeId, archivedPath },
+          payload: { changeId, archivedPath, currentSpecPaths },
         })
       }
       return

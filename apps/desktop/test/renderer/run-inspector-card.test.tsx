@@ -210,7 +210,7 @@ describe('RunInspectorCard', () => {
     expect(screen.getByText('Source: proposal:proposal-1 · Run run-source-1 · Confidence 75%')).toBeTruthy()
   })
 
-  it('shows recalled memory and pending suggestions in the inspector', () => {
+  it('shows run-local pending memory suggestions without global recalled memory', () => {
     window.desktop = createDesktopMock()
 
     renderWithQueryClient(
@@ -219,18 +219,6 @@ describe('RunInspectorCard', () => {
         events={[]}
         pendingApproval={null}
         streamingState={null}
-        memoryRecords={{
-          records: [{
-            id: 'memory-1',
-            category: 'workflow',
-            content: 'Run typecheck after renderer edits.',
-            source: 'proposal:proposal-1',
-            runId: 'run-1',
-            confidence: 0.8,
-            createdAt: '2026-04-29T10:00:00.000Z',
-            updatedAt: '2026-04-29T10:05:00.000Z',
-          }],
-        }}
         memoryProposals={{
           proposals: [
             {
@@ -261,10 +249,50 @@ describe('RunInspectorCard', () => {
     )
 
     expect(screen.getByText('Memory')).toBeTruthy()
-    expect(screen.getByText('Run typecheck after renderer edits.')).toBeTruthy()
+    expect(screen.getByText('Pending memory suggestions produced by this run. Global approved memory remains in Settings.')).toBeTruthy()
     expect(screen.getByText('Validate spec tasks before marking them done.')).toBeTruthy()
     expect(screen.getByText('Evidence: validation:pnpm typecheck passed')).toBeTruthy()
+    expect(screen.queryByText('Recalled')).toBeNull()
     expect(screen.queryByText('This suggestion belongs to another run.')).toBeNull()
+  })
+
+  it('approves and rejects pending memory suggestions from the inspector', async () => {
+    const user = userEvent.setup()
+    const resolveMemoryProposal = vi.fn(async () => undefined)
+    window.desktop = createDesktopMock({ resolveMemoryProposal })
+
+    renderWithQueryClient(
+      <RunInspectorCard
+        run={createRun({ status: 'completed', startedAt: '2026-04-29T10:01:00.000Z' })}
+        events={[]}
+        pendingApproval={null}
+        streamingState={null}
+        memoryProposals={{
+          proposals: [{
+            id: 'proposal-2',
+            runId: 'run-1',
+            category: 'workflow',
+            content: 'Validate spec tasks before marking them done.',
+            rationale: 'Spec evidence was appended during this run.',
+            evidence: ['validation:pnpm typecheck passed'],
+            status: 'pending',
+            createdAt: '2026-04-29T10:06:00.000Z',
+          }],
+        }}
+        onEvidenceExported={() => undefined}
+        onEvidenceExportError={() => undefined}
+      />,
+    )
+
+    await user.click(screen.getByRole('button', { name: 'Approve memory' }))
+    await waitFor(() => {
+      expect(resolveMemoryProposal).toHaveBeenCalledWith({ proposalId: 'proposal-2', decision: 'approved' })
+    })
+
+    await user.click(screen.getByRole('button', { name: 'Reject' }))
+    await waitFor(() => {
+      expect(resolveMemoryProposal).toHaveBeenCalledWith({ proposalId: 'proposal-2', decision: 'rejected' })
+    })
   })
 
   it('surfaces mutation errors from run controls', async () => {

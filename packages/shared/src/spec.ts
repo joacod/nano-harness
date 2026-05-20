@@ -137,8 +137,11 @@ export type SpecEvidencePacket = z.infer<typeof specEvidencePacketSchema>
 
 export function createSpecWorkflowPrompt(task: string): string {
   return [
-    'Create a bounded implementation spec for this task before any build work.',
-    'Route the workflow through Plan, Build, and Review. Keep branch creation, push, and PR publication approval-gated.',
+    'Create a durable Spec Workbench change for this task before any build work.',
+    'Use Plan mode. First choose a concise kebab-case changeId. Create or update local artifacts under .nano/specs/changes/<changeId>/ using approval-gated write_spec_artifact calls:',
+    '- proposal.md\n- design.md\n- tasks.md\n- evidence.json',
+    'You may use create_spec_artifact to draft a bounded implementation spec, but it is non-mutating and not durable. Durable persistence must use write_spec_artifact and wait for approval.',
+    'Do not edit application code during this proposal step. After artifacts are written, summarize the changeId and tell the user it is available in the Specs workbench.',
     task.trim(),
   ].join('\n\n')
 }

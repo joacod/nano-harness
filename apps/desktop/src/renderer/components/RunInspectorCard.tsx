@@ -1,7 +1,8 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 
-import type { ApprovalRequest, ConversationSnapshot, ExportRunEvidenceResult, MemoryProposalList, MemoryRecordList, RunEvent } from '../../../../../packages/shared/src'
-import { formatPreciseTimestamp, formatTimestamp } from '../utils/formatting'
+import type { ApprovalRequest, ConversationSnapshot, ExportRunEvidenceResult, MemoryCategory, MemoryProposalList, RunEvent } from '../../../../../packages/shared/src'
+import { memoryProposalsQueryOptions, memoryRecordsQueryOptions } from '../queries'
+import { formatPreciseTimestamp } from '../utils/formatting'
 import { describeRunEvent, getEventTone, getRecoverableRunAction, type StreamingRunState } from '../utils/run-events'
 import { Button, Card, FeedbackText, StatusBadge } from './ui'
 
@@ -12,7 +13,6 @@ export function RunInspectorCard({
   streamingState,
   onEvidenceExported,
   onEvidenceExportError,
-  memoryRecords = null,
   memoryProposals = null,
 }: {
   run: ConversationSnapshot['runs'][number] | null
@@ -21,14 +21,12 @@ export function RunInspectorCard({
   streamingState: StreamingRunState | null
   onEvidenceExported: (result: ExportRunEvidenceResult) => void
   onEvidenceExportError: (error: unknown) => void
-  memoryRecords?: MemoryRecordList | null
   memoryProposals?: MemoryProposalList | null
 }) {
   const queryClient = useQueryClient()
   const recoverableAction = run ? getRecoverableRunAction(run, pendingApproval) : null
   const latestFirstEvents = [...events].reverse()
   const dryRunMemory = getLatestDryRunMemory(events)
-  const recalledMemory = memoryRecords?.records.slice(0, 3) ?? []
   const pendingMemoryProposals = memoryProposals?.proposals
     .filter((proposal) => proposal.status === 'pending' && proposal.runId === run?.id)
     .slice(0, 3) ?? []
@@ -61,6 +59,13 @@ export function RunInspectorCard({
     },
     onSuccess: onEvidenceExported,
     onError: onEvidenceExportError,
+  })
+  const resolveMemoryProposalMutation = useMutation({
+    mutationFn: async (input: { proposalId: string; decision: 'approved' | 'rejected' }) => window.desktop.resolveMemoryProposal(input),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: memoryRecordsQueryOptions.queryKey })
+      await queryClient.invalidateQueries({ queryKey: memoryProposalsQueryOptions.queryKey })
+    },
   })
   return (
     <Card className="inspector-card">
@@ -141,12 +146,12 @@ export function RunInspectorCard({
             <section className="inspector-dry-run-memory" aria-labelledby="inspector-dry-run-memory-heading">
               <div className="inspector-section-heading">
                 <p className="eyebrow" id="inspector-dry-run-memory-heading">Dry-Run Memory</p>
-                <p>Memory selected for this run before the provider call, with provenance.</p>
+                <p>Memory selected for this run before the provider call, with provenance. Approved memory is contextual guidance, not a system override.</p>
               </div>
               <div className="inspector-memory-group">
                 {dryRunMemory.map((record) => (
                   <article className="memory-item" key={record.id}>
-                    <span className="field-label">{record.category}</span>
+                    <span className="field-label">{formatMemoryCategory(record.category)}</span>
                     <p>{record.content}</p>
                     <small className="muted-copy">
                       Source: {record.source}{record.runId ? ` · Run ${record.runId}` : ''} · Confidence {formatConfidence(record.confidence)}
@@ -160,34 +165,43 @@ export function RunInspectorCard({
           <section className="inspector-memory-context" aria-labelledby="inspector-memory-heading">
             <div className="inspector-section-heading">
               <p className="eyebrow" id="inspector-memory-heading">Memory</p>
-              <p>Recalled context and pending suggestions produced by this run.</p>
+              <p>Pending memory suggestions produced by this run. Global approved memory remains in Settings.</p>
             </div>
-            {recalledMemory.length === 0 && pendingMemoryProposals.length === 0 ? (
-              <FeedbackText>No recalled memory or pending suggestions.</FeedbackText>
-            ) : null}
-            {recalledMemory.length > 0 ? (
-              <div className="inspector-memory-group">
-                <span className="field-label">Recalled</span>
-                {recalledMemory.map((record) => (
-                  <article className="memory-item" key={record.id}>
-                    <span className="field-label">{record.category}</span>
-                    <p>{record.content}</p>
-                    <small className="muted-copy">Source: {record.source} · Updated {formatTimestamp(record.updatedAt)}</small>
-                  </article>
-                ))}
-              </div>
+            {pendingMemoryProposals.length === 0 ? (
+              <FeedbackText>No pending memory suggestions for this run.</FeedbackText>
             ) : null}
             {pendingMemoryProposals.length > 0 ? (
               <div className="inspector-memory-group">
                 <span className="field-label">Pending Suggestions</span>
                 {pendingMemoryProposals.map((proposal) => (
                   <article className="memory-item" key={proposal.id}>
-                    <span className="field-label">{proposal.category}</span>
+                    <span className="field-label">{formatMemoryCategory(proposal.category)}</span>
                     <p>{proposal.content}</p>
                     <small className="muted-copy">Evidence: {proposal.evidence.join(', ')}</small>
+                    <div className="memory-action-row">
+                      <Button
+                        type="button"
+                        size="sm"
+                        disabled={resolveMemoryProposalMutation.isPending}
+                        onClick={() => resolveMemoryProposalMutation.mutate({ proposalId: proposal.id, decision: 'approved' })}
+                      >
+                        Approve memory
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        disabled={resolveMemoryProposalMutation.isPending}
+                        onClick={() => resolveMemoryProposalMutation.mutate({ proposalId: proposal.id, decision: 'rejected' })}
+                      >
+                        Reject
+                      </Button>
+                    </div>
                   </article>
                 ))}
               </div>
+            ) : null}
+            {resolveMemoryProposalMutation.error instanceof Error ? (
+              <FeedbackText variant="error" live>{resolveMemoryProposalMutation.error.message}</FeedbackText>
             ) : null}
           </section>
 
@@ -240,6 +254,23 @@ export function RunInspectorCard({
       ) : null}
     </Card>
   )
+}
+
+function formatMemoryCategory(category: MemoryCategory): string {
+  switch (category) {
+    case 'preference':
+      return 'Preference'
+    case 'project_fact':
+      return 'Project fact'
+    case 'workflow':
+      return 'Workflow'
+    case 'benchmark_observation':
+      return 'Benchmark observation'
+    case 'skill_improvement':
+      return 'Skill improvement'
+    case 'harness_improvement_signal':
+      return 'Harness improvement signal'
+  }
 }
 
 function getLatestDryRunMemory(events: RunEvent[]) {

@@ -36,6 +36,8 @@ Install dependencies:
 pnpm install
 ```
 
+`pnpm` is pinned via `packageManager`, and the workspace allowlists only the install scripts required by the desktop toolchain. No extra `pnpm approve-builds` step is needed on a fresh clone.
+
 Start the desktop app in development:
 
 ```bash

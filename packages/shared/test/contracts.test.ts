@@ -229,7 +229,11 @@ describe('shared contracts', () => {
 
   it('validates spec artifacts and creates spec workflow prompts', () => {
     expect(createSpecWorkflowPrompt('fix the settings crash')).toContain('fix the settings crash')
-    expect(createSpecWorkflowPrompt('fix the settings crash')).toContain('Route the workflow through Plan, Build, and Review')
+    expect(createSpecWorkflowPrompt('fix the settings crash')).toContain('Create a durable Spec Workbench change')
+    expect(createSpecWorkflowPrompt('fix the settings crash')).toContain('.nano/specs/changes/<changeId>/')
+    expect(createSpecWorkflowPrompt('fix the settings crash')).toContain('create_spec_artifact')
+    expect(createSpecWorkflowPrompt('fix the settings crash')).toContain('non-mutating and not durable')
+    expect(createSpecWorkflowPrompt('fix the settings crash')).toContain('write_spec_artifact')
     expect(implementationSpecSchema.parse({
       id: 'spec-1',
       source: { type: 'local_text', value: 'fix bug' },

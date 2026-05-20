@@ -20,6 +20,8 @@ vi.mock('@tanstack/react-router', async (importOriginal) => {
   }
 })
 
+import { createDefaultProviderSettings } from '@nano-harness/shared'
+
 import { SpecsRoute } from '../../src/renderer/routes/SpecsRoute'
 import { createDesktopMock, renderWithQueryClient } from './test-utils'
 
@@ -34,14 +36,26 @@ describe('SpecsRoute', () => {
   })
 
   it('renders the empty spec workbench skeleton', async () => {
+    const showItemInFolder = vi.fn(async () => undefined)
     window.desktop = createDesktopMock({
+      getSettings: async () => ({
+        provider: createDefaultProviderSettings('openrouter'),
+        workspace: { rootPath: '/tmp/nano-workspace', approvalPolicy: 'on-request' },
+      }),
       listSpecChanges: async () => ({ changes: [] }),
+      showItemInFolder,
     })
+    const user = userEvent.setup()
 
     renderWithQueryClient(<SpecsRoute />)
 
     expect(await screen.findByText('Spec Workbench')).toBeTruthy()
     expect(await screen.findByText(/No spec changes yet/i)).toBeTruthy()
+    expect((await screen.findAllByText(/Spec chat button/i)).length).toBeGreaterThan(0)
+
+    await user.click(screen.getByRole('button', { name: 'Open .nano/specs folder' }))
+
+    expect(showItemInFolder).toHaveBeenCalledWith({ filePath: '/tmp/nano-workspace/.nano/specs' })
   })
 
   it('shows active spec count and local changes', async () => {
@@ -71,7 +85,11 @@ describe('SpecsRoute', () => {
       readSpecArtifact: async (input) => ({
         kind: input.artifactKind,
         path: `.nano/specs/changes/add-spec-workbench/${input.artifactKind}.md`,
-        content: input.artifactKind === 'tasks' ? '- [ ] ui: Add route\n' : '# Add Spec Workbench\n\nCreate a visible specs screen.\n',
+        content: input.artifactKind === 'tasks'
+          ? '- [ ] ui: Add route\n'
+          : input.artifactKind === 'evidence'
+            ? JSON.stringify({ draftPr: { title: 'Draft PR' }, validation: ['unmet obligation: run tests'] })
+            : '# Add Spec Workbench\n\nCreate a visible specs screen.\n',
       }),
       startSpecRun,
     })
@@ -81,6 +99,9 @@ describe('SpecsRoute', () => {
     expect(await screen.findByText('1 active')).toBeTruthy()
     expect((await screen.findAllByText('Add Spec Workbench')).length).toBeGreaterThan(0)
     expect(await screen.findByText('ui: Add route')).toBeTruthy()
+    expect(await screen.findByText('Draft PR artifact')).toBeTruthy()
+    expect(await screen.findByText('unmet obligation: run tests')).toBeTruthy()
+    expect(await screen.findByText('router.tsx')).toBeTruthy()
 
     await user.click(screen.getByRole('tab', { name: 'Tasks' }))
 
@@ -152,5 +173,30 @@ describe('SpecsRoute', () => {
         workflowIntent: 'archive',
       }))
     })
+  })
+
+  it('shows missing key evidence in the evidence panel', async () => {
+    window.desktop = createDesktopMock({
+      listSpecChanges: async () => ({
+        changes: [{
+          summary: {
+            id: 'missing-evidence',
+            title: 'Missing Evidence',
+            status: 'draft',
+            path: '.nano/specs/changes/missing-evidence',
+            taskCounts: { total: 0, todo: 0, inProgress: 0, done: 0, blocked: 0 },
+            updatedAt: '2026-05-14T10:00:00.000Z',
+            linkedRunIds: [],
+          },
+          artifactPaths: [],
+          tasks: [],
+          evidenceLinks: { runIds: [], eventIds: [], approvalIds: [], changedFiles: [], validationOutputs: [], benchmarkObservations: [] },
+        }],
+      }),
+    })
+
+    renderWithQueryClient(<SpecsRoute />)
+
+    expect(await screen.findByText('Missing key evidence: linked runs, changed files, validation output.')).toBeTruthy()
   })
 })

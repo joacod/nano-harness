@@ -1,6 +1,13 @@
 import { z } from 'zod'
 
-export const memoryCategorySchema = z.enum(['preference', 'project_fact', 'workflow', 'benchmark_observation'])
+export const memoryCategorySchema = z.enum([
+  'preference',
+  'project_fact',
+  'workflow',
+  'benchmark_observation',
+  'skill_improvement',
+  'harness_improvement_signal',
+])
 
 export type MemoryCategory = z.infer<typeof memoryCategorySchema>
 
@@ -37,7 +44,14 @@ export type MemoryProposal = z.infer<typeof memoryProposalSchema>
 
 export const memorySettingsSchema = z.object({
   enabled: z.boolean().default(true),
-  enabledCategories: z.array(memoryCategorySchema).default(['preference', 'project_fact', 'workflow', 'benchmark_observation']),
+  enabledCategories: z.array(memoryCategorySchema).default([
+    'preference',
+    'project_fact',
+    'workflow',
+    'benchmark_observation',
+    'skill_improvement',
+    'harness_improvement_signal',
+  ]),
   maxSnippets: z.number().int().min(0).max(12).default(5),
 })
 

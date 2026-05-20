@@ -97,14 +97,47 @@ describe('SpecWorkspaceService', () => {
     })
   })
 
-  it('archives active changes', async () => {
+  it('archives active changes and promotes delta specs to current specs', async () => {
     const workspaceRoot = await createWorkspace()
     await writeSpecChange(workspaceRoot, 'add-spec-workbench')
     const service = new SpecWorkspaceService()
 
-    await expect(service.archiveChange(workspaceRoot, 'add-spec-workbench')).resolves.toBe('.nano/specs/archive/add-spec-workbench')
+    await expect(service.archiveChange(workspaceRoot, 'add-spec-workbench')).resolves.toEqual({
+      archivedPath: '.nano/specs/archive/add-spec-workbench',
+      currentSpecPaths: ['.nano/specs/current/ui/spec.md'],
+    })
     await expect(service.listChanges(workspaceRoot)).resolves.toEqual([])
     await expect(service.listChanges(workspaceRoot, { includeArchived: true })).resolves.toHaveLength(1)
+    await expect(service.readArtifact(workspaceRoot, {
+      kind: 'current_spec',
+      relativePath: 'ui/spec.md',
+    })).resolves.toMatchObject({
+      kind: 'current_spec',
+      path: '.nano/specs/current/ui/spec.md',
+      content: '# UI Delta\n',
+    })
+  })
+
+  it('archives active changes without delta specs', async () => {
+    const workspaceRoot = await createWorkspace()
+    await writeSpecChangeWithoutDeltaSpecs(workspaceRoot, 'documentation-refresh')
+    const service = new SpecWorkspaceService()
+
+    await expect(service.archiveChange(workspaceRoot, 'documentation-refresh')).resolves.toEqual({
+      archivedPath: '.nano/specs/archive/documentation-refresh',
+      currentSpecPaths: [],
+    })
+    await expect(service.listChanges(workspaceRoot)).resolves.toEqual([])
+  })
+
+  it('rejects archiving an already archived change', async () => {
+    const workspaceRoot = await createWorkspace()
+    await writeSpecChangeWithoutDeltaSpecs(workspaceRoot, 'already-archived')
+    const service = new SpecWorkspaceService()
+
+    await service.archiveChange(workspaceRoot, 'already-archived')
+
+    await expect(service.archiveChange(workspaceRoot, 'already-archived')).rejects.toThrow('Spec change already-archived is already archived')
   })
 
   it('rejects traversal outside .nano/specs and the workspace root', async () => {
@@ -149,4 +182,11 @@ async function writeSpecChange(workspaceRoot: string, changeId: string): Promise
     validation: ['pnpm typecheck passed'],
     draftPr: null,
   }, null, 2)}\n`, 'utf8')
+}
+
+async function writeSpecChangeWithoutDeltaSpecs(workspaceRoot: string, changeId: string): Promise<void> {
+  const changeRoot = path.join(workspaceRoot, '.nano', 'specs', 'changes', changeId)
+
+  await mkdir(changeRoot, { recursive: true })
+  await writeFile(path.join(changeRoot, 'proposal.md'), '# Documentation Refresh\n', 'utf8')
 }

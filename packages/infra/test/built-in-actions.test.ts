@@ -413,6 +413,18 @@ describe('BuiltInActionExecutor', () => {
       '## Success Criteria',
       '- The run timeline shows obligation.created after the edit action completes.',
     ].join('\n'))
+    await writeBenchmarkCase(rootPath, 'harness-promotion', [
+      '# Harness Promotion',
+      '',
+      '## Goal',
+      'Validate the safe self-improvement loop from evidence to benchmarked, approval-gated promotion.',
+      '',
+      '## Prompt',
+      'Propose a small harness improvement from the evidence, create an isolated patch preview, compare before and after benchmark summaries, and produce a promotion artifact only if the comparison improves without increasing failures.',
+      '',
+      '## Success Criteria',
+      '- No live harness file is mutated automatically.',
+    ].join('\n'))
     const executor = createExecutor()
     const componentsResult = await executor.execute(
       createExecutionInput({
@@ -481,7 +493,7 @@ describe('BuiltInActionExecutor', () => {
         settings: { ...workspaceSettings, workspace: { ...workspaceSettings.workspace, rootPath } },
         input: {
           suite: 'local',
-          caseIds: ['spec-workbench', 'validation-obligations', 'missing-case'],
+          caseIds: ['spec-workbench', 'validation-obligations', 'harness-promotion', 'missing-case'],
         },
       }),
     )
@@ -607,6 +619,11 @@ describe('BuiltInActionExecutor', () => {
             id: 'spec-workbench',
             prompt: expect.stringContaining('Create a spec'),
             successCriteria: expect.arrayContaining(['The Spec Workbench shows exactly one active change for the benchmark task.']),
+          }),
+          expect.objectContaining({
+            id: 'harness-promotion',
+            prompt: expect.stringContaining('Propose a small harness improvement'),
+            successCriteria: expect.arrayContaining(['No live harness file is mutated automatically.']),
           }),
         ]),
         resultTemplate: expect.arrayContaining([expect.objectContaining({ caseId: 'spec-workbench', status: null })]),
@@ -751,6 +768,78 @@ describe('BuiltInActionExecutor', () => {
         unknownPatchPaths: ['packages/infra/src/built-in-actions.ts'],
         blockers: ['Patch preview path is not a declared affected component: packages/infra/src/built-in-actions.ts'],
         liveMutationApplied: false,
+      },
+    })
+  })
+
+  it('rejects harness proposals without concrete evidence links', async () => {
+    const rootPath = await createWorkspace()
+
+    await expect(createExecutor().execute(
+      createExecutionInput({
+        actionId: 'propose_harness_change',
+        settings: { ...workspaceSettings, workspace: { ...workspaceSettings.workspace, rootPath } },
+        input: {
+          manifest: {
+            id: 'change-1',
+            title: 'Tighten provider instructions',
+            rootCause: 'General improvement idea.',
+            proposedFix: 'Add a reminder.',
+            predictedEffect: 'Better behavior.',
+            affectedComponents: ['core.instructions'],
+            evidence: ['seems useful'],
+            benchmarkSuites: ['local'],
+            tests: ['pnpm test'],
+            rollbackPlan: 'Revert the instruction text change in packages/core/src/instructions.ts.',
+            patchPreview: 'diff --git a/packages/core/src/instructions.ts b/packages/core/src/instructions.ts',
+            createdAt: '2026-04-29T10:00:00.000Z',
+          },
+        },
+      }),
+    )).resolves.toMatchObject({
+      status: 'failed',
+      errorMessage: 'Harness proposal requires concrete evidence links such as run:, event:, action:, validation:, benchmark:, memory:, or spec:',
+    })
+  })
+
+  it('blocks harness promotion when patch preview paths are invalid', async () => {
+    const rootPath = await createWorkspace()
+    const result = await createExecutor().execute(
+      createExecutionInput({
+        actionId: 'create_harness_promotion_artifact',
+        settings: { ...workspaceSettings, workspace: { ...workspaceSettings.workspace, rootPath } },
+        input: {
+          manifest: {
+            id: 'change-1',
+            title: 'Tighten provider instructions',
+            rootCause: 'Benchmark evidence shows missing validation reminders.',
+            proposedFix: 'Add a concise validation reminder to build mode.',
+            predictedEffect: 'More runs will validate edits before completion.',
+            affectedComponents: ['core.instructions'],
+            evidence: ['benchmark:local-edit failed validation'],
+            benchmarkSuites: ['local'],
+            tests: ['pnpm test'],
+            rollbackPlan: 'Revert the instruction text change in packages/core/src/instructions.ts.',
+            patchPreview: 'diff --git a/packages/infra/src/built-in-actions.ts b/packages/infra/src/built-in-actions.ts',
+            createdAt: '2026-04-29T10:00:00.000Z',
+          },
+          benchmarkComparison: {
+            before: { suite: 'local', passed: 2, failed: 1, score: 0.66 },
+            after: { suite: 'local', passed: 3, failed: 0, score: 1 },
+            passedDelta: 1,
+            failedDelta: -1,
+            scoreDelta: 0.33999999999999997,
+            improved: true,
+          },
+        },
+      }),
+    )
+
+    expect(result).toMatchObject({
+      status: 'completed',
+      output: {
+        promotionReady: false,
+        blockers: ['Patch preview path is not a declared affected component: packages/infra/src/built-in-actions.ts'],
       },
     })
   })
@@ -1050,6 +1139,16 @@ describe('BuiltInActionExecutor', () => {
         content: '- [ ] contracts: Add shared schemas\n- [ ] ui: Add route\n',
       },
     }))
+    await executor.execute(createExecutionInput({
+      actionId: 'write_spec_artifact',
+      settings,
+      input: {
+        changeId: 'add-spec-workbench',
+        artifactKind: 'delta_spec',
+        relativePath: 'ui/spec.md',
+        content: '# UI Delta\n',
+      },
+    }))
     const appendEvidenceResult = await executor.execute(createExecutionInput({
       actionId: 'append_spec_evidence',
       settings,
@@ -1091,8 +1190,26 @@ describe('BuiltInActionExecutor', () => {
       },
     }))
 
-    expect(writeProposalResult).toMatchObject({ status: 'completed', output: { path: '.nano/specs/changes/add-spec-workbench/proposal.md' } })
-    expect(writeTasksResult).toMatchObject({ status: 'completed', output: { path: '.nano/specs/changes/add-spec-workbench/tasks.md' } })
+    expect(writeProposalResult).toMatchObject({
+      status: 'completed',
+      output: {
+        path: '.nano/specs/changes/add-spec-workbench/proposal.md',
+        changeCreated: true,
+        change: expect.objectContaining({
+          id: 'add-spec-workbench',
+          title: 'Add Spec Workbench',
+          path: '.nano/specs/changes/add-spec-workbench',
+        }),
+      },
+    })
+    expect(writeTasksResult).toMatchObject({
+      status: 'completed',
+      output: {
+        path: '.nano/specs/changes/add-spec-workbench/tasks.md',
+        changeCreated: false,
+        change: expect.objectContaining({ id: 'add-spec-workbench' }),
+      },
+    })
     expect(appendEvidenceResult).toMatchObject({
       status: 'completed',
       output: {
@@ -1117,7 +1234,13 @@ describe('BuiltInActionExecutor', () => {
       },
     })
     expect(readResult).toMatchObject({ status: 'completed', output: { content: '- [x] contracts: Add shared schemas\n- [ ] ui: Add route\n' } })
-    expect(archiveResult).toMatchObject({ status: 'completed', output: { archivedPath: '.nano/specs/archive/add-spec-workbench' } })
+    expect(archiveResult).toMatchObject({
+      status: 'completed',
+      output: {
+        archivedPath: '.nano/specs/archive/add-spec-workbench',
+        currentSpecPaths: ['.nano/specs/current/ui/spec.md'],
+      },
+    })
   })
 
   it('exposes spec action approval requirements in definitions', async () => {

@@ -103,6 +103,7 @@ export const specChangeArchivedEventSchema = eventBaseSchema.extend({
   payload: z.object({
     changeId: z.string().min(1),
     archivedPath: z.string().min(1),
+    currentSpecPaths: z.array(z.string().min(1)).default([]),
   }),
 })
 

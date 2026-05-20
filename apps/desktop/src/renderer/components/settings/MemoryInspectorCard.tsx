@@ -1,4 +1,4 @@
-import type { MemoryProposalList, MemoryRecordList } from '../../../../../../packages/shared/src'
+import type { MemoryCategory, MemoryProposalList, MemoryRecordList } from '../../../../../../packages/shared/src'
 import { formatTimestamp } from '../../utils/formatting'
 import { Button, FeedbackText } from '../ui'
 
@@ -29,7 +29,7 @@ export function MemoryInspectorCard({
         {pendingProposals.map((proposal) => (
           <article className="memory-item" key={proposal.id}>
             <div>
-              <span className="field-label">{proposal.category}</span>
+              <span className="field-label">{formatMemoryCategory(proposal.category)}</span>
               <p>{proposal.content}</p>
               <small className="muted-copy">{proposal.rationale}</small>
               <small className="muted-copy">Evidence: {proposal.evidence.join(', ')}</small>
@@ -51,7 +51,7 @@ export function MemoryInspectorCard({
         {!records?.records.length ? <FeedbackText>No approved memory yet.</FeedbackText> : null}
         {records?.records.map((record) => (
           <article className="memory-item" key={record.id}>
-            <span className="field-label">{record.category}</span>
+            <span className="field-label">{formatMemoryCategory(record.category)}</span>
             <p>{record.content}</p>
             <small className="muted-copy">Source: {record.source} · Updated {formatTimestamp(record.updatedAt)} · Confidence {record.confidence}</small>
           </article>
@@ -59,4 +59,21 @@ export function MemoryInspectorCard({
       </section>
     </div>
   )
+}
+
+function formatMemoryCategory(category: MemoryCategory): string {
+  switch (category) {
+    case 'preference':
+      return 'Preference'
+    case 'project_fact':
+      return 'Project fact'
+    case 'workflow':
+      return 'Workflow'
+    case 'benchmark_observation':
+      return 'Benchmark observation'
+    case 'skill_improvement':
+      return 'Skill improvement'
+    case 'harness_improvement_signal':
+      return 'Harness improvement signal'
+  }
 }

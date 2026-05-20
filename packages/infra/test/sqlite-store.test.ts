@@ -366,7 +366,7 @@ describe('SqliteStore', () => {
 
 async function saveApprovedMemory(store: Awaited<ReturnType<typeof createTestStore>>, input: {
   id: string
-  category: 'preference' | 'project_fact' | 'workflow' | 'benchmark_observation'
+  category: 'preference' | 'project_fact' | 'workflow' | 'benchmark_observation' | 'skill_improvement' | 'harness_improvement_signal'
   content: string
 }): Promise<void> {
   await store.saveMemoryProposal({
