@@ -55,6 +55,7 @@ type ProviderCatalogDefinition = {
   adapterId: ProviderAdapterId
   baseUrl: string
   defaultModel: string
+  recommendedModels: readonly string[]
   requiresApiKey: boolean
   authMethods: readonly ProviderAuthMethod[]
   defaultAuthMethod: ProviderAuthMethod
@@ -68,12 +69,53 @@ type ProviderCatalogDefinition = {
 }
 
 export const providerCatalog = {
+  openai: {
+    key: 'openai',
+    label: 'OpenAI',
+    adapterId: 'chatgpt-subscription',
+    baseUrl: 'https://chatgpt.com/backend-api/codex',
+    defaultModel: providerDefaultModels.openai,
+    recommendedModels: [providerDefaultModels.openai],
+    requiresApiKey: false,
+    authMethods: ['oauth'],
+    defaultAuthMethod: 'oauth',
+    authLabels: { oauth: 'ChatGPT account' },
+    apiKeyLabel: 'Not used for ChatGPT subscription auth',
+    missingAuthIssue: 'Sign in with ChatGPT before starting an OpenAI run.',
+    statusHints: [],
+    endpoint: {
+      editable: false,
+      description: 'Model and fixed ChatGPT subscription endpoint.',
+      hint: 'Managed by the ChatGPT subscription provider.',
+    },
+  },
+  google: {
+    key: 'google',
+    label: 'Google',
+    adapterId: 'google-gemini',
+    baseUrl: 'https://generativelanguage.googleapis.com/v1beta',
+    defaultModel: providerDefaultModels.google,
+    recommendedModels: [providerDefaultModels.google, 'gemini-3.1-flash-lite'],
+    requiresApiKey: true,
+    authMethods: ['api-key'],
+    defaultAuthMethod: 'api-key',
+    authLabels: { 'api-key': 'Google AI Studio API key' },
+    apiKeyLabel: 'Google AI Studio API key',
+    apiKeyMissingIssue: 'Add your Google AI Studio API key before starting a Google run.',
+    statusHints: ['Create or copy a Gemini API key from Google AI Studio: https://aistudio.google.com/app/apikey'],
+    endpoint: {
+      editable: true,
+      description: 'Model and Gemini API endpoint.',
+      hint: 'Gemini API root.',
+    },
+  },
   openrouter: {
     key: 'openrouter',
     label: 'OpenRouter',
     adapterId: 'openai-compatible',
     baseUrl: 'https://openrouter.ai/api/v1',
     defaultModel: providerDefaultModels.openrouter,
+    recommendedModels: [providerDefaultModels.openrouter],
     requiresApiKey: true,
     authMethods: ['api-key'],
     defaultAuthMethod: 'api-key',
@@ -94,6 +136,7 @@ export const providerCatalog = {
     adapterId: 'openai-compatible',
     baseUrl: 'http://127.0.0.1:8080/v1',
     defaultModel: providerDefaultModels['llama-cpp'],
+    recommendedModels: [providerDefaultModels['llama-cpp']],
     requiresApiKey: false,
     authMethods: ['none'],
     defaultAuthMethod: 'none',
@@ -104,44 +147,6 @@ export const providerCatalog = {
       editable: true,
       description: 'Model and API endpoint.',
       hint: 'OpenAI-compatible API root.',
-    },
-  },
-  openai: {
-    key: 'openai',
-    label: 'OpenAI',
-    adapterId: 'chatgpt-subscription',
-    baseUrl: 'https://chatgpt.com/backend-api/codex',
-    defaultModel: providerDefaultModels.openai,
-    requiresApiKey: false,
-    authMethods: ['oauth'],
-    defaultAuthMethod: 'oauth',
-    authLabels: { oauth: 'ChatGPT account' },
-    apiKeyLabel: 'Not used for ChatGPT subscription auth',
-    missingAuthIssue: 'Sign in with ChatGPT before starting an OpenAI run.',
-    statusHints: [],
-    endpoint: {
-      editable: false,
-      description: 'Model and fixed ChatGPT subscription endpoint.',
-      hint: 'Managed by the ChatGPT subscription provider.',
-    },
-  },
-  google: {
-    key: 'google',
-    label: 'Google',
-    adapterId: 'google-gemini',
-    baseUrl: 'https://generativelanguage.googleapis.com/v1beta',
-    defaultModel: providerDefaultModels.google,
-    requiresApiKey: true,
-    authMethods: ['api-key'],
-    defaultAuthMethod: 'api-key',
-    authLabels: { 'api-key': 'Google AI Studio API key' },
-    apiKeyLabel: 'Google AI Studio API key',
-    apiKeyMissingIssue: 'Add your Google AI Studio API key before starting a Google run.',
-    statusHints: ['Create or copy a Gemini API key from Google AI Studio: https://aistudio.google.com/app/apikey'],
-    endpoint: {
-      editable: true,
-      description: 'Model and Gemini API endpoint.',
-      hint: 'Gemini API root.',
     },
   },
 } as const satisfies Record<ProviderKey, ProviderCatalogDefinition>
@@ -163,6 +168,10 @@ export const providerOptions = Object.values(providerCatalog).map((provider) =>
     defaultModel: provider.defaultModel,
   }),
 )
+
+export function getRecommendedModels(provider: ProviderKey): readonly string[] {
+  return providerCatalog[provider].recommendedModels
+}
 
 const currentProviderSettingsSchema = z.object({
   provider: providerKeySchema,

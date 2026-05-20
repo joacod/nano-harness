@@ -3,7 +3,7 @@ import { type ReactNode, useEffect, useState } from 'react'
 import { useForm } from '@tanstack/react-form'
 
 import type { AppSettings } from '../../../../../../packages/shared/src'
-import { getProviderDefinition, providerDefaultModels, providerOptions } from '../../../../../../packages/shared/src'
+import { getProviderDefinition, getRecommendedModels, providerDefaultModels, providerOptions } from '../../../../../../packages/shared/src'
 import { applyProviderDefaults } from '../../utils/run-events'
 import { FieldHint, LabeledField, TextField } from '../form-fields'
 import { Button, FeedbackText, Select } from '../ui'
@@ -175,6 +175,7 @@ export function ProviderSettingsForm({
                     onChange: ({ value }) => (value.trim() ? undefined : 'Model is required.'),
                   }}
                   children={(field) => (
+                    <>
                       <TextField
                         field={field}
                         name="model"
@@ -189,6 +190,28 @@ export function ProviderSettingsForm({
                         }}
                         spellCheck={false}
                       />
+                      {getRecommendedModels(selectedProvider).length > 0 && (
+                        <div className="model-suggestions" aria-label="Suggested models">
+                          {getRecommendedModels(selectedProvider).map((model) => (
+                            <button
+                              key={model}
+                              type="button"
+                              className="model-suggestion-chip"
+                              onClick={() => {
+                                field.handleChange(model)
+                                setDraftSettings((current) => ({
+                                  ...current,
+                                  provider: { ...current.provider, model },
+                                }))
+                                setSaveMessage(null)
+                              }}
+                            >
+                              {model}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </>
                   )}
                 />
               </LabeledField>
