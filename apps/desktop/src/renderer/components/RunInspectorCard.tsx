@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 
-import type { ApprovalRequest, ConversationSnapshot, ExportRunEvidenceResult, MemoryProposalList, RunEvent } from '../../../../../packages/shared/src'
+import type { ApprovalRequest, ConversationSnapshot, ExportRunEvidenceResult, MemoryCategory, MemoryProposalList, RunEvent } from '../../../../../packages/shared/src'
 import { memoryProposalsQueryOptions, memoryRecordsQueryOptions } from '../queries'
 import { formatPreciseTimestamp } from '../utils/formatting'
 import { describeRunEvent, getEventTone, getRecoverableRunAction, type StreamingRunState } from '../utils/run-events'
@@ -151,7 +151,7 @@ export function RunInspectorCard({
               <div className="inspector-memory-group">
                 {dryRunMemory.map((record) => (
                   <article className="memory-item" key={record.id}>
-                    <span className="field-label">{record.category}</span>
+                    <span className="field-label">{formatMemoryCategory(record.category)}</span>
                     <p>{record.content}</p>
                     <small className="muted-copy">
                       Source: {record.source}{record.runId ? ` · Run ${record.runId}` : ''} · Confidence {formatConfidence(record.confidence)}
@@ -175,7 +175,7 @@ export function RunInspectorCard({
                 <span className="field-label">Pending Suggestions</span>
                 {pendingMemoryProposals.map((proposal) => (
                   <article className="memory-item" key={proposal.id}>
-                    <span className="field-label">{proposal.category}</span>
+                    <span className="field-label">{formatMemoryCategory(proposal.category)}</span>
                     <p>{proposal.content}</p>
                     <small className="muted-copy">Evidence: {proposal.evidence.join(', ')}</small>
                     <div className="memory-action-row">
@@ -254,6 +254,23 @@ export function RunInspectorCard({
       ) : null}
     </Card>
   )
+}
+
+function formatMemoryCategory(category: MemoryCategory): string {
+  switch (category) {
+    case 'preference':
+      return 'Preference'
+    case 'project_fact':
+      return 'Project fact'
+    case 'workflow':
+      return 'Workflow'
+    case 'benchmark_observation':
+      return 'Benchmark observation'
+    case 'skill_improvement':
+      return 'Skill improvement'
+    case 'harness_improvement_signal':
+      return 'Harness improvement signal'
+  }
 }
 
 function getLatestDryRunMemory(events: RunEvent[]) {
