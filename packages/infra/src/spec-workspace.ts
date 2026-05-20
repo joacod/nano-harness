@@ -10,6 +10,7 @@ import {
   type JsonValue,
   type SpecArtifactKind,
   type SpecChangeDetail,
+  type SpecChangeSummary,
   type SpecChangeStatus,
   type SpecTask,
 } from '@nano-harness/shared'
@@ -93,15 +94,21 @@ export class SpecWorkspaceService {
     kind: SpecArtifactKind
     relativePath?: string
     content: string
-  }): Promise<{ path: string; bytesWritten: number }> {
+  }): Promise<{ path: string; bytesWritten: number; changeCreated?: boolean; change?: SpecChangeSummary }> {
+    const normalizedChangeId = input.kind === 'current_spec' || !input.changeId ? null : normalizeChangeId(input.changeId)
+    const changePath = normalizedChangeId ? this.resolveChangePath(workspaceRoot, 'changes', normalizedChangeId) : null
+    const changeExisted = changePath ? await exists(changePath) : false
     const artifactPath = this.resolveArtifactPath(workspaceRoot, input)
 
     await mkdir(path.dirname(artifactPath.absolutePath), { recursive: true })
     await writeFile(artifactPath.absolutePath, input.content, 'utf8')
 
+    const change = normalizedChangeId ? (await this.readChangeDetail(workspaceRoot, 'changes', normalizedChangeId)).summary : undefined
+
     return {
       path: artifactPath.displayPath,
       bytesWritten: Buffer.byteLength(input.content, 'utf8'),
+      ...(normalizedChangeId ? { changeCreated: !changeExisted, change } : {}),
     }
   }
 

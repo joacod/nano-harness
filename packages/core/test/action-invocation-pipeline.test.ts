@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import type { ApprovalResolution, RunEvent } from '@nano-harness/shared'
+import { runEventSchema } from '@nano-harness/shared'
 
 import { ActionInvocationPipeline } from '../src'
 import { createActionDefinition, createActionResult, createToolRequest, FakeActionExecutor, FakePolicy, FakeStore, testSettings } from './helpers'
@@ -233,6 +234,16 @@ describe('ActionInvocationPipeline', () => {
       actionCallId: input.call.id,
       output: {
         changeId: 'add-workbench',
+        changeCreated: true,
+        change: {
+          id: 'add-workbench',
+          title: 'Add Workbench',
+          status: 'draft',
+          path: '.nano/specs/changes/add-workbench',
+          taskCounts: { total: 1, todo: 1, inProgress: 0, done: 0, blocked: 0 },
+          updatedAt: '2026-04-29T10:00:00.000Z',
+          linkedRunIds: [],
+        },
         artifactKind: 'tasks',
         path: '.nano/specs/changes/add-workbench/tasks.md',
         bytesWritten: 17,
@@ -267,7 +278,21 @@ describe('ActionInvocationPipeline', () => {
       signal: new AbortController().signal,
     })
 
-    expect(events.find((event) => event.type === 'spec.artifact_written')).toMatchObject({
+    const changeCreatedEvent = events.find((event) => event.type === 'spec.change_created')
+    const artifactWrittenEvent = events.find((event) => event.type === 'spec.artifact_written')
+
+    expect(changeCreatedEvent).toMatchObject({
+      type: 'spec.change_created',
+      payload: {
+        change: {
+          id: 'add-workbench',
+          path: '.nano/specs/changes/add-workbench',
+        },
+      },
+    })
+    expect(runEventSchema.parse(changeCreatedEvent)).toMatchObject({ type: 'spec.change_created' })
+    expect(events.indexOf(changeCreatedEvent as RunEvent)).toBeLessThan(events.indexOf(artifactWrittenEvent as RunEvent))
+    expect(artifactWrittenEvent).toMatchObject({
       type: 'spec.artifact_written',
       payload: {
         changeId: 'add-workbench',

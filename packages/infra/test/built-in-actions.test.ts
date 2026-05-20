@@ -1091,8 +1091,26 @@ describe('BuiltInActionExecutor', () => {
       },
     }))
 
-    expect(writeProposalResult).toMatchObject({ status: 'completed', output: { path: '.nano/specs/changes/add-spec-workbench/proposal.md' } })
-    expect(writeTasksResult).toMatchObject({ status: 'completed', output: { path: '.nano/specs/changes/add-spec-workbench/tasks.md' } })
+    expect(writeProposalResult).toMatchObject({
+      status: 'completed',
+      output: {
+        path: '.nano/specs/changes/add-spec-workbench/proposal.md',
+        changeCreated: true,
+        change: expect.objectContaining({
+          id: 'add-spec-workbench',
+          title: 'Add Spec Workbench',
+          path: '.nano/specs/changes/add-spec-workbench',
+        }),
+      },
+    })
+    expect(writeTasksResult).toMatchObject({
+      status: 'completed',
+      output: {
+        path: '.nano/specs/changes/add-spec-workbench/tasks.md',
+        changeCreated: false,
+        change: expect.objectContaining({ id: 'add-spec-workbench' }),
+      },
+    })
     expect(appendEvidenceResult).toMatchObject({
       status: 'completed',
       output: {
