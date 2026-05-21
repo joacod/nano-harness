@@ -7,6 +7,7 @@ import { ChatTranscript } from '../components/ChatTranscript'
 import { SessionLayout } from '../components/SessionLayout'
 import { SessionTelemetry } from '../components/SessionTelemetry'
 import { Card, FeedbackText, Toast, type ToastMessage } from '../components/ui'
+import { rendererFeatureFlags } from '../features'
 import { conversationQueryOptions, memoryProposalsQueryOptions, sessionCompactionsQueryOptions } from '../queries'
 import { useRuntimeUi, useTechnicalUi } from '../runtime-ui'
 import { getFileName } from '../utils/files'
@@ -20,11 +21,11 @@ export function ConversationRoute() {
   const snapshotQuery = useQuery(conversationQueryOptions(conversationId))
   const memoryProposalsQuery = useQuery({
     ...memoryProposalsQueryOptions,
-    enabled: isAdvancedUiActive && advancedSettings.telemetrySidebar,
+    enabled: rendererFeatureFlags.settingsMemory && isAdvancedUiActive && advancedSettings.telemetrySidebar,
   })
   const sessionCompactionsQuery = useQuery({
     ...sessionCompactionsQueryOptions(conversationId),
-    enabled: isAdvancedUiActive && advancedSettings.telemetrySidebar,
+    enabled: rendererFeatureFlags.sessionCompaction && isAdvancedUiActive && advancedSettings.telemetrySidebar,
   })
   const { liveRunEvents, streamingRuns } = useRuntimeUi()
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null)
@@ -210,10 +211,10 @@ export function ConversationRoute() {
         title={snapshotQuery.data?.conversation?.title ?? 'Loading conversation…'}
         transcriptRef={transcriptPanelRef}
         onTranscriptScroll={handleTranscriptScroll}
-        isSessionActionPending={forkSessionMutation.isPending || cloneSessionMutation.isPending || exportSessionMutation.isPending || compactSessionMutation.isPending}
-        onForkSession={() => forkSessionMutation.mutate()}
-        onCloneSession={() => cloneSessionMutation.mutate()}
-        onExportSession={() => exportSessionMutation.mutate()}
+        isSessionActionPending={forkSessionMutation.isPending || cloneSessionMutation.isPending || exportSessionMutation.isPending || (rendererFeatureFlags.sessionCompaction && compactSessionMutation.isPending)}
+        onForkSession={rendererFeatureFlags.sessionActions ? () => forkSessionMutation.mutate() : undefined}
+        onCloneSession={rendererFeatureFlags.sessionActions ? () => cloneSessionMutation.mutate() : undefined}
+        onExportSession={rendererFeatureFlags.sessionActions ? () => exportSessionMutation.mutate() : undefined}
         transcriptChildren={(
           <>
             {snapshotQuery.isLoading ? <FeedbackText>Loading messages…</FeedbackText> : null}
@@ -237,10 +238,10 @@ export function ConversationRoute() {
             selectedRun={selectedRun}
             selectedRunEvents={selectedRunEvents}
             pendingApproval={pendingApproval}
-            memoryProposals={memoryProposalsQuery.data ?? null}
-            compactions={sessionCompactionsQuery.data ?? null}
-            isCompacting={compactSessionMutation.isPending}
-            onCompactSession={() => compactSessionMutation.mutate()}
+            memoryProposals={rendererFeatureFlags.settingsMemory ? memoryProposalsQuery.data ?? null : null}
+            compactions={rendererFeatureFlags.sessionCompaction ? sessionCompactionsQuery.data ?? null : null}
+            isCompacting={rendererFeatureFlags.sessionCompaction && compactSessionMutation.isPending}
+            onCompactSession={rendererFeatureFlags.sessionCompaction ? () => compactSessionMutation.mutate() : undefined}
             streamingState={selectedRun ? streamingRuns[selectedRun.id] ?? null : null}
             onRunEvidenceExported={(result) => {
               setToast({

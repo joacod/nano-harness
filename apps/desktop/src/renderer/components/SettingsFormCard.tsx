@@ -19,14 +19,41 @@ export function SettingsFormCard({
   providersPanel: ReactNode
   workspacePanel: ReactNode
   advancedPanel?: ReactNode
-  skillsPanel: ReactNode
-  mcpPanel: ReactNode
-  memoryPanel: ReactNode
-  harnessPanel: ReactNode
+  skillsPanel?: ReactNode
+  mcpPanel?: ReactNode
+  memoryPanel?: ReactNode
+  harnessPanel?: ReactNode
   dataPanel: ReactNode
   selectedTab: SettingsTab
   onSelectedTabChange: (tab: SettingsTab) => void
 }) {
+  const tabs: Array<{ value: SettingsTab; label: string; panel: ReactNode }> = [
+    { value: 'providers', label: 'Providers', panel: providersPanel },
+    { value: 'workspace', label: 'Workspace', panel: workspacePanel },
+  ]
+
+  if (skillsPanel) {
+    tabs.push({ value: 'skills', label: 'Skills', panel: skillsPanel })
+  }
+
+  if (mcpPanel) {
+    tabs.push({ value: 'mcp', label: 'MCP', panel: mcpPanel })
+  }
+
+  if (memoryPanel) {
+    tabs.push({ value: 'memory', label: 'Memory', panel: memoryPanel })
+  }
+
+  if (harnessPanel) {
+    tabs.push({ value: 'harness', label: 'Harness', panel: harnessPanel })
+  }
+
+  tabs.push({ value: 'data', label: 'Data', panel: dataPanel })
+
+  if (advancedPanel) {
+    tabs.push({ value: 'advanced', label: 'Advanced', panel: advancedPanel })
+  }
+
   return (
     <Card className="settings-card">
       <p className="eyebrow">Settings</p>
@@ -35,48 +62,7 @@ export function SettingsFormCard({
         ariaLabel="Settings sections"
         value={selectedTab}
         onValueChange={onSelectedTabChange}
-        tabs={[
-          {
-            value: 'providers',
-            label: 'Providers',
-            panel: providersPanel,
-          },
-          {
-            value: 'workspace',
-            label: 'Workspace',
-            panel: workspacePanel,
-          },
-          {
-            value: 'skills',
-            label: 'Skills',
-            panel: skillsPanel,
-          },
-          {
-            value: 'mcp',
-            label: 'MCP',
-            panel: mcpPanel,
-          },
-          {
-            value: 'memory',
-            label: 'Memory',
-            panel: memoryPanel,
-          },
-          {
-            value: 'harness',
-            label: 'Harness',
-            panel: harnessPanel,
-          },
-          {
-            value: 'data',
-            label: 'Data',
-            panel: dataPanel,
-          },
-          {
-            value: 'advanced',
-            label: 'Advanced',
-            panel: advancedPanel,
-          },
-        ]}
+        tabs={tabs}
       />
     </Card>
   )

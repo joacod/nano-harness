@@ -1,6 +1,7 @@
-import { createHashHistory, createRootRoute, createRoute, createRouter } from '@tanstack/react-router'
+import { Navigate, createHashHistory, createRootRoute, createRoute, createRouter } from '@tanstack/react-router'
 
 import { RootLayout } from './components/RootLayout'
+import { rendererFeatureFlags } from './features'
 import { ConversationRoute } from './routes/ConversationRoute'
 import { HomeRoute } from './routes/HomeRoute'
 import { SettingsRoute } from './routes/SettingsRoute'
@@ -31,13 +32,13 @@ const settingsRoute = createRoute({
 const specsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/specs',
-  component: SpecsRoute,
+  component: rendererFeatureFlags.specs ? SpecsRoute : DisabledFeatureRedirect,
 })
 
 const specChangeRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/specs/$changeId',
-  component: SpecsRoute,
+  component: rendererFeatureFlags.specs ? SpecsRoute : DisabledFeatureRedirect,
 })
 
 const routeTree = rootRoute.addChildren([homeRoute, conversationRoute, settingsRoute, specsRoute, specChangeRoute])
@@ -51,4 +52,8 @@ declare module '@tanstack/react-router' {
   interface Register {
     router: typeof router
   }
+}
+
+function DisabledFeatureRedirect() {
+  return <Navigate to="/" />
 }
