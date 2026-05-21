@@ -1,6 +1,6 @@
 # Nano Harness
 
-`nano-harness` is a personal, local-first coding harness for working with AI providers under controlled autonomy. It gives you a desktop workspace where an assistant can plan, inspect code, make approved changes, run validation, and leave behind a clear trace of what happened.
+`nano-harness` is a personal, local-first coding harness for working with AI providers under controlled autonomy. It gives you a desktop chat workspace where an assistant can plan, inspect code, make approved changes, run validation, and leave behind a clear trace of what happened.
 
 Nano is intentionally small and opinionated. It is not a marketplace or a general agent platform; it is a local app for one owner who wants useful coding automation without losing visibility or control.
 
@@ -9,15 +9,16 @@ Nano is intentionally small and opinionated. It is not a marketplace or a genera
 - Connects to configurable AI providers for streamed assistant runs.
 - Lets the assistant inspect a workspace, search files, propose patches, and run approved commands.
 - Keeps risky actions behind approvals and workspace boundaries.
-- Shows an inspectable timeline of messages, tool calls, approvals, events, and validation output.
-- Supports planning, building, reviewing, local skills, memory proposals, sessions, and evidence export.
+- Shows an inspectable timeline of messages, tool calls, approvals, events, and validation output behind the Advanced toggle.
+- Supports simple Plan, Build, and Review chat sessions.
+- Keeps more experimental surfaces deferred behind renderer feature flags.
 
 ## Why It Exists
 
 - Local-first: your conversations, settings, approvals, and run evidence stay on your machine.
 - Inspectable: the assistant's work is visible through events, approvals, and exports.
 - Provider-flexible: use hosted or local providers through small adapters.
-- Extensible: add capabilities through local tools, skills, settings, and spec-driven workflows.
+- Focused: advanced capabilities can exist locally without taking over the main chat UI.
 - Personal: defaults and workflows are optimized for a single owner, not a large platform.
 
 ## Workspace
@@ -27,6 +28,10 @@ Nano is intentionally small and opinionated. It is not a marketplace or a genera
 - `packages/infra`: provider adapters, SQLite persistence, built-in actions, skills loading, MCP adapters, and other side effects.
 - `packages/shared`: shared Zod schemas, bridge contracts, settings, events, runs, memory, skills, MCP, and spec/harness artifacts.
 - `benchmarks`: tracked regression scenarios for agent behavior, safety, and evidence quality.
+
+## Deferred Features
+
+The current app is optimized for a usable basic chat workflow. Spec workflows, Skills, MCP, Memory UI, Harness Engineering, session actions, and session compaction are still present in the codebase but hidden by default through `apps/desktop/src/renderer/features.ts`. See `TODO.md` for the deferred-feature list and the planned right-sidebar refactor.
 
 ## Development
 

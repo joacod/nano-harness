@@ -2,7 +2,8 @@
 
 ## Product Direction
 - Nano is a personal, local-first coding harness with controlled autonomy. Preserve the small, opinionated, inspectable desktop-app experience rather than turning it into a broad agent platform or marketplace.
-- Prefer simple settings toggles, local files, commands, and harness capabilities over complex UI surfaces. Advanced workflows should remain understandable through run events, approvals, evidence exports, and local artifacts.
+- Prefer the basic chat/session workflow with simple settings toggles, local files, commands, and inspectable approvals over complex UI surfaces. Advanced workflows should remain understandable through run events, approvals, evidence exports, and local artifacts.
+- Spec, Skills, MCP, Memory, Harness Engineering, session actions, and session compaction renderer surfaces are deferred by default behind `apps/desktop/src/renderer/features.ts`. Do not re-enable or expand them unless explicitly requested.
 - `docs/` is intentionally ignored and may contain local roadmap-completion notes. Do not rely on it for committed product behavior unless the user explicitly asks to promote something from docs into tracked code or README content.
 
 ## Structure
@@ -16,7 +17,7 @@
 - `packages/core` owns orchestration. `CoreRunEngine` coordinates focused runtime seams in `provider-turn-runner.ts`, `action-invocation-pipeline.ts`, `approval-gate.ts`, and `dry-run-preview-builder.ts`; supporting contracts live in `provider.ts`, `actions.ts`, `policy.ts`, `event-bus.ts`, `approvals.ts`, `hooks.ts`, and `run-status.ts`. `packages/infra` owns side effects: providers, built-in actions, MCP adapters, skills loading, and SQLite persistence.
 
 ## Workflow
-- Use `pnpm install` with `pnpm@10.33.2`.
+- Use `pnpm install` with the `pnpm` version pinned in `package.json`.
 - Main checks are `pnpm test`, `pnpm test:e2e`, `pnpm typecheck`, `pnpm lint`, and `pnpm build`.
 - This project is pre-release. Do not add migrations, backward-compatible schema fallbacks, or compatibility shims unless explicitly requested. Prefer updating the current schema/contracts directly; local data can be recreated from scratch until the project is declared released.
 - For renderer/UI work, run `pnpm dev` and inspect `http://localhost:5173/` with Playwright if needed.
@@ -30,9 +31,9 @@
 - The SQLite store initializes itself on startup via `createSqliteStore()`. In the desktop app, the DB lives under `app.getPath('userData')/data/nano-harness.db`; the default agent workspace root is `~/nano-harness`. Message metadata for tool calls/results is serialized in `messages.metadata` via `packages/infra/src/sqlite/message-metadata.ts`, so message schema changes usually require matching store updates.
 - Built-in actions include workspace file/search actions, command/git actions, MCP actions, spec workspace actions, benchmark actions, skill artifact actions, and harness artifact actions. The registry is `packages/infra/src/built-in-actions.ts`, and implementations live under `packages/infra/src/actions/`. Mutating or risky actions such as `apply_patch`, `write_file`, `run_command`, `propose_harness_change`, artifact writers, and spec state changes require approval; with approval policy `never`, required-approval actions are denied instead of auto-running.
 - Tool-facing workspace paths are relative and use `/` separators on every OS, including Windows. Keep boundary/path normalization centralized in `packages/core/src/workspace-paths.ts`, and use `pathToFileURL()` instead of manual `file://` strings for local file URLs.
-- Plan, Build, Review, and Spec are first-class composer modes. Spec routes into Plan mode and produces a bounded spec workflow prompt.
+- Plan, Build, and Review are the visible composer modes. Spec mode exists as deferred UI behind renderer feature flags and routes into Plan mode when re-enabled.
 - Skills are Markdown data packages resolved by `MarkdownSkillResolver`; the target shape is the standard Agent Skills folder model with `SKILL.md` plus optional `scripts/`, `references/`, and `assets/`. MCP inventory and resources are filtered through configured registry contracts before exposure.
-- Sessions are first-class lineage records layered over conversations. Transcripts remain conversation-owned; session fork/clone/export operations preserve lineage metadata and exported evidence.
+- Sessions are first-class lineage records layered over conversations. Transcripts remain conversation-owned; session fork/clone/export operations preserve lineage metadata and exported evidence, but their renderer controls are deferred by default.
 - Safety checks are centralized in `packages/core/src/policy.ts`, with workspace boundaries, command classification, personal rules, and `pre_tool_use`/`post_tool_use` hook events. Preserve hook event fidelity in timeline/export changes.
 - Approved memory records and pending memory proposals live in SQLite. Approved records are recalled into provider instructions with provenance; proposal approval writes `USER.md`/`MEMORY.md` under the app data directory.
 - Harness engineering and spec workflow tools are non-mutating by default. Change manifests, patch previews, benchmark comparisons, promotion records, specs, draft PR artifacts, and evidence packets can be generated locally, but live harness mutation, branch mutation, remote push, and PR publication must remain approval-gated.
