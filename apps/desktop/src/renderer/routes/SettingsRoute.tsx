@@ -11,6 +11,7 @@ import { ProviderSettingsTabContainer } from '../components/settings/ProviderSet
 import { SkillsSettingsTabContainer } from '../components/settings/SkillsSettingsTabContainer'
 import { WorkspaceSettingsTabContainer } from '../components/settings/WorkspaceSettingsTabContainer'
 import { Card } from '../components/ui'
+import { rendererFeatureFlags } from '../features'
 import { settingsQueryOptions } from '../queries'
 
 export function SettingsRoute() {
@@ -32,10 +33,10 @@ export function SettingsRoute() {
       providersPanel={<ProviderSettingsTabContainer settings={settingsQuery.data} />}
       workspacePanel={<WorkspaceSettingsTabContainer settings={settingsQuery.data} />}
       advancedPanel={<AdvancedSettingsTabContainer settings={settingsQuery.data} />}
-      skillsPanel={<SkillsSettingsTabContainer settings={settingsQuery.data} />}
-      mcpPanel={<McpSettingsTabContainer />}
-      memoryPanel={<MemorySettingsTabContainer />}
-      harnessPanel={<HarnessEngineeringCard />}
+      skillsPanel={rendererFeatureFlags.settingsSkills ? <SkillsSettingsTabContainer settings={settingsQuery.data} /> : undefined}
+      mcpPanel={rendererFeatureFlags.settingsMcp ? <McpSettingsTabContainer /> : undefined}
+      memoryPanel={rendererFeatureFlags.settingsMemory ? <MemorySettingsTabContainer /> : undefined}
+      harnessPanel={rendererFeatureFlags.settingsHarnessEngineering ? <HarnessEngineeringCard /> : undefined}
       dataPanel={<DataSettingsTabContainer />}
       selectedTab={selectedTab}
       onSelectedTabChange={setSelectedTab}

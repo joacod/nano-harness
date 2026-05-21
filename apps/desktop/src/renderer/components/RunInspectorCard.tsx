@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 
 import type { ApprovalRequest, ConversationSnapshot, ExportRunEvidenceResult, MemoryCategory, MemoryProposalList, RunEvent } from '../../../../../packages/shared/src'
+import { rendererFeatureFlags } from '../features'
 import { memoryProposalsQueryOptions, memoryRecordsQueryOptions } from '../queries'
 import { formatPreciseTimestamp } from '../utils/formatting'
 import { describeRunEvent, getEventTone, getRecoverableRunAction, type StreamingRunState } from '../utils/run-events'
@@ -26,7 +27,7 @@ export function RunInspectorCard({
   const queryClient = useQueryClient()
   const recoverableAction = run ? getRecoverableRunAction(run, pendingApproval) : null
   const latestFirstEvents = [...events].reverse()
-  const dryRunMemory = getLatestDryRunMemory(events)
+  const dryRunMemory = rendererFeatureFlags.settingsMemory ? getLatestDryRunMemory(events) : []
   const pendingMemoryProposals = memoryProposals?.proposals
     .filter((proposal) => proposal.status === 'pending' && proposal.runId === run?.id)
     .slice(0, 3) ?? []
@@ -162,48 +163,50 @@ export function RunInspectorCard({
             </section>
           ) : null}
 
-          <section className="inspector-memory-context" aria-labelledby="inspector-memory-heading">
-            <div className="inspector-section-heading">
-              <p className="eyebrow" id="inspector-memory-heading">Memory</p>
-              <p>Pending memory suggestions produced by this run. Global approved memory remains in Settings.</p>
-            </div>
-            {pendingMemoryProposals.length === 0 ? (
-              <FeedbackText>No pending memory suggestions for this run.</FeedbackText>
-            ) : null}
-            {pendingMemoryProposals.length > 0 ? (
-              <div className="inspector-memory-group">
-                <span className="field-label">Pending Suggestions</span>
-                {pendingMemoryProposals.map((proposal) => (
-                  <article className="memory-item" key={proposal.id}>
-                    <span className="field-label">{formatMemoryCategory(proposal.category)}</span>
-                    <p>{proposal.content}</p>
-                    <small className="muted-copy">Evidence: {proposal.evidence.join(', ')}</small>
-                    <div className="memory-action-row">
-                      <Button
-                        type="button"
-                        size="sm"
-                        disabled={resolveMemoryProposalMutation.isPending}
-                        onClick={() => resolveMemoryProposalMutation.mutate({ proposalId: proposal.id, decision: 'approved' })}
-                      >
-                        Approve memory
-                      </Button>
-                      <Button
-                        type="button"
-                        size="sm"
-                        disabled={resolveMemoryProposalMutation.isPending}
-                        onClick={() => resolveMemoryProposalMutation.mutate({ proposalId: proposal.id, decision: 'rejected' })}
-                      >
-                        Reject
-                      </Button>
-                    </div>
-                  </article>
-                ))}
+          {rendererFeatureFlags.settingsMemory ? (
+            <section className="inspector-memory-context" aria-labelledby="inspector-memory-heading">
+              <div className="inspector-section-heading">
+                <p className="eyebrow" id="inspector-memory-heading">Memory</p>
+                <p>Pending memory suggestions produced by this run. Global approved memory remains in Settings.</p>
               </div>
-            ) : null}
-            {resolveMemoryProposalMutation.error instanceof Error ? (
-              <FeedbackText variant="error" live>{resolveMemoryProposalMutation.error.message}</FeedbackText>
-            ) : null}
-          </section>
+              {pendingMemoryProposals.length === 0 ? (
+                <FeedbackText>No pending memory suggestions for this run.</FeedbackText>
+              ) : null}
+              {pendingMemoryProposals.length > 0 ? (
+                <div className="inspector-memory-group">
+                  <span className="field-label">Pending Suggestions</span>
+                  {pendingMemoryProposals.map((proposal) => (
+                    <article className="memory-item" key={proposal.id}>
+                      <span className="field-label">{formatMemoryCategory(proposal.category)}</span>
+                      <p>{proposal.content}</p>
+                      <small className="muted-copy">Evidence: {proposal.evidence.join(', ')}</small>
+                      <div className="memory-action-row">
+                        <Button
+                          type="button"
+                          size="sm"
+                          disabled={resolveMemoryProposalMutation.isPending}
+                          onClick={() => resolveMemoryProposalMutation.mutate({ proposalId: proposal.id, decision: 'approved' })}
+                        >
+                          Approve memory
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          disabled={resolveMemoryProposalMutation.isPending}
+                          onClick={() => resolveMemoryProposalMutation.mutate({ proposalId: proposal.id, decision: 'rejected' })}
+                        >
+                          Reject
+                        </Button>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              ) : null}
+              {resolveMemoryProposalMutation.error instanceof Error ? (
+                <FeedbackText variant="error" live>{resolveMemoryProposalMutation.error.message}</FeedbackText>
+              ) : null}
+            </section>
+          ) : null}
 
           {validationObligations.total > 0 ? (
             <section className="inspector-validation-context" aria-labelledby="inspector-validation-heading">
@@ -240,7 +243,7 @@ export function RunInspectorCard({
                     <small className="timeline-timestamp">{formatPreciseTimestamp(event.timestamp)}</small>
                     <p className="timeline-type">{event.type}</p>
                     <FeedbackText className="timeline-detail">{description.detail}</FeedbackText>
-                    {specChangeId ? (
+                    {rendererFeatureFlags.specs && specChangeId ? (
                       <a className="ghost-link timeline-link" href={`/specs/${encodeURIComponent(specChangeId)}`}>
                         Open in Specs
                       </a>

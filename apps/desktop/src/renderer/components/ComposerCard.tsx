@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 
 import { createConversationId, providerStatusQueryOptions } from '../queries'
+import { rendererFeatureFlags } from '../features'
 import { Button, Card, FeedbackText, RuntimePill, TextArea } from './ui'
 import { createSkillDraftPrompt, createSpecWorkflowPrompt, type AgentRole } from '../../../../../packages/shared/src'
 
@@ -14,7 +15,7 @@ const composerModes: Array<{ label: string; value: ComposerMode; description: st
   { label: 'Plan', value: 'plan', description: 'Explore and outline the approach before edits.' },
   { label: 'Build', value: 'build', description: 'Make focused implementation changes.' },
   { label: 'Review', value: 'review', description: 'Inspect code for bugs and risks.' },
-  { label: 'Spec', value: 'spec', description: 'Create a bounded Plan, Build, Review workflow spec.' },
+  ...(rendererFeatureFlags.specs ? [{ label: 'Spec', value: 'spec' as const, description: 'Create a bounded Plan, Build, Review workflow spec.' }] : []),
 ]
 
 export function ComposerCard({ conversationId }: { conversationId: string | null }) {
@@ -168,15 +169,15 @@ export function ComposerCard({ conversationId }: { conversationId: string | null
 function buildRunInput(prompt: string, mode: ComposerMode): { prompt: string; role: AgentRole } {
   const skillDraftTask = parseNewSkillCommand(prompt)
 
-  if (skillDraftTask) {
+  if (rendererFeatureFlags.skillDrafts && skillDraftTask) {
     return { prompt: createSkillDraftPrompt(skillDraftTask), role: 'plan' }
   }
 
-  if (mode === 'spec') {
+  if (rendererFeatureFlags.specs && mode === 'spec') {
     return { prompt: createSpecWorkflowPrompt(prompt), role: 'plan' }
   }
 
-  return { prompt, role: mode }
+  return { prompt, role: mode === 'spec' ? 'plan' : mode }
 }
 
 function parseNewSkillCommand(prompt: string): string | null {

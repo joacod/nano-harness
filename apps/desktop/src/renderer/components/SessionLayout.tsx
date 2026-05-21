@@ -2,6 +2,7 @@ import type { ReactNode, Ref, UIEventHandler } from 'react'
 import { useQuery } from '@tanstack/react-query'
 
 import { providerStatusQueryOptions } from '../queries'
+import { rendererFeatureFlags } from '../features'
 import { ComposerCard } from './ComposerCard'
 import { SessionActionsMenu } from './SessionActionsMenu'
 import { Card } from './ui'
@@ -34,7 +35,7 @@ export function SessionLayout({
   const providerStatusQuery = useQuery(providerStatusQueryOptions)
   const providerStatus = providerStatusQuery.data
   const hasSessionActions = Boolean(onForkSession || onCloneSession || onExportSession)
-  const showSessionActions = Boolean(conversationId && hasSessionActions)
+  const showSessionActions = Boolean(rendererFeatureFlags.sessionActions && conversationId && hasSessionActions)
 
   return (
     <div className={`conversation-grid ${showTechnicalInfo ? 'conversation-grid-technical' : 'conversation-grid-simple'}`}>

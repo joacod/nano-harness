@@ -1645,7 +1645,7 @@
   font-family: var(--font-mono);
   font-size: var(--font-size-sm);
   cursor: pointer;
-  transition: border-color 0.12s ease, color 0.12s ease, background 0.12s ease;
+  transition: border-color var(--duration-fast) var(--ease-out), color var(--duration-fast) var(--ease-out), background var(--duration-fast) var(--ease-out);
 }
 
 .model-suggestion-chip::after {
@@ -1655,7 +1655,7 @@
   flex: 0 0 auto;
   border-right: var(--border-width-default) solid currentColor;
   border-bottom: var(--border-width-default) solid currentColor;
-  transform: rotate(-45deg) translateY(-1px);
+  transform: rotate(-45deg) translateY(var(--motion-raise-y));
   opacity: 0.5;
 }
 
